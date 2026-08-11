@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS ships bash 3.2; the scanner must keep working on it.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Show bash version
+        run: bash --version | head -1
+
+      - name: Shell syntax check
+        run: |
+          bash -n scripts/vibecheck.sh
+          bash -n scripts/apply_safe_fixes.sh
+
+      - name: Shellcheck
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning scripts/vibecheck.sh scripts/apply_safe_fixes.sh
+
+      - name: Install workbook dependency
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Generated map is current
+        run: |
+          python3 scripts/gen_map.py
+          git diff --exit-code references/checklist-map.md
+
+      - name: Workbooks build in all four variants
+        run: |
+          mkdir -p out
+          python3 scripts/build_workbook.py --outdir out
+          test "$(ls out/*.xlsx | wc -l)" -eq 4
