@@ -1,4 +1,4 @@
-// LLM called straight from the browser: cost.client_llm FAIL
+// LLM called straight from the browser: cost.client_llm WARN
 export async function ask(question: string) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",

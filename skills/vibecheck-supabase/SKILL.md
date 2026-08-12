@@ -10,15 +10,15 @@ description: >
 
 # Vibecheck Supabase Live Probe
 
-Static scanning of migrations catches missing RLS, but the ground truth is the live database. This skill probes a running Supabase project through its public REST API using only the **anon** key — exactly what an attacker in a browser has.
+Static scanning of migrations only produces signals; the live deployment is the ground truth. This skill probes a running Supabase project through its public REST API using a public **legacy anon** or modern **publishable** key — what a browser client has.
 
 ## Inputs required from the user
 
 - `SUPABASE_URL` (e.g. `https://abcd.supabase.co`)
-- `SUPABASE_ANON_KEY` (the public/publishable key — safe to use; it already ships to browsers)
+- `SUPABASE_ANON_KEY` or publishable key (public, but still redact it from reports)
 - Optionally, a list of table names. If not given, the probe discovers them from the PostgREST OpenAPI root.
 
-Never ask for the `service_role` key. If the user offers it, decline — the probe must run with the anon key to reflect real attacker capability. The script refuses to run if it is handed a token whose `role` claim is `service_role`.
+Never ask for a legacy `service_role` key or modern `sb_secret_...` key. If offered, decline. The script rejects both. A modern publishable key is sent only as `apikey`; a legacy anon JWT also gets the legacy bearer header.
 
 Confirm the user owns or is authorised to review the project before running anything.
 
@@ -31,16 +31,17 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/supabase_probe.py \
 
 For each table it reports `anon_select`:
 
-- **`FAIL_readable_by_anon`** — rows were actually returned to an unauthenticated caller. This is the single most common vibecoded-Lovable vulnerability. Map to #12/#14, Critical → BLOCK.
-- **`PASS_no_rows_visible`** — `200` with zero rows. RLS is filtering **or the table is empty**. These look identical from outside: do not record a Pass until the user confirms the table has rows, or seeds one.
-- **`PASS_blocked`** — `401/403`.
+- **`REVIEW_rows_readable_by_anon`** — the one-row response range shows at least one row visible to unauthenticated callers. Confirm whether that table is intentionally public before recording a failure.
+- **`NO_ROWS_VISIBLE_UNCONFIRMED`** — the response range is empty. RLS is filtering **or the table is empty**; do not record a Pass without a seeded private row.
+- **`BLOCKED_OR_KEY_INVALID`** — `401/403`; validate the key/project before treating blocking as policy evidence.
+- **`UNKNOWN_*`** — network, server, discovery, or count failure. Resolve it; do not interpret it as blocked access.
 - **`INFO_not_exposed`** — `404`, not published through PostgREST.
 
 A `200` response on its own is **not** a finding. A table with RLS enabled and no matching policy returns `200 []` to anon rather than an error, so exposure is judged on rows returned (via `Content-Range`), not on the status code.
 
 ## Write probe (opt-in only)
 
-PostgREST has no dry-run insert. An anon INSERT probe can **create a real row** on a table whose columns are all nullable or defaulted, so it is off by default and the output says `NOT_TESTED` when it did not run.
+PostgREST has no dry-run insert. An anon INSERT probe can **create a real row and fire triggers or other side effects**, so it is off by default and the output says `NOT_TESTED` when it did not run. Prefer an isolated test project or staging environment.
 
 Only add `--write-probe` after telling the user it may write a row and getting explicit agreement, and only on a project they own:
 
@@ -48,23 +49,25 @@ Only add `--write-probe` after telling the user it may write a row and getting e
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/supabase_probe.py --url ... --anon ... --write-probe
 ```
 
-Verdicts: `PASS_write_blocked_by_policy` (401/403), `WARN_write_reached_validation` (400/409/422 — the policy may allow anon writes and only validation stopped it), `FAIL_anon_write_succeeded` (a row was very likely created — tell the user to delete it).
+Verdicts: `BLOCKED_OR_KEY_INVALID` (401/403; not automatically a Pass), `WARN_write_reached_validation` (400/409/422 — validation, not necessarily policy, stopped it), `FAIL_anon_write_succeeded` (a row was very likely created — tell the user to locate and delete it).
 
 ## IDOR probe (#13)
 
-Needs two access tokens from the user's own test accounts. The probe reads row ids as account A, then attempts to read those exact ids as account B — read-only:
+Needs two access tokens from distinct test accounts and a known private record created/owned by account A. Put tokens in environment variables so they do not land in shell history, and name the target explicitly:
 
 ```bash
+SUPABASE_JWT_A="$TOKEN_A" SUPABASE_JWT_B="$TOKEN_B" \
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/supabase_probe.py --url ... --anon ... \
-  --jwt-a "$TOKEN_A" --jwt-b "$TOKEN_B"
+  --idor-target private_table:known-a-owned-id
 ```
 
-`FAIL_cross_account_read` means B could read A's rows. Without both tokens the check reports `NOT_TESTED` — never record #13 as passed on the strength of the anon probe alone.
+The script first confirms A can see the supplied target, then asks whether B can see the same ID. Only `PASS_no_cross_account_read_of_known_private_record` is positive evidence for that one record and operation. A non-200 response, invalid token, unknown count, or target invisible to A is Unknown/Not tested — never a Pass. Repeat for read/update/delete and representative object types before closing #13.
 
 ## Interpretation
 
 - Reference and lookup tables (countries, plan tiers) that are intentionally public are fine — confirm with the user which tables are meant to be readable before flagging.
 - Discovery only sees tables PostgREST exposes. A table missing from the list is not proven safe; cross-check against the migrations.
+- The read probe uses `HEAD` plus a one-row range, so it neither downloads row bodies nor requests an expensive exact full-table count. It refuses cross-origin redirects to avoid forwarding account tokens to another host.
 
 ## Constraints
 

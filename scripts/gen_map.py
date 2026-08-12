@@ -6,8 +6,9 @@ Coverage tiers come from items.SCANNER_CHECKS, which is verified against the
 emit() calls in vibecheck.sh by tests/test_coverage_map.py — so the map can no
 longer drift from what the scanner actually checks.
 
-Usage: python3 scripts/gen_map.py   (run from anywhere)
+Usage: python3 scripts/gen_map.py [--check]   (run from anywhere)
 """
+import argparse
 import collections
 import os
 import sys
@@ -27,6 +28,8 @@ for cat in CATEGORIES:
     for it in cat["items"]:
         n += 1
         vcodes, tools = VERIFICATION[n]
+        # Do not emit an executable-looking HTML tag into generated Markdown.
+        tools = tools.replace("<script>", "&lt;script&gt;")
         rows.append((n, cat["en"], it[0], cov[n], " + ".join(vcodes), tools, it[1]))
 
 counts = collections.Counter(cov.values())
@@ -42,11 +45,10 @@ Pass/Fail/N/A, simplified verdict). Item numbers are identical in both.
 Severity weights (reviewer profile): Critical=5, High=3, Medium=2, Low=1. "Triage" rows
 (EU AI Act screening) carry weight 0 and are excluded from all scores in both profiles.
 
-`scan` = what the scanner's answer is worth for that item. A static scan can prove a failure
-but never prove a pass, and the tiers say so:
+`scan` = what the scanner contributes for that item. Regex/path heuristics generally prove
+neither a vulnerability nor its absence, and the tiers say so:
 
-- **DECISIVE** — when the check fires, the item is a Fail with no interpretation needed.
-  A clean run still means only "no signal found", never a Pass.
+- **DECISIVE** — reserved for conclusive automation. The bundled scanner currently has none.
 - **EVIDENCE** — the check surfaces material; a human decides the item either way.
 - **MANUAL** — no scanner signal; the item is listed as an explicit reviewer to-do so it
   cannot be silently skipped.
@@ -61,18 +63,20 @@ tail = """
 ## Verdict gates (reviewer profile)
 
 NOT REVIEWED -> INCOMPLETE REVIEW (unreviewed Crit/High, N/A without reason, open screening,
-or coverage < 100%%) -> BLOCK (any Critical fail or Critical marked Accepted) -> BLOCK - RISK ACCEPTANCE REQUIRED (any High fail)
--> FIX BEFORE RELEASE (pass-rate < 90%%) -> RELEASE CANDIDATE. A high pass-rate never overrides a gate. Accepted risk (with mandatory reason) counts as reviewed, is excluded from pass-rate, clears High blocks only, and stays visible in counters.
+unsupported Crit/High Pass, or coverage < 100%%) -> BLOCK (any Critical fail or Critical marked Accepted)
+-> BLOCK - RISK ACCEPTANCE REQUIRED (any High fail) -> FIX BEFORE RELEASE (any other Fail/Partial)
+-> REVIEW COMPLETE - NO OPEN FAIL/PARTIAL. Pass-rate is prioritisation data, never a release gate.
+Accepted risk (with mandatory reason) counts as reviewed, is excluded from pass-rate, clears High blocks only, and stays visible in counters.
 
 ## Verdict ladder (founder profile)
 
-NOT REVIEWED -> REVIEW INCOMPLETE (any Crit/High blank, N/A without reason, open screening)
+NOT REVIEWED -> REVIEW INCOMPLETE (incomplete coverage, unsupported Crit/High Pass, N/A without reason, open screening)
 -> DO NOT LAUNCH (any Critical fail or accepted) -> FIX BEFORE LAUNCH (any High fail)
--> LOOKS READY FOR A LIMITED LAUNCH. The percentage is supporting info only.
+-> FIX BEFORE LAUNCH (any other fail) -> REVIEW COMPLETE - NO OPEN FAILURES. The percentage is supporting info only.
 
 ## Coverage summary
 
-- DECISIVE: %d items — a scanner FAIL settles the item.
+- DECISIVE: %d items — reserved for conclusive automation.
 - EVIDENCE: %d items — the scanner contributes evidence; a human decides.
 - MANUAL: %d items — reviewer judgment, live probes, dashboard checks, or external evidence.
 
@@ -80,23 +84,39 @@ No item is decided *Pass* by the scanner alone.
 
 ## EU AI Act note (timeline)
 
-The May 2026 Digital Omnibus deferred Annex III high-risk obligations to 2 December 2027, but
-Article 50 transparency rules apply from August 2026, and market surveillance / governance /
-sanctions chapters apply from 2 August 2026. Prohibited practices (Art. 5) enforceable since
-Feb 2025. Verify current status at enforcement time; do not treat the deferral as removal.
-Items 60-63 are unscored screening questions in both profiles; yes/uncertain answers escalate
-to a specialist ("Needs specialist" status).
+As of 11 August 2026, Article 50 transparency obligations apply from 2 August 2026 (with a
+limited marking/detection grace period for certain systems already on the market), while the
+AI Omnibus timeline puts Annex III high-risk rules at 2 December 2027 and high-risk systems
+embedded in regulated products at 2 August 2028. Verify the Commission implementation
+timeline and the enacted regulation at assessment time; a delayed obligation is not removed.
+Items 60-63 are unscored screening questions; yes/uncertain answers escalate to a specialist.
 
 ## Estonian data residency note
 
-No Estonian statute mandates in-country storage for private-sector SaaS. Governing law is
-GDPR + IKS (transfer rules outside EEA). EU-region hosting is compliant. Exceptions: public
-sector / vital services (E-ITS, riigipilv), accounting-record retention (Raamatupidamise
-seadus, ~7y, retrievable), sector rules (health, NIS2 via kuberturvalisuse seadus), and — most
-commonly binding in practice — enterprise-customer DPAs demanding EU-only processing incl.
-LLM routing (item 58 covers DB region AND LLM routing).
+Do not infer that EU-region hosting is sufficient from this checklist. GDPR/IKS, international
+transfer mechanisms, controller instructions/DPAs, public-sector or essential-service rules,
+health and other sector rules, and record-retention duties can all change the answer. Item 58
+covers database region and subprocessors such as LLM routing; obtain legal/contractual review
+for the actual data and customer context.
 """ % tuple(counts[t] for t in TIER_ORDER)
 
-with open(OUT, "w") as fh:
-    fh.write(hdr + body + tail)
-print("wrote %d items -> %s" % (n_items, os.path.relpath(OUT, REPO_ROOT)))
+rendered = hdr + body + tail
+parser = argparse.ArgumentParser()
+parser.add_argument("--check", action="store_true",
+                    help="fail if the committed map differs; do not modify it")
+args = parser.parse_args()
+if args.check:
+    try:
+        with open(OUT) as fh:
+            current = fh.read()
+    except OSError:
+        current = ""
+    if current != rendered:
+        print("stale: %s (run python3 scripts/gen_map.py)" %
+              os.path.relpath(OUT, REPO_ROOT), file=sys.stderr)
+        sys.exit(1)
+    print("current: %s" % os.path.relpath(OUT, REPO_ROOT))
+else:
+    with open(OUT, "w") as fh:
+        fh.write(rendered)
+    print("wrote %d items -> %s" % (n_items, os.path.relpath(OUT, REPO_ROOT)))

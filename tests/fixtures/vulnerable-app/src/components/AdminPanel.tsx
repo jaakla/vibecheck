@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-// service_role key in a client component: secrets.service_role FAIL
+// service_role key in a client component: secrets.service_role WARN
 const supabase = createClient(
   "https://example.supabase.co",
   "service_role.FAKEFAKEFAKE"

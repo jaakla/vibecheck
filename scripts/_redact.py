@@ -24,6 +24,7 @@ KNOWN = re.compile(
     r'|AKIA[0-9A-Z]{16}'
     r'|gh[pousr]_[A-Za-z0-9]{20,}'
     r'|xox[bapsr]-[A-Za-z0-9-]{10,}'
+    r'|sb_secret_[A-Za-z0-9_\-]{10,}'
     r'|eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,})')
 
 GENERIC = re.compile(r'[A-Za-z0-9+_\-]{40,}')
@@ -63,10 +64,18 @@ def main():
         lines.append(line if len(line) <= MAX_LINE
                      else line[:MAX_LINE] + ' ...[truncated]')
 
-    encoded = json.dumps('\n'.join(lines).strip())
+    rendered = '\n'.join(lines).strip()
+    encoded = json.dumps(rendered)
     if len(encoded) > MAX_TOTAL:
-        encoded = json.dumps(json.loads(encoded[:MAX_TOTAL] + '"')[:MAX_TOTAL - 20]
-                             + ' ...[truncated]')
+        suffix = ' ...[truncated]'
+        lo, hi = 0, len(rendered)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if len(json.dumps(rendered[:mid] + suffix)) <= MAX_TOTAL:
+                lo = mid
+            else:
+                hi = mid - 1
+        encoded = json.dumps(rendered[:lo] + suffix)
     sys.stdout.write(encoded)
 
 

@@ -3,8 +3,8 @@
 """Render vibecoded-app review workbooks in two profiles from one shared item bank.
 
 Profiles:
-  reviewer : technical wording, Pass/Partial/Fail/Not tested/N/A, weights, full gate model
-             (coverage + weighted pass-rate, pass-rate<90% => FIX). For a technical reviewer.
+  reviewer : technical wording, Pass/Partial/Fail/Not tested/N/A, weights, full gate model.
+             Percentages support prioritisation but never determine the verdict.
   founder  : plain-question wording, Pass/Fail/N/A, simplified verdict, % as supporting info,
              "ask your developer/specialist" escalation. For a non-technical app owner.
 
@@ -31,8 +31,6 @@ from openpyxl.formatting.rule import CellIsRule
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from items import CATEGORIES, WEIGHT, VERIFICATION
 
-PASS_THRESHOLD = 0.90
-
 STR = {
  "en": {
   "col_cat":"Category","col_no":"#","col_item":"Control","col_q":"Question","col_sev":"Priority",
@@ -48,13 +46,13 @@ STR = {
   # reviewer verdicts
   "v_notrev":"NOT REVIEWED","v_incomplete":"INCOMPLETE REVIEW","v_block":"BLOCK",
   "v_block_high":"BLOCK - RISK ACCEPTANCE REQUIRED","v_fix":"FIX BEFORE RELEASE",
-  "v_rc":"RELEASE CANDIDATE (no blocking findings)",
+  "v_rc":"REVIEW COMPLETE - NO OPEN FAIL/PARTIAL",
   # founder verdicts
   "f_notrev":"NOT REVIEWED","f_incomplete":"REVIEW INCOMPLETE","f_donot":"DO NOT LAUNCH",
-  "f_fix":"FIX BEFORE LAUNCH","f_ready":"LOOKS READY FOR A LIMITED LAUNCH",
+  "f_fix":"FIX BEFORE LAUNCH","f_ready":"REVIEW COMPLETE - NO OPEN FAILURES",
   "m_coverage":"Review coverage (of applicable)","m_passrate":"Control pass-rate (of verified)",
   "m_applicable":"Applicable controls","m_verified":"Controls verified","m_blocking":"Blocking findings (Critical+High fails)",
-  "m_chunrev":"Critical/High not reviewed","m_narat":"N/A or Accepted risk without a reason","m_acc":"Accepted risks (visible, excluded from pass-rate)","m_critacc":"Critical marked Accepted (not allowed - blocks)","m_triage":"Screening questions unanswered",
+  "m_chunrev":"Critical/High not reviewed","m_passev":"Critical/High Pass without evidence","m_narat":"N/A or Accepted risk without a reason","m_acc":"Accepted risks (visible, excluded from pass-rate)","m_critacc":"Critical marked Accepted (not allowed - blocks)","m_triage":"Screening questions unanswered",
   "f_answered":"Questions answered (of applicable)","f_passed":"Checks passed (of answered)",
   "f_chblank":"Critical/High still blank","f_critfail":"Critical failures (do not launch)","f_highfail":"High failures (fix first)",
   "sec_scores":"Per-category coverage & pass-rate","cat":"Category","coverage":"Coverage","passrate":"Pass-rate",
@@ -72,7 +70,7 @@ STR = {
     "2. Status: Pass / Partial / Fail / Not tested / N/A. Screening rows: Answered / Needs specialist.",
     "3. N/A on a Critical or High control REQUIRES a reason in the Notes column.",
     "4. Weights (Critical 5 / High 3 / Medium 2 / Low 1) drive pass-rate only; screening rows are unscored.",
-    "5. Gates: unreviewed Critical/High OR missing N/A or Accepted-risk reason OR open screening => INCOMPLETE; any Critical Fail OR Critical Accepted => BLOCK; any High Fail => BLOCK/RISK ACCEPTANCE; coverage < 100% => INCOMPLETE; pass-rate < 90% => FIX; else RELEASE CANDIDATE.",
+    "5. Gates: unreviewed Critical/High, unsupported Critical/High Pass, missing N/A or Accepted-risk reason, open screening, or coverage < 100% => INCOMPLETE; any Critical Fail or Critical Accepted => BLOCK; any High Fail => BLOCK/RISK ACCEPTANCE; any other Fail/Partial => FIX; otherwise review complete with no open Fail/Partial.",
     "5b. Accepted risk = a conscious decision, not a fix: write WHO accepted, WHY, and a review-by date in Notes. It counts as reviewed but never as a Pass, and stays visible in the counters. Critical items cannot be accepted - fix or escalate. If you think a severity is overstated, say so in the acceptance reason rather than re-rating the item.",
     "6. A high pass-rate never overrides a failed gate. Categories 3, 14, 15 are product-readiness, not security.",
   ],
@@ -80,7 +78,7 @@ STR = {
     "1. Fill in the details, then answer each question with Pass / Fail / N/A on the Review tab.",
     "2. Use the 'How to verify' column to actually test each one. Blank means NOT checked - never 'probably fine'.",
     "3. Use N/A only when the feature or risk genuinely does not exist, and write why in Notes.",
-    "4. Verdict: any Critical or High blank => REVIEW INCOMPLETE; any Critical fails or is marked Accepted => DO NOT LAUNCH; any High fails => FIX BEFORE LAUNCH; all Critical & High pass or are accepted with a reason => looks ready for a limited launch.",
+    "4. Verdict: incomplete coverage or an unsupported Critical/High Pass => REVIEW INCOMPLETE; any Critical failure or accepted Critical => DO NOT LAUNCH; any other failure => FIX BEFORE LAUNCH; otherwise the review is complete with no open failures.",
     "4b. Accepted risk: only after talking to your developer/specialist. Write who accepted it, why, and when to revisit. Critical problems cannot be accepted - they must be fixed.",
     "5. The percentage is supporting information only - it does not decide the verdict.",
     "6. For items marked 'ask your developer/specialist' (backups, key rotation, GDPR, AI Act, payments), get real evidence.",
@@ -100,12 +98,12 @@ STR = {
   "verdict":"OTSUS",
   "v_notrev":"ULE VAATAMATA","v_incomplete":"ULEVAATUS POOLELI","v_block":"BLOKEERI",
   "v_block_high":"BLOKEERI - NOUAB RISKI AKTSEPTEERIMIST","v_fix":"PARANDA ENNE AVALDAMIST",
-  "v_rc":"VALJALASKEKANDIDAAT (blokeerivaid leide pole)",
+  "v_rc":"ULEVAATUS VALMIS - PUUDULIKKE/OSALISI POLE",
   "f_notrev":"ULE VAATAMATA","f_incomplete":"ULEVAATUS POOLELI","f_donot":"ARA AVALDA",
-  "f_fix":"PARANDA ENNE AVALDAMIST","f_ready":"NAIB VALMIS PIIRATUD AVALDAMISEKS",
+  "f_fix":"PARANDA ENNE AVALDAMIST","f_ready":"ULEVAATUS VALMIS - PUUDULIKKE POLE",
   "m_coverage":"Ulevaatuse kaetus (kohaldatavatest)","m_passrate":"Labimismaar (kontrollitutest)",
   "m_applicable":"Kohaldatavaid kontrolle","m_verified":"Kontrollitud","m_blocking":"Blokeerivaid leide (Krit+Korge)",
-  "m_chunrev":"Kriitilisi/Korgeid ule vaatamata","m_narat":"'Ei kohaldu' voi aktsepteeritud risk ilma pohjuseta","m_acc":"Aktsepteeritud riske (nahtav, labimismaara ei loeta)","m_critacc":"Kriitiline aktsepteeritud (pole lubatud - blokeerib)","m_triage":"Soelumiskusimusi vastamata",
+  "m_chunrev":"Kriitilisi/Korgeid ule vaatamata","m_passev":"Kriitiline/Korge Korras ilma toendita","m_narat":"'Ei kohaldu' voi aktsepteeritud risk ilma pohjuseta","m_acc":"Aktsepteeritud riske (nahtav, labimismaara ei loeta)","m_critacc":"Kriitiline aktsepteeritud (pole lubatud - blokeerib)","m_triage":"Soelumiskusimusi vastamata",
   "f_answered":"Kusimusi vastatud (kohaldatavatest)","f_passed":"Kontrolle labitud (vastatutest)",
   "f_chblank":"Kriitilisi/Korgeid veel tuhjad","f_critfail":"Kriitilisi puudujaake (ara avalda)","f_highfail":"Korgeid puudujaake (paranda enne)",
   "sec_scores":"Kategooriate kaetus ja labimismaar","cat":"Kategooria","coverage":"Kaetus","passrate":"Labimismaar",
@@ -123,7 +121,7 @@ STR = {
     "2. Staatus: Korras / Osaline / Puudulik / Testimata / Ei kohaldu. Soelumisread: Vastatud / Vajab spetsialisti.",
     "3. 'Ei kohaldu' Kriitilisel voi Korgel kontrollil NOUAB pohjust Margkmete veerus.",
     "4. Kaalud (Krit 5 / Korge 3 / Keskmine 2 / Madal 1) mojutavad ainult labimismaara; soelumisread on skoorimata.",
-    "5. Varavad: ule vaatamata Krit/Korge VOI puuduv pohjus VOI avatud soelumine => POOLELI; iga Krit Puudulik VOI Krit aktsepteeritud => BLOKEERI; iga Korge Puudulik => BLOKEERI/RISKI AKTSEPT; kaetus < 100% => POOLELI; labimismaar < 90% => PARANDA; muidu KANDIDAAT.",
+    "5. Varavad: ule vaatamata voi toendita Korras Krit/Korge, puuduv pohjus, avatud soelumine voi kaetus < 100% => POOLELI; iga Krit Puudulik voi Krit aktsepteeritud => BLOKEERI; iga Korge Puudulik => BLOKEERI/RISKI AKTSEPT; muu Puudulik/Osaline => PARANDA; muidu ulevaatus valmis.",
     "5b. Aktsepteeritud risk = teadlik otsus, mitte parandus: kirjuta Margkmetesse KES, MIKS ja ulevaatuse kuupaev. Loeb ulevaadatuks, mitte kunagi Korras'eks, ja jaab loenduritesse nahtavaks. Kriitilisi ei saa aktsepteerida - paranda voi eskaleeri. Kui raskusaste tundub ulepaisutatud, pohjenda seda aktsepteerimise pohjuses, mitte umberhindamisega.",
     "6. Korge labimismaar ei tuhista kunagi labikukkunud varavat. Kategooriad 3, 14, 15 on tootevalmidus, mitte turve.",
   ],
@@ -131,7 +129,7 @@ STR = {
     "1. Taida andmed, siis vasta igale kusimusele Korras / Puudulik / Ei kohaldu 'Ulevaatus' lehel.",
     "2. Kasuta 'Kuidas kontrollida' veergu, et igauht pariselt testida. Tuhi tahendab EI KONTROLLITUD - mitte 'kull sobib'.",
     "3. 'Ei kohaldu' ainult kui funktsiooni voi riski pariselt pole, ja kirjuta miks Margkmetesse.",
-    "4. Otsus: iga Kriitiline voi Korge tuhi => POOLELI; iga Kriitiline puudulik voi aktsepteeritud => ARA AVALDA; iga Korge puudulik => PARANDA ENNE; koik Krit ja Korge korras voi pohjendatult aktsepteeritud => naib valmis piiratud avaldamiseks.",
+    "4. Otsus: puudulik kaetus voi toendita Kriitiline/Korge Korras => POOLELI; iga Kriitiline puudulik voi aktsepteeritud => ARA AVALDA; iga muu puudulik => PARANDA ENNE; muidu ulevaatus valmis ja avatud puudujaake pole.",
     "4b. Aktsepteeritud risk: ainult parast arendaja/spetsialistiga raakimist. Kirjuta, kes aktsepteeris, miks ja millal ule vaadata. Kriitilisi probleeme ei saa aktsepteerida - need tuleb parandada.",
     "5. Protsent on ainult tugiinfo - see ei otsusta tulemust.",
     "6. Ridade puhul 'kusi arendajalt/spetsialistilt' (varukoopiad, votmed, GDPR, AI-maarus, maksed) hangi paris tond.",
@@ -221,6 +219,7 @@ def build(profile, lang, path):
 
     # shared count formulas (scoreable = weight>0)
     nPass=f'COUNTIFS({Fc},"{P}",{E},">0")'; nFail=f'COUNTIFS({Fc},"{F}",{E},">0")'
+    nPartial=f'COUNTIFS({Fc},"{PT}",{E},">0")'
     nNA=f'COUNTIFS({Fc},"{NA}",{E},">0")'; scoreTot=f'COUNTIF({E},">0")'
     critFail=f'COUNTIFS({D},"{crit}",{Fc},"{F}")'; highFail=f'COUNTIFS({D},"{high}",{Fc},"{F}")'
     scrTot=f'COUNTIF({D},"{scr}")'
@@ -229,6 +228,8 @@ def build(profile, lang, path):
     nAcc=f'COUNTIFS({Fc},"{ACC}",{E},">0")'
     critAcc=f'COUNTIFS({D},"{crit}",{Fc},"{ACC}")'
     accNoRat=f'(SUMPRODUCT(({Fc}="{ACC}")*({G}="")))'
+    passNoEv=(f'(SUMPRODUCT((({D}="{crit}")+({D}="{high}"))'
+              f'*({Fc}="{P}")*({G}="")))')
     applicable=f'({scoreTot}-{nNA})'
 
     sm=wb.create_sheet(t["summary_tab"]); wb.move_sheet(t["summary_tab"],-(len(wb.sheetnames)-1))
@@ -255,15 +256,18 @@ def build(profile, lang, path):
     v=sm.cell(row=r,column=2)
     if founder:
         chBlank=f'(COUNTIFS({D},"{crit}",{Fc},"")+COUNTIFS({D},"{high}",{Fc},""))'
-        anyRev=f'({nPass}+{nFail}+{nAcc}+{nNA}+({scrTot}-{scrOpen}))'
+        answered=f'({nPass}+{nFail}+{nAcc})'
+        coverage=f'IF({applicable}=0,0,{answered}/{applicable})'
+        anyRev=f'({answered}+{nNA}+({scrTot}-{scrOpen}))'
         v.value=(f'=IF({anyRev}=0,"{t["f_notrev"]}",'
-                 f'IF(OR({chBlank}>0,{scrOpen}>0,{naNoRat}>0,{accNoRat}>0),"{t["f_incomplete"]}",'
+                 f'IF(OR({chBlank}>0,{scrOpen}>0,{naNoRat}>0,{accNoRat}>0,'
+                 f'{passNoEv}>0,{coverage}<1),"{t["f_incomplete"]}",'
                  f'IF(({critFail}+{critAcc})>0,"{t["f_donot"]}",'
-                 f'IF({highFail}>0,"{t["f_fix"]}","{t["f_ready"]}"))))')
+                 f'IF({nFail}>0,"{t["f_fix"]}","{t["f_ready"]}"))))')
         vmap=[(t["f_notrev"],"808080"),(t["f_incomplete"],"B7791F"),(t["f_donot"],"C00000"),
               (t["f_fix"],"E8A200"),(t["f_ready"],"2E7D32")]
     else:
-        verified=f'({nPass}+COUNTIFS({Fc},"{PT}",{E},">0")+{nFail}+{nAcc})'
+        verified=f'({nPass}+{nPartial}+{nFail}+{nAcc})'
         coverage=f'IF({applicable}=0,0,{verified}/{applicable})'
         earnedW=f'(SUMIFS({E},{Fc},"{P}")+0.5*SUMIFS({E},{Fc},"{PT}"))'
         applW=f'(SUMIFS({E},{Fc},"{P}")+SUMIFS({E},{Fc},"{PT}")+SUMIFS({E},{Fc},"{F}"))'
@@ -272,11 +276,11 @@ def build(profile, lang, path):
                  f'+COUNTIFS({D},"{high}",{Fc},"")+COUNTIFS({D},"{high}",{Fc},"{NT}"))')
         anyRev=f'({verified}+{nNA}+({scrTot}-{scrOpen}))'
         v.value=(f'=IF({anyRev}=0,"{t["v_notrev"]}",'
-                 f'IF(OR({chUnrev}>0,{naNoRat}>0,{accNoRat}>0,{scrOpen}>0),"{t["v_incomplete"]}",'
+                 f'IF(OR({chUnrev}>0,{passNoEv}>0,{naNoRat}>0,{accNoRat}>0,{scrOpen}>0),"{t["v_incomplete"]}",'
                  f'IF(({critFail}+{critAcc})>0,"{t["v_block"]}",'
                  f'IF({highFail}>0,"{t["v_block_high"]}",'
                  f'IF({coverage}<1,"{t["v_incomplete"]}",'
-                 f'IF({passrate}<{PASS_THRESHOLD},"{t["v_fix"]}","{t["v_rc"]}"))))))')
+                 f'IF(({nFail}+{nPartial})>0,"{t["v_fix"]}","{t["v_rc"]}"))))))')
         vmap=[(t["v_notrev"],"808080"),(t["v_incomplete"],"B7791F"),(t["v_block"],"C00000"),
               (t["v_block_high"],"C00000"),(t["v_fix"],"E8A200"),(t["v_rc"],"2E7D32")]
     v.font=Font(name="Arial",bold=True,size=13,color="FFFFFF"); v.alignment=Alignment(horizontal="center",vertical="center")
@@ -296,12 +300,12 @@ def build(profile, lang, path):
                 fill=PatternFill("solid",fgColor=RED),font=Font(bold=True,color=RED_T)))
     r+=2
     if founder:
-        answered=f'({nPass}+{nFail}+{nAcc})'
         cov=f'IF({applicable}=0,0,{answered}/{applicable})'
         pr=f'IF({answered}=0,0,{nPass}/{answered})'
         metric(r,t["f_answered"],f"={cov}",pct=True); r+=1
         metric(r,t["f_passed"],f"={pr}",pct=True); r+=1
         metric(r,t["f_chblank"],f"={chBlank}",warn=True); r+=1
+        metric(r,t["m_passev"],f"={passNoEv}",warn=True); r+=1
         metric(r,t["f_critfail"],f"={critFail}",warn=True); r+=1
         metric(r,t["f_highfail"],f"={highFail}",warn=True); r+=1
         metric(r,t["m_acc"],f"=COUNTIF({Fc},\"{ACC}\")"); r+=1
@@ -314,6 +318,7 @@ def build(profile, lang, path):
         metric(r,t["m_verified"],f"={verified}"); r+=1
         metric(r,t["m_blocking"],f"=({critFail}+{highFail})",warn=True); r+=1
         metric(r,t["m_chunrev"],f"={chUnrev}",warn=True); r+=1
+        metric(r,t["m_passev"],f"={passNoEv}",warn=True); r+=1
         metric(r,t["m_narat"],f"=({naNoRat}+{accNoRat})",warn=True); r+=1
         metric(r,t["m_acc"],f"=COUNTIF({Fc},\"{ACC}\")"); r+=1
         metric(r,t["m_critacc"],f"={critAcc}",warn=True); r+=1
@@ -341,7 +346,7 @@ def build(profile, lang, path):
                 ew=f'COUNTIFS({A},$A{r},{Fc},"{P}")'
                 aw=f'(COUNTIFS({A},$A{r},{Fc},"{P}")+COUNTIFS({A},$A{r},{Fc},"{F}"))' 
             else:
-                ver=f'(COUNTIFS({A},$A{r},{Fc},"{P}")+COUNTIFS({A},$A{r},{Fc},"{PT}")+COUNTIFS({A},$A{r},{Fc},"{F}"))'
+                ver=f'(COUNTIFS({A},$A{r},{Fc},"{P}")+COUNTIFS({A},$A{r},{Fc},"{PT}")+COUNTIFS({A},$A{r},{Fc},"{F}")+COUNTIFS({A},$A{r},{Fc},"{ACC}"))'
                 ew=f'(SUMIFS({E},{A},$A{r},{Fc},"{P}")+0.5*SUMIFS({E},{A},$A{r},{Fc},"{PT}"))'
                 aw=f'(SUMIFS({E},{A},$A{r},{Fc},"{P}")+SUMIFS({E},{A},$A{r},{Fc},"{PT}")+SUMIFS({E},{A},$A{r},{Fc},"{F}"))'
             appl=f'({tot}-{na})'
@@ -370,6 +375,9 @@ def build(profile, lang, path):
     sm.column_dimensions["A"].width=40
     for col in ["B","C","D","E","F"]: sm.column_dimensions[col].width=15
     _guide(wb, t, lang)
+    wb.calculation.calcMode = "auto"
+    wb.calculation.fullCalcOnLoad = True
+    wb.calculation.forceFullCalc = True
     wb.save(path); return n
 
 
@@ -378,38 +386,44 @@ GUIDE = {
   "t1":"Verification types","t2":"Recommended tool stack",
   "h1":["Type","What it means","Typical tools","Good for","Do NOT assume","Owner action"],
   "r1":[
-   ["Automated","A tool checks code, configuration or the running site repeatedly.","Aikido, GitHub secret scanning, Dependabot, Lighthouse, Mozilla Observatory, axe","Secrets, dependencies, headers, obvious code patterns, asset size","A green scan proves the app is safe","Connect once, review every finding, rerun after changes"],
+   ["Automated","A tool checks code, configuration or the running site repeatedly.","Gitleaks, Semgrep Community, OSV-Scanner, Trivy, OWASP ZAP, axe","Secrets, dependencies, headers, obvious code patterns, asset size","A green scan proves the app is safe","Run locally or in CI, review every finding, rerun after changes"],
    ["AI review","An AI coding assistant reads the repository and explains likely issues.","Claude Code, Cursor, GitHub Copilot, ChatGPT/Codex","Locating relevant code, unsafe patterns, duplicated logic, test suggestions","The AI has tested production behaviour or understood every business rule","Ask for file/line evidence and verify important claims yourself"],
    ["Guided manual","A person follows a concrete test using accounts, browser tools or provider dashboards.","Two test accounts, browser DevTools, real inbox/phone, provider test mode","Authorization, persistence, payments, email, uploads, failure handling","A developer statement is equivalent to a successful test","Record result, screenshot and date in the Notes column"],
-   ["Automated E2E","A browser robot repeats a small number of core user journeys.","Ghost Inspector, mabl, Playwright, Checkly","Signup, login, create/edit, upload, payment, the primary workflow","Every changing UI detail needs a large test suite","Keep 5-10 stable critical-flow tests, run on each release"],
+   ["Automated E2E","A browser robot repeats a small number of core user journeys.","Playwright","Signup, login, create/edit, upload, payment, the primary workflow","Every changing UI detail needs a large test suite","Keep 5-10 stable critical-flow tests, run on each release"],
    ["Specialist","The answer needs operational evidence, business intent or legal/security judgement.","Developer, security reviewer, privacy/legal adviser, platform support","Backup restore, key rotation, GDPR/AI Act, incident response","The checklist can self-certify regulated or high-impact use","Escalate uncertain Critical/High answers before launch"],
   ],
   "h2":["Tool","Purpose","When to use","Coverage","Limitation","Practical setup"],
   "r2":[
-   ["Aikido Security","Repository and deployed-app risk scanning","Any app with GitHub/source access","Secrets, dependencies, code risks, configuration, some DAST","Does not prove business flows or legal compliance","Connect repo + deployment; review on each release"],
-   ["Ghost Inspector / mabl","Codeless browser-flow tests","Non-technical owner wants repeatable E2E checks","Functional reality, core journeys, visual breakage","Tests still require intentional expected results","Record 5-10 primary user journeys"],
+   ["Gitleaks + TruffleHog","Free/open-source secret scanning","Every repository and its full history","Known and high-entropy credential patterns","A hit still needs validity/placement review; rotate real leaks","Run locally and in CI over full history"],
+   ["Semgrep Community / CodeQL","Static code analysis; CodeQL is free for public GitHub repos","Language-supported codebases","Injection, insecure APIs and framework-specific patterns","No ruleset understands every business or authorization rule","Start with maintained security rules; triage with code context"],
+   ["OSV-Scanner / Trivy","Free/open-source dependency and supply-chain scanning","Lockfiles, containers and CI","Known advisories, vulnerable packages and images","Advisory presence is not exploitability; absence is not safety","Scan lockfiles/images in CI and triage reachability"],
+   ["OWASP ZAP","Free/open-source dynamic web scanner","A test deployment you are authorized to probe","Headers, exposed routes and common web vulnerabilities","Can change state or create load; does not understand business intent","Use passive/baseline mode first against staging"],
+   ["Playwright","Free/open-source browser-flow tests","Critical user journeys","Signup, login, persistence, authorization and regressions","Expected outcomes must be designed by a human","Keep a small stable suite using two test accounts"],
    ["Sentry","Production error and performance monitoring","Any public MVP","Real client/server failures and regressions","Detects failures after they occur; not a pre-launch test","Trigger one test error and confirm the alert arrives"],
    ["axe/WAVE + Lighthouse","Accessibility and frontend quality","Any web interface","Basic accessibility, asset and performance issues","Automated accessibility checks are incomplete","Run before launch and after major UI changes"],
-   ["vibecheck scanner","Deterministic static scan mapped to this checklist","Every review, first step","Secrets, RLS patterns, injection chain, config, deps","Findings are evidence, never sign-off","Run scripts/vibecheck.sh; triage FAIL/WARN/MANUAL"],
+   ["vibecheck","Review orchestration and lightweight static signals","Every review, as a checklist driver","Maps signals and manual work to this checklist","Less capable than dedicated scanners; NO_SIGNAL is not a Pass","Run scripts/vibecheck.sh; confirm WARN and complete MANUAL checks"],
   ],
  },
  "et": {
   "t1":"Kontrolli tuubid","t2":"Soovitatav tooriistakomplekt",
   "h1":["Tuup","Mida tahendab","Tuupilised tooriistad","Sobib","ARA eelda","Omaniku tegevus"],
   "r1":[
-   ["Automaatne","Tooriist kontrollib koodi, seadistust voi tootavat saiti korduvalt.","Aikido, GitHub secret scanning, Dependabot, Lighthouse, Mozilla Observatory, axe","Saladused, soltuvused, paised, ilmsed koodimustrid, varade suurus","Roheline skann toestab, et rakendus on turvaline","Uhenda kord, vaata iga leid ule, korda parast muudatusi"],
+   ["Automaatne","Tooriist kontrollib koodi, seadistust voi tootavat saiti korduvalt.","Gitleaks, Semgrep Community, OSV-Scanner, Trivy, OWASP ZAP, axe","Saladused, soltuvused, paised, ilmsed koodimustrid, varade suurus","Roheline skann toestab, et rakendus on turvaline","Kaivita kohapeal voi CI-s, vaata iga leid ule ja korda parast muudatusi"],
    ["AI ulevaatus","AI-abiline loeb hoidlat ja selgitab tenaoseid probleeme.","Claude Code, Cursor, GitHub Copilot, ChatGPT/Codex","Asjakohase koodi leidmine, ohtlikud mustrid, dubleeritud loogika, testisoovitused","AI on testinud tootmiskaitumist voi moistnud iga arireeglit","Kusi faili/rea toendit ja kontrolli olulised vaited ise"],
    ["Juhendatud kasitsi","Inimene labib konkreetse testi kontode, brauseri tooriistade voi tooulaudade abil.","Kaks testkontot, brauseri DevTools, paris postkast/telefon, teenuse testreziim","Volitamine, pusivus, maksed, e-post, uleslaadimised, torgete kaitumine","Arendaja vaide vordub onnestunud testiga","Salvesta tulemus, ekraanipilt ja kuupaev Margkmete veergu"],
-   ["Automaatne E2E","Brauserirobot kordab vaikest arvu pohilisi kasutajateid.","Ghost Inspector, mabl, Playwright, Checkly","Registreerimine, login, loomine/muutmine, uleslaadimine, makse, pohivoog","Iga muutuv liidese detail vajab suurt testikomplekti","Hoia 5-10 stabiilset kriitilise voo testi, kaivita igal valjalaskel"],
+   ["Automaatne E2E","Brauserirobot kordab vaikest arvu pohilisi kasutajateid.","Playwright","Registreerimine, login, loomine/muutmine, uleslaadimine, makse, pohivoog","Iga muutuv liidese detail vajab suurt testikomplekti","Hoia 5-10 stabiilset kriitilise voo testi, kaivita igal valjalaskel"],
    ["Spetsialist","Vastus vajab operatiivset toendit, arikavatsust voi oigus-/turvahinnangut.","Arendaja, turvaulevaataja, privaatsus-/oigusnounik, platvormi tugi","Varukoopia taaste, votmete rotatsioon, GDPR/AI-maarus, intsidendid","Kontrollnimekiri saab ise kinnitada reguleeritud voi suure mojuga kasutust","Eskaleeri ebakindlad Krit/Korge vastused enne avaldamist"],
   ],
   "h2":["Tooriist","Otstarve","Millal kasutada","Kaetus","Piirang","Praktiline seadistus"],
   "r2":[
-   ["Aikido Security","Hoidla ja juurutatud rakenduse riskiskann","Iga app GitHub/lahtekoodi ligipaasuga","Saladused, soltuvused, koodiriskid, seadistus, osaline DAST","Ei toesta arivooge ega oiguslikku vastavust","Uhenda repo + juurutus; vaata ule igal valjalaskel"],
-   ["Ghost Inspector / mabl","Koodivabad brauserivoo testid","Mittetehniline omanik tahab korratavaid E2E kontrolle","Funktsionaalne reaalsus, pohiteekonnad, visuaalne katkiminek","Testid vajavad siiski teadlikke oodatud tulemusi","Salvesta 5-10 peamist kasutajateekonda"],
+   ["Gitleaks + TruffleHog","Tasuta/avatud lahtekoodiga saladuste skann","Iga hoidla ja kogu selle ajalugu","Tuntud ja suure entroopiaga mandaadimustrid","Leid vajab kehtivuse/asukoha kontrolli; paris leke roteeri","Kaivita kohapeal ja CI-s kogu ajaloo peal"],
+   ["Semgrep Community / CodeQL","Staatiline koodianaluus; CodeQL on avalikel GitHubi hoidlail tasuta","Toetatud keeltega koodibaasid","Injektsioon, ohtlikud API-d ja raamistikumustrid","Ukski reeglistik ei moista koiki ari- ega volitusreegleid","Alusta hooldatud turvareeglitest; hinda koodikontekstis"],
+   ["OSV-Scanner / Trivy","Tasuta/avatud soltuvus- ja tarneahelaskann","Lukufailid, konteinerid ja CI","Tuntud turvateated, haavatavad paketid ja tommised","Turvateade ei toesta kasutatavust; puudumine ei toesta turvalisust","Skanni lukufaile/tommiseid CI-s ja hinda ulatuvust"],
+   ["OWASP ZAP","Tasuta/avatud dunaamiline veebiskanner","Testjuurutus, mida tohib skannida","Paisid, avatud marsruudid ja levinud veebihaavatavused","Voib muuta olekut voi tekitada koormust; arikavatsust ei moista","Alusta passiivse/baseline-reziimiga stagingus"],
+   ["Playwright","Tasuta/avatud brauserivoogude testid","Kriitilised kasutajateekonnad","Registreerimine, login, pusivus, volitamine, regressioonid","Oodatavad tulemused peab inimene kavandama","Hoia vaike stabiilne komplekt kahe testkontoga"],
    ["Sentry","Tootmisvigade ja joudluse seire","Iga avalik MVP","Paris kliendi-/serveritorked ja regressioonid","Tuvastab torked parast toimumist; pole avaldamiseelne test","Vallanda uks testviga ja kinnita teate saabumine"],
    ["axe/WAVE + Lighthouse","Ligipaasetavus ja frontendi kvaliteet","Iga veebiliides","Pohiligipaasetavus, varade ja joudluse probleemid","Automaatsed ligipaasetavuse kontrollid on mittetaielikud","Kaivita enne avaldamist ja parast suuremaid UI-muudatusi"],
-   ["vibecheck skanner","Deterministlik staatiline skann, seotud selle nimekirjaga","Iga ulevaatus, esimene samm","Saladused, RLS-mustrid, injektsiooniahel, seadistus, soltuvused","Leiud on toendid, mitte kunagi kinnitus","Kaivita scripts/vibecheck.sh; triazeeri FAIL/WARN/MANUAL"],
+   ["vibecheck","Ulevaatuse orkestreerimine ja kerged staatilised signaalid","Iga ulevaatus, kontrollnimekirja juhtimiseks","Seob signaalid ja kasitoo selle nimekirjaga","Norgem kui spetsiaalsed skannerid; NO_SIGNAL pole Korras","Kaivita scripts/vibecheck.sh; kinnita WARN ja tee MANUAL kontrollid"],
   ],
  },
 }

@@ -1,7 +1,7 @@
 {
   "name": "vibecheck",
-  "version": "0.2.0",
-  "description": "Automated + semi-automated technical review of vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0). Runs static scans for architecture fit, secrets, access control, faked functionality, cost blast radius, prompt injection and config hygiene; probes Supabase RLS live; and produces a scored review report mapped to an 89-item checklist including GDPR and EU AI Act items.",
+  "version": "0.3.0",
+  "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): lightweight static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening. Not a security certification or replacement for dedicated scanners.",
   "author": {
     "name": "Goplex / Jaak Laineste"
   },

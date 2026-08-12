@@ -11,12 +11,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCANNER = os.path.join(REPO, "scripts", "vibecheck.sh")
 FIXTURES = os.path.join(REPO, "tests", "fixtures")
+sys.path.insert(0, os.path.join(REPO, "scripts"))
+import items
 
 
 def git(cwd, *args):
@@ -24,7 +27,7 @@ def git(cwd, *args):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def scan(fixture, as_git_repo=True, extra_setup=None):
+def scan(fixture, as_git_repo=True, extra_setup=None, scanner_args=None):
     """Copy a fixture to a temp dir, optionally git-init it, and scan it."""
     tmp = tempfile.mkdtemp(prefix="vibecheck-test-")
     try:
@@ -38,7 +41,7 @@ def scan(fixture, as_git_repo=True, extra_setup=None):
             git(work, "commit", "-q", "-m", "fixture")
         if extra_setup:
             extra_setup(work)
-        out = subprocess.run(["bash", SCANNER, work], capture_output=True,
+        out = subprocess.run(["bash", SCANNER] + list(scanner_args or []) + [work], capture_output=True,
                              text=True, timeout=180)
         findings = {}
         for line in out.stdout.splitlines():
@@ -63,7 +66,7 @@ class ScannerTestCase(unittest.TestCase):
 
 
 class TestVulnerableApp(ScannerTestCase):
-    """Everything the scanner claims to detect must actually fire."""
+    """Every intentionally planted risky pattern must produce a warning."""
 
     @classmethod
     def setUpClass(cls):
@@ -74,36 +77,36 @@ class TestVulnerableApp(ScannerTestCase):
         self.assertEqual(self.proc.returncode, 0)
 
     def test_hardcoded_secrets(self):
-        self.assertStatus(self.f, "secrets.hardcoded", "FAIL")
-        self.assertStatus(self.f, "secrets.known_prefixes", "FAIL")
+        self.assertStatus(self.f, "secrets.hardcoded", "WARN")
+        self.assertStatus(self.f, "secrets.known_prefixes", "WARN")
 
-    def test_service_role_in_client_code_is_fail_not_warn(self):
-        self.assertStatus(self.f, "secrets.service_role", "FAIL")
+    def test_service_role_in_client_code_is_warning_requiring_confirmation(self):
+        self.assertStatus(self.f, "secrets.service_role", "WARN")
 
     def test_rls(self):
-        self.assertStatus(self.f, "rls.missing", "FAIL")      # profiles has no RLS
-        self.assertStatus(self.f, "rls.permissive", "FAIL")   # using (true)
+        self.assertStatus(self.f, "rls.missing", "WARN")      # profiles has no RLS
+        self.assertStatus(self.f, "rls.permissive", "WARN")   # using (true)
         self.assertStatus(self.f, "rls.anon_write", "WARN")
 
     def test_sql_injection(self):
-        self.assertStatus(self.f, "inject.sql", "FAIL")
+        self.assertStatus(self.f, "inject.sql", "WARN")
 
     def test_llm_cost_and_injection_chain(self):
-        self.assertStatus(self.f, "cost.client_llm", "FAIL")
-        self.assertStatus(self.f, "cost.no_ratelimit", "FAIL")
-        self.assertStatus(self.f, "inject.llm_to_exec", "FAIL")
+        self.assertStatus(self.f, "cost.client_llm", "WARN")
+        self.assertStatus(self.f, "cost.no_ratelimit", "WARN")
+        self.assertStatus(self.f, "inject.llm_to_exec", "WARN")
         self.assertStatus(self.f, "inject.prompt_interpolation", "WARN")
 
     def test_webhook_without_signature(self):
-        self.assertStatus(self.f, "integ.webhook_sig", "FAIL")
+        self.assertStatus(self.f, "integ.webhook_sig", "WARN")
 
     def test_architecture(self):
-        self.assertStatus(self.f, "arch.datastore", "FAIL")        # sqlite + vercel
-        self.assertStatus(self.f, "arch.handrolled_auth", "FAIL")  # md5 + Math.random
+        self.assertStatus(self.f, "arch.datastore", "WARN")        # sqlite + vercel
+        self.assertStatus(self.f, "arch.handrolled_auth", "WARN")  # md5 + Math.random
         self.assertStatus(self.f, "arch.mixed_stack", "WARN")      # pg + mongoose + prisma
 
     def test_lockfile_and_hygiene(self):
-        self.assertStatus(self.f, "deps.lockfile", "FAIL")
+        self.assertStatus(self.f, "deps.lockfile", "WARN")
         self.assertStatus(self.f, "errors.swallowed", "WARN")
         self.assertStatus(self.f, "inject.xss", "WARN")
         self.assertStatus(self.f, "authz.client_admin", "WARN")
@@ -127,7 +130,7 @@ class TestVulnerableApp(ScannerTestCase):
 
 
 class TestCleanApp(ScannerTestCase):
-    """The same shapes, done right, must produce no FAIL."""
+    """The same shapes, done right, must produce no warnings for those checks."""
 
     @classmethod
     def setUpClass(cls):
@@ -137,25 +140,35 @@ class TestCleanApp(ScannerTestCase):
         fails = {k: v["title"] for k, v in self.f.items() if v["status"] == "FAIL"}
         self.assertEqual(fails, {}, f"false positives on a clean app: {fails}")
 
+    def test_every_declared_check_emits_a_result(self):
+        self.assertEqual(set(self.f), set(items.SCANNER_CHECKS))
+
     def test_positive_detections(self):
-        self.assertStatus(self.f, "rls.missing", "PASS")
-        self.assertStatus(self.f, "rls.permissive", "PASS")
-        self.assertStatus(self.f, "inject.sql", "PASS")
-        self.assertStatus(self.f, "integ.webhook_sig", "PASS")
-        self.assertStatus(self.f, "deps.lockfile", "PASS")
-        self.assertStatus(self.f, "secrets.gitignore", "PASS")
-        self.assertStatus(self.f, "arch.handrolled_auth", "PASS")
+        self.assertStatus(self.f, "rls.missing", "NO_SIGNAL")
+        self.assertStatus(self.f, "rls.permissive", "NO_SIGNAL")
+        self.assertStatus(self.f, "inject.sql", "NO_SIGNAL")
+        self.assertStatus(self.f, "integ.webhook_sig", "NO_SIGNAL")
+        self.assertStatus(self.f, "deps.lockfile", "NO_SIGNAL")
+        self.assertStatus(self.f, "secrets.gitignore", "NO_SIGNAL")
+        self.assertStatus(self.f, "arch.handrolled_auth", "NO_SIGNAL")
 
     def test_library_detection_uses_imports_not_bare_words(self):
-        self.assertStatus(self.f, "inject.validation", "PASS")   # zod imported
-        self.assertStatus(self.f, "errors.tracking", "PASS")     # @sentry/node imported
-        self.assertStatus(self.f, "cost.no_ratelimit", "PASS")   # @upstash/ratelimit
+        self.assertStatus(self.f, "inject.validation", "NO_SIGNAL")   # zod imported
+        self.assertStatus(self.f, "errors.tracking", "NO_SIGNAL")     # @sentry/node imported
+        self.assertStatus(self.f, "cost.no_ratelimit", "NO_SIGNAL")   # @upstash/ratelimit
 
     def test_ai_disclosure_found_in_ui(self):
-        self.assertStatus(self.f, "aiact.transparency", "PASS")
+        self.assertStatus(self.f, "aiact.transparency", "NO_SIGNAL")
 
     def test_server_side_llm_not_flagged_as_client(self):
-        self.assertStatus(self.f, "cost.client_llm", "PASS")
+        self.assertStatus(self.f, "cost.client_llm", "NO_SIGNAL")
+
+    def test_direct_provider_fetch_is_not_called_indirect_injection(self):
+        self.assertStatus(self.f, "inject.indirect", "NO_SIGNAL")
+
+    def test_dependency_audit_is_offline_by_default(self):
+        self.assertStatus(self.f, "deps.audit", "MANUAL")
+        self.assertIn("not run by default", self.f["deps.audit"]["title"])
 
 
 class TestDocsOnly(ScannerTestCase):
@@ -174,8 +187,8 @@ class TestDocsOnly(ScannerTestCase):
         self.assertStatus(self.f, "arch.handrolled_auth", "WARN")
         self.assertNotEqual(self.f["arch.handrolled_auth"]["status"], "FAIL")
         # the word "webhook" in prose is not a webhook handler
-        self.assertStatus(self.f, "integ.webhook_sig", "PASS")
-        self.assertIn("No webhook handlers", self.f["integ.webhook_sig"]["title"])
+        self.assertStatus(self.f, "integ.webhook_sig", "NO_SIGNAL")
+        self.assertIn("No webhook-handler signal", self.f["integ.webhook_sig"]["title"])
 
     def test_no_false_passes_from_prose(self):
         """'joi' inside 'join', 'PostHog' in a sentence — these used to be
@@ -197,9 +210,9 @@ class TestGitHistory(ScannerTestCase):
             git(work, "commit", "-q", "-m", "remove env")
 
         f, proc = scan("clean-app", extra_setup=commit_then_delete_env)
-        self.assertStatus(f, "secrets.env_tracked", "PASS")     # gone from the tree
-        self.assertStatus(f, "secrets.env_history", "FAIL")     # still in history
-        self.assertStatus(f, "secrets.history_content", "FAIL")
+        self.assertStatus(f, "secrets.env_tracked", "NO_SIGNAL")  # gone from tree
+        self.assertStatus(f, "secrets.env_history", "WARN")       # still in history
+        self.assertStatus(f, "secrets.history_content", "WARN")
         self.assertNotIn("sk-ant-FAKEHISTORYFAKEHISTORY", proc.stdout)
 
     def test_non_git_directory_degrades_gracefully(self):
@@ -218,7 +231,81 @@ class TestPathsWithSpaces(ScannerTestCase):
                 fh.write('const k = "sk-ant-SPACEYFAKEFAKEFAKE";\n')
 
         f, _ = scan("clean-app", extra_setup=add_spacey_file)
-        self.assertStatus(f, "secrets.known_prefixes", "FAIL")
+        self.assertStatus(f, "secrets.known_prefixes", "WARN")
+
+
+class TestAdversarialScannerCases(ScannerTestCase):
+    def test_modern_supabase_secret_is_detected_and_redacted(self):
+        secret = "sb_secret_FAKEFAKEFAKEFAKEFAKEFAKE"
+
+        def add_secret(work):
+            with open(os.path.join(work, "src", "secret.ts"), "w") as fh:
+                fh.write('const key = "%s";\n' % secret)
+
+        f, proc = scan("clean-app", extra_setup=add_secret)
+        self.assertStatus(f, "secrets.known_prefixes", "WARN")
+        self.assertNotIn(secret, proc.stdout)
+        self.assertIn("REDACTED", proc.stdout)
+
+    def test_multiline_create_table_without_rls_is_found(self):
+        def add_sql(work):
+            path = os.path.join(work, "db", "multiline.sql")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write("CREATE\n TABLE IF NOT EXISTS private_notes (id uuid);\n")
+
+        f, _ = scan("clean-app", extra_setup=add_sql)
+        self.assertStatus(f, "rls.missing", "WARN")
+        self.assertIn("private_notes", f["rls.missing"]["evidence"])
+
+    def test_rls_in_another_schema_does_not_mask_missing_rls(self):
+        def add_sql(work):
+            path = os.path.join(work, "db", "schemas.sql")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write("CREATE TABLE tenant.accounts (id uuid);\n"
+                         "ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;\n")
+
+        f, _ = scan("clean-app", extra_setup=add_sql)
+        self.assertStatus(f, "rls.missing", "WARN")
+        self.assertIn("tenant.accounts", f["rls.missing"]["evidence"])
+
+    def test_untracked_lockfile_is_not_treated_as_reproducible(self):
+        def replace_after_commit(work):
+            os.remove(os.path.join(work, "package-lock.json"))
+            with open(os.path.join(work, "bun.lock"), "w") as fh:
+                fh.write("lockfileVersion = 1\n")
+
+        f, _ = scan("clean-app", extra_setup=replace_after_commit)
+        self.assertStatus(f, "deps.lockfile", "WARN")
+        self.assertIn("not tracked", f["deps.lockfile"]["title"])
+
+    def test_typescript_client_candidate_is_scanned(self):
+        def add_client_ts(work):
+            with open(os.path.join(work, "src", "browser.ts"), "w") as fh:
+                fh.write('const role = "service_role";\n')
+
+        f, _ = scan("clean-app", extra_setup=add_client_ts)
+        self.assertStatus(f, "secrets.service_role", "WARN")
+        self.assertIn("client-reachable candidate", f["secrets.service_role"]["title"])
+
+    def test_server_tsx_is_not_labeled_client_reachable(self):
+        def add_server_tsx(work):
+            path = os.path.join(work, "src", "server", "render.tsx")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write('const role = "service_role";\n')
+
+        f, _ = scan("clean-app", extra_setup=add_server_tsx)
+        self.assertStatus(f, "secrets.service_role", "WARN")
+        self.assertNotIn("client-reachable candidate", f["secrets.service_role"]["title"])
+
+    def test_nonexistent_repo_is_scanner_failure(self):
+        proc = subprocess.run(["bash", SCANNER, "/definitely/not/a/vibecheck/repo"],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn('"error"', proc.stdout)
+        self.assertNotIn('"done":true', proc.stdout)
 
 
 if __name__ == "__main__":

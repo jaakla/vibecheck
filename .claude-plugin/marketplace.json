@@ -1,0 +1,30 @@
+{
+  "name": "goplex-plugins",
+  "owner": {
+    "name": "Goplex / Jaak Laineste",
+    "url": "https://github.com/jaakla"
+  },
+  "description": "Review and audit plugins for vibecoded applications.",
+  "plugins": [
+    {
+      "name": "vibecheck",
+      "source": "./",
+      "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening.",
+      "homepage": "https://github.com/jaakla/vibecheck",
+      "repository": "https://github.com/jaakla/vibecheck",
+      "license": "MIT",
+      "category": "security",
+      "keywords": [
+        "security-review",
+        "vibecoding",
+        "supabase",
+        "rls",
+        "audit",
+        "checklist",
+        "prompt-injection",
+        "gdpr",
+        "eu-ai-act"
+      ]
+    }
+  ]
+}

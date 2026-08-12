@@ -46,3 +46,4 @@ pnpm-lock.yaml
 *.xlsx
 out/
 tests/tmp/
+outputs/

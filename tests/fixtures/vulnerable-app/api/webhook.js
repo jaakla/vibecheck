@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// Webhook handler with no signature verification: integ.webhook_sig FAIL
+// Webhook handler with no signature verification: integ.webhook_sig WARN
 router.post("/api/webhook/stripe", async (req, res) => {
   const event = req.body;
   if (event.type === "checkout.session.completed") {

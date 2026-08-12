@@ -1,0 +1,8 @@
+{"kind":"deck","id":"pr/lxmbgf","name":"Deck"}
+{"kind":"layout","layoutId":"a19df44e-7edc-4d58-a730-59c426070c01","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"5d439387-8c6c-4a56-89f6-a082f719869f","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/1wqm7q","slide":1,"title":"How to review a","textShapes":3}
+{"kind":"textbox","id":"sh/sfi5kjap","slide":1,"name":"Title-3-1","text":"How to review a\nvibe-coded app","textPreview":"How to review a | vibe-coded app","textChars":30,"textLines":2,"bbox":[41.33,182.55,992,261.57]}
+{"kind":"textbox","id":"sh/7e9oret4","slide":1,"name":"Subtitle-4-2","text":"A practical pre-launch review","textPreview":"A practical pre-launch review","textChars":29,"textLines":1,"bbox":[41.33,497.87,598.67,113.41]}
+{"kind":"textbox","id":"sh/6dgni9sj","slide":1,"name":"Subtitle-4-3","text":"WORKSHOP","textPreview":"WORKSHOP","textChars":8,"textLines":1,"bbox":[41.33,41.18,598.67,68.15]}
+{"kind":"notes","id":"nt/1wqm7q","slide":1,"text":""}

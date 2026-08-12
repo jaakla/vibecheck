@@ -18,13 +18,13 @@ Classify every finding into one of three tiers before touching anything:
 
 **AUTO — mechanical, deterministic, safe to apply after showing the diff:**
 - `.env` tracked → `git rm --cached` + add to `.gitignore`
-- Missing lockfile → generate it (`npm install --package-lock-only`)
 - Wildcard CORS on a known endpoint → replace `*` with an allowlist constant
 - Empty catch blocks → add error logging (never leave silent)
 - `console.log` of secrets/PII → remove or redact
 - Missing `.gitignore` entries for build/secret artifacts
 
 **PROPOSE — needs a project-specific value; draft it and ask before applying:**
+- Missing lockfile → with explicit permission for networked registry resolution, generate it without lifecycle scripts (`npm install --package-lock-only --ignore-scripts --no-audit --fund=false`). First inspect `.npmrc`/registry configuration; never send credentials to an untrusted registry.
 - `rls.missing` → generate `alter table X enable row level security;` plus a starter owner policy, but the owner column (`user_id`?) must be confirmed
 - `rls.permissive` (`using(true)`) → propose `using (auth.uid() = <owner_col>)`; confirm the column and whether the table is meant to be public
 - `inject.sql` → rewrite as parameterized query / ORM call
@@ -48,8 +48,8 @@ Classify every finding into one of three tiers before touching anything:
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply_safe_fixes.sh <repo_dir> --dry-run
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply_safe_fixes.sh <repo_dir>
    ```
-   It only does the non-destructive, reversible actions (untrack `.env` while leaving it on disk, extend `.gitignore`, generate a lockfile) and prints what it changed. It never rewrites history or rotates keys.
-6. **Re-run `vibecheck-scan` and confirm each targeted finding moved to PASS.** Report any that did not. A fix that doesn't clear the scanner isn't done.
+   It only does scoped, reversible repository actions and prints what it did. Lockfile generation is skipped unless the user has approved registry access and you add `--allow-network-lockfile`; even then lifecycle scripts and the implicit audit are disabled. It never rewrites history or rotates keys.
+6. **Re-run `vibecheck-scan` and confirm each targeted warning cleared to `NO_SIGNAL`, then verify the control independently.** A cleared regex signal is not proof that the vulnerability is fixed. Report any remaining warnings or failed functional/security tests.
 7. Summarise: what was fixed, what still needs the user's decision, and the outstanding ADVISORY actions.
 
 ## Hard rules

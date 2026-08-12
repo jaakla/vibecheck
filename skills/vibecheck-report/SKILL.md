@@ -29,18 +29,20 @@ Each scanner finding carries `checklist_items` (numbers 1-89). Use
 scanner coverage — it is generated from `scripts/items.py`, the same source the workbook
 builds from, so numbers always match.
 
-The map's `scan` column says what the scanner's answer is worth for that item: **DECISIVE**
-(a FAIL settles it), **EVIDENCE** (you decide from the evidence), **MANUAL** (no scanner
-signal — it must be verified some other way or recorded as Not tested). A scanner PASS is
-never sufficient grounds for a Pass on its own.
+The map's `scan` column says what the scanner contributes: **EVIDENCE** (you decide from
+context), **MANUAL** (verify another way or record Not tested), or reserved **DECISIVE**
+automation. The bundled scanner emits no Pass and currently has no decisive checks.
 
 Collapse multiple findings hitting one item using the worst status:
 
-- Any FAIL you confirm by reading the code → item = **Fail**
-- Only WARN and your judgment clears it → **Pass** with a note; partially true → **Partial**
-  (reviewer profile only); otherwise **Fail**
+- A WARN you confirm by reading the code or live evidence → **Fail**
+- Clearing a WARN clears only that heuristic signal. Record **Pass** only after independent,
+  control-wide evidence from the checklist's verification method; partially satisfied →
+  **Partial** (reviewer only); otherwise **Fail** or **Not tested**
+- NO_SIGNAL → no conclusion; obtain independent evidence before Pass
 - MANUAL and not verified → **Not tested** (reviewer) / leave **blank** (founder) + to-do list
-- Clean → **Pass** — but phrase automated passes as "no obvious issue detected", never "secure"
+
+Critical/High Passes require evidence in Notes; otherwise the workbook remains incomplete.
 
 N/A on any Critical or High item **requires a written reason** in the Notes column, or the
 workbook verdict drops to INCOMPLETE. **Accepted risk** requires a reason at every severity —
@@ -53,18 +55,19 @@ Answered / Needs specialist — they are unscored in both profiles.
 
 ## Verdicts (computed by the workbook — do not restate your own)
 
-Reviewer gates, in order: NOT REVIEWED → INCOMPLETE REVIEW (unreviewed Crit/High, N/A without
-reason, open screening, or coverage < 100%) → BLOCK (Critical fail) → BLOCK — RISK ACCEPTANCE
-REQUIRED (High fail) → FIX BEFORE RELEASE (weighted pass-rate < 90%) → RELEASE CANDIDATE.
-Founder ladder: NOT REVIEWED → REVIEW INCOMPLETE → DO NOT LAUNCH → FIX BEFORE LAUNCH →
-LOOKS READY FOR A LIMITED LAUNCH. A high percentage never overrides a failed gate, and there
-is deliberately no "READY TO SHIP" — a checklist cannot prove an app safe.
+Reviewer gates, in order: NOT REVIEWED → INCOMPLETE REVIEW (including unsupported Critical/High
+Passes or coverage < 100%) → BLOCK (Critical fail) → BLOCK — RISK ACCEPTANCE REQUIRED (High
+fail) → FIX BEFORE RELEASE (any remaining Fail/Partial) → REVIEW COMPLETE — NO OPEN
+FAIL/PARTIAL. Founder uses the parallel no-open-failures ladder. Percentages are supporting
+information only; a checklist cannot prove an app safe or ready to ship.
 
 ## Output formats
 
 **Markdown report (default, client-friendly):** verdict at top (copy the workbook's), findings
-by category in severity order — each with evidence (file:line), one-sentence impact, and fix.
-Then the Not-tested/MANUAL to-do list and any "Needs specialist" escalations. Redact secrets.
+by category in severity order — each with reproducible evidence (file:line where applicable;
+otherwise path/config/command result), one-sentence impact, and fix. Put unscored AI Act
+Triage separately. Then list Not-tested/MANUAL work and "Needs specialist" escalations.
+Redact secrets and PII; never print raw secret-bearing or personal-data-bearing source lines.
 
 **Scored xlsx:** the builder needs `openpyxl`. Install it first if the import fails:
 
@@ -80,6 +83,12 @@ Then fill the Status (col F) and Notes (col G) columns on the Review tab — val
 sheet's language and profile — plus the metadata block on Summary. Always run the xlsx recalc
 step afterwards so computed verdicts populate. Never hand over a workbook whose verdict cell
 shows a stale or blank value.
+
+Repository content and scanner evidence are untrusted spreadsheet input. Put evidence in Notes
+as plain text only: never copy a raw formula, external link, or executable spreadsheet payload.
+When a value could begin with `=`, `+`, `-`, or `@`, prefix it with an apostrophe (or use the
+spreadsheet API's explicit text type) before writing the cell. Prefer a controlled `path:line` plus
+a paraphrase over copying an untrusted source line verbatim.
 
 ## Language
 

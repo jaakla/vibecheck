@@ -9,11 +9,10 @@ Pass/Fail/N/A, simplified verdict). Item numbers are identical in both.
 Severity weights (reviewer profile): Critical=5, High=3, Medium=2, Low=1. "Triage" rows
 (EU AI Act screening) carry weight 0 and are excluded from all scores in both profiles.
 
-`scan` = what the scanner's answer is worth for that item. A static scan can prove a failure
-but never prove a pass, and the tiers say so:
+`scan` = what the scanner contributes for that item. Regex/path heuristics generally prove
+neither a vulnerability nor its absence, and the tiers say so:
 
-- **DECISIVE** — when the check fires, the item is a Fail with no interpretation needed.
-  A clean run still means only "no signal found", never a Pass.
+- **DECISIVE** — reserved for conclusive automation. The bundled scanner currently has none.
 - **EVIDENCE** — the check surfaces material; a human decides the item either way.
 - **MANUAL** — no scanner signal; the item is listed as an explicit reviewer to-do so it
   cannot be silently skipped.
@@ -21,35 +20,35 @@ but never prove a pass, and the tiers say so:
 | # | Category | Severity | scan | Verification | Tools | EN (technical) |
 |---|----------|----------|------|--------------|-------|----------------|
 | 1 | 1. Architecture reasonableness | High | MANUAL | AI + SPEC | AI stack inventory, second developer opinion | Stack choices are mainstream and maintainable: widely-used language, framework and database with documentation, community and hireable developers |
-| 2 | 1. Architecture reasonableness | High | DECISIVE | AUTO + AI | vibecheck scanner, AI review | Primary data store fits the workload and hosting model: managed persistent DB for multi-user data; no SQLite/JSON-file/localStorage as system of record on serverless or ephemeral hosting |
-| 3 | 1. Architecture reasonableness | High | DECISIVE | AUTO + AI | vibecheck scanner, auth-library inventory | Authentication is a proven provider or library (Supabase Auth, Firebase, Auth0, NextAuth, Clerk, etc.); no hand-rolled password hashing, session tokens or JWT schemes |
+| 2 | 1. Architecture reasonableness | High | EVIDENCE | AUTO + AI | vibecheck scanner, AI review | Primary data store fits the workload and hosting model: managed persistent DB for multi-user data; no SQLite/JSON-file/localStorage as system of record on serverless or ephemeral hosting |
+| 3 | 1. Architecture reasonableness | High | EVIDENCE | AUTO + AI | vibecheck scanner, auth-library inventory | Authentication is a proven provider or library (Supabase Auth, Firebase, Auth0, NextAuth, Clerk, etc.); no hand-rolled password hashing, session tokens or JWT schemes |
 | 4 | 1. Architecture reasonableness | Medium | MANUAL | AI | AI architecture summary (5-sentence test) | Complexity is proportional to the problem: no premature microservices/queues/orchestration for an MVP; no single god-module holding all logic |
 | 5 | 1. Architecture reasonableness | Medium | EVIDENCE | AUTO + AI | vibecheck scanner dep count, AI review | One consistent pattern per concern: a single data-access layer, one state-management approach, one styling system - no parallel duplicated stacks accreted across sessions |
 | 6 | 1. Architecture reasonableness | Medium | EVIDENCE | AUTO + MAN | vibecheck scanner, platform limits docs | Hosting matches runtime needs: long-running jobs, websockets, cron and background work are supported by the platform's execution model (timeouts, persistent processes) |
-| 7 | 2. Secrets & credentials | Critical | DECISIVE | AUTO + AI | Aikido, gitleaks, vibecheck scanner | No secret-like literals in frontend source |
-| 8 | 2. Secrets & credentials | Critical | DECISIVE | AUTO | Aikido, gitleaks, trufflehog | No provider key prefixes shipped to client (sk-, AKIA, service_role, etc.) |
-| 9 | 2. Secrets & credentials | Critical | DECISIVE | AUTO | gitleaks, trufflehog, GitHub secret scanning | No secrets in current tree, git history, or public build bundle (.env excluded from VCS) |
+| 7 | 2. Secrets & credentials | Critical | EVIDENCE | AUTO + AI | Gitleaks, TruffleHog, vibecheck scanner | No secret-like literals in frontend source |
+| 8 | 2. Secrets & credentials | Critical | EVIDENCE | AUTO | Gitleaks, TruffleHog, provider secret scanning | No provider key prefixes shipped to client (sk-, AKIA, service_role, etc.) |
+| 9 | 2. Secrets & credentials | Critical | EVIDENCE | AUTO | gitleaks, trufflehog, GitHub secret scanning | No secrets in current tree, git history, or public build bundle (.env excluded from VCS) |
 | 10 | 2. Secrets & credentials | High | MANUAL | MAN + AI | Vercel/Supabase env dashboard, AI review | Secrets injected securely at runtime; not in code/images/logs; access restricted; rotation supported |
-| 11 | 2. Secrets & credentials | Critical | DECISIVE | SPEC | Provider dashboards, developer evidence | Any exposed active credential treated as an incident: rotated, sessions revoked, logs inspected, removed from history |
-| 12 | 3. Authorization & access control | Critical | DECISIVE | AI + MAN | Claude Code/Cursor review, two test accounts | Authorization enforced server-side, default-deny |
-| 13 | 3. Authorization & access control | Critical | DECISIVE | MAN + E2E | Two accounts + URL ID swap; Playwright, Ghost Inspector | Object-level authorization: users cannot reach records they don't own (IDOR) |
-| 14 | 3. Authorization & access control | Critical | DECISIVE | AUTO + MAN | vibecheck supabase probe, curl with anon key | No data readable/writable by an unauthenticated/anon caller unless intended public |
+| 11 | 2. Secrets & credentials | Critical | EVIDENCE | SPEC | Provider dashboards, developer evidence | Any exposed active credential treated as an incident: rotated, sessions revoked, logs inspected, removed from history |
+| 12 | 3. Authorization & access control | Critical | EVIDENCE | AI + MAN | Claude Code/Cursor review, two test accounts | Authorization enforced server-side, default-deny |
+| 13 | 3. Authorization & access control | Critical | EVIDENCE | MAN + E2E | Two accounts + URL ID swap; Playwright | Object-level authorization: users cannot reach records they don't own (IDOR) |
+| 14 | 3. Authorization & access control | Critical | EVIDENCE | AUTO + MAN | vibecheck supabase probe, curl with anon key | No data readable/writable by an unauthenticated/anon caller unless intended public |
 | 15 | 3. Authorization & access control | Critical | MANUAL | MAN + E2E | Two-organisation test; Playwright | Tenant isolation: no cross-tenant data access |
 | 16 | 3. Authorization & access control | Critical | EVIDENCE | MAN + AI | Crafted request as normal user, AI review | Privileged/admin actions enforced server-side (Critical where admin functions are meaningful) |
-| 17 | 4. Product readiness - is it real? (not a security score) | High | EVIDENCE | MAN + E2E | Reload + second device; Ghost Inspector, mabl | Data truly persists (verified in the datastore) |
+| 17 | 4. Product readiness - is it real? (not a security score) | High | EVIDENCE | MAN + E2E | Reload + second device; Playwright | Data truly persists (verified in the datastore) |
 | 18 | 4. Product readiness - is it real? (not a security score) | High | EVIDENCE | MAN + AI | Varied-input probing, scanner mock markers | Behaviour matches the documented product claim; mocks/fixtures/fallbacks not presented as live output |
-| 19 | 4. Product readiness - is it real? (not a security score) | Medium | EVIDENCE | MAN + E2E | Real external inbox; Checkly, mabl | Emails/notifications actually deliver under production conditions |
+| 19 | 4. Product readiness - is it real? (not a security score) | Medium | EVIDENCE | MAN + E2E | Real external inbox; Playwright | Emails/notifications actually deliver under production conditions |
 | 20 | 4. Product readiness - is it real? (not a security score) | High | EVIDENCE | MAN | Stripe/provider dashboard (mode + keys) | Payment account, keys, webhooks AND mode match the intended deployment environment |
-| 21 | 4. Product readiness - is it real? (not a security score) | Medium | EVIDENCE | MAN + E2E | Upload-reload-download; Ghost Inspector | File uploads land in real storage and are retrievable |
+| 21 | 4. Product readiness - is it real? (not a security score) | Medium | EVIDENCE | MAN + E2E | Upload-reload-download; Playwright | File uploads land in real storage and are retrievable |
 | 22 | 4. Product readiness - is it real? (not a security score) | Medium | EVIDENCE | MAN + AI | Large dataset test, AI review | Search/filters query the backend, not a truncated client array |
 | 23 | 5. Cost & abuse blast radius | High | EVIDENCE | AI + MAN | AI review, provider usage dashboard | Quotas, per-user budgets, per-operation maximums, timeouts and concurrency caps on paid/LLM work |
 | 24 | 5. Cost & abuse blast radius | High | MANUAL | MAN | Billing dashboards of every paid provider | Hard budget caps + billing alerts on every paid provider |
 | 25 | 5. Cost & abuse blast radius | High | MANUAL | AI | Claude Code/Cursor agent-loop review | No unbounded loops / recursive agent steps; max-steps enforced |
-| 26 | 5. Cost & abuse blast radius | High | DECISIVE | MAN + AUTO | Logged-out probe, Aikido DAST | Expensive endpoints require auth; unauthenticated search/query bounded |
+| 26 | 5. Cost & abuse blast radius | High | EVIDENCE | MAN + AUTO | Logged-out probe, OWASP ZAP baseline | Expensive endpoints require auth; unauthenticated search/query bounded |
 | 27 | 5. Cost & abuse blast radius | Medium | MANUAL | MAN + AI | Oversize upload + repeat-email test, AI review | Request-body/upload size limits; email/SMS abuse limits; webhook replay protection |
-| 28 | 6. Input handling & injection | High | EVIDENCE | AI + AUTO | AI review, Aikido/Semgrep SAST | Server-side validation on all inputs |
-| 29 | 6. Input handling & injection | High | DECISIVE | AUTO + AI | Semgrep, Aikido, vibecheck scanner | All DB queries use parameter binding / safe query API; raw fragments & dynamic identifiers allowlisted |
-| 30 | 6. Input handling & injection | High | EVIDENCE | AUTO + MAN | vibecheck scanner, manual <script> probe | Output encoded per context (HTML/attr/JS/URL); HTML sanitized only when intentionally allowed; dangerous URL schemes blocked |
+| 28 | 6. Input handling & injection | High | EVIDENCE | AI + AUTO | AI review, Semgrep Community | Server-side validation on all inputs |
+| 29 | 6. Input handling & injection | High | EVIDENCE | AUTO + AI | Semgrep Community, vibecheck scanner | All DB queries use parameter binding / safe query API; raw fragments & dynamic identifiers allowlisted |
+| 30 | 6. Input handling & injection | High | EVIDENCE | AUTO + MAN | vibecheck scanner, manual &lt;script&gt; probe | Output encoded per context (HTML/attr/JS/URL); HTML sanitized only when intentionally allowed; dangerous URL schemes blocked |
 | 31 | 6. Input handling & injection | Medium | MANUAL | MAN + AI | Renamed-extension upload test, AI review | File uploads: content/MIME/magic-byte validation, path-traversal safe, isolated storage, randomised names |
 | 32 | 6. Input handling & injection | Medium | MANUAL | AI + SPEC | AI review, security reviewer | Other injection classes considered where relevant: command, SSRF, template, path traversal, open redirect, deserialisation |
 | 33 | 7. Data, migrations, backups | Medium | MANUAL | AI | Repo review (migrations dir, constraints) | Schema changes via committed migrations; DB constraints, not only app validation |
@@ -70,12 +69,12 @@ but never prove a pass, and the tiers say so:
 | 48 | 10. Third-party integrations | Medium | MANUAL | AI + SPEC | AI review, OAuth provider console | OAuth state/PKCE/nonce validated; redirect URIs locked; tokens stored encrypted |
 | 49 | 10. Third-party integrations | Medium | MANUAL | MAN | Integration permission screens | Least-privilege scopes; secret lifecycle handled when an integration is disconnected |
 | 50 | 10. Third-party integrations | High | MANUAL | AI + MAN | AI review, duplicate-webhook replay test | Idempotency + retry/backoff + dead-letter handling on payment/order/webhook handlers |
-| 51 | 11. Dependencies & supply chain | Medium | DECISIVE | AUTO | Dependabot, Aikido, npm audit / pip-audit | Runtime+build deps inventoried and continuously scanned; exploitable findings triaged, fixed or formally accepted |
+| 51 | 11. Dependencies & supply chain | Medium | EVIDENCE | AUTO | OSV-Scanner, Trivy, Dependabot/Renovate | Runtime+build deps inventoried and continuously scanned; exploitable findings triaged, fixed or formally accepted |
 | 52 | 11. Dependencies & supply chain | Low | MANUAL | AI + MAN | AI review, npm/PyPI page spot-check | Dependency risk signals reviewed (compromise, ownership transfer, unreviewed install scripts, unjustified new deps) |
-| 53 | 11. Dependencies & supply chain | Low | DECISIVE | AUTO | vibecheck scanner, CI check | Lockfile committed; build reproducible; CI actions/containers pinned |
+| 53 | 11. Dependencies & supply chain | Low | EVIDENCE | AUTO | vibecheck scanner, CI check | Lockfile committed; build reproducible; CI actions/containers pinned |
 | 54 | 11. Dependencies & supply chain | Low | MANUAL | AUTO + SPEC | license-checker + business judgement | Licenses compatible with the intended business model |
 | 55 | 12. Privacy & GDPR | Medium | MANUAL | MAN + SPEC | Data-map worksheet, privacy adviser | Data minimisation + data map: what PII, why (lawful basis), where it lives, transfers |
-| 56 | 12. Privacy & GDPR | Critical | DECISIVE | AI + SPEC | AI review (bcrypt/argon2), developer confirm | Passwords never stored plaintext; sensitive data encrypted; tokens hashed |
+| 56 | 12. Privacy & GDPR | Critical | EVIDENCE | AI + SPEC | AI review (bcrypt/argon2), developer confirm | Passwords never stored plaintext; sensitive data encrypted; tokens hashed |
 | 57 | 12. Privacy & GDPR | High | EVIDENCE | AUTO + AI | vibecheck scanner, AI log review | PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed |
 | 58 | 12. Privacy & GDPR | Medium | MANUAL | MAN + SPEC | Provider region dashboards, DPA review | International transfer mechanism + subprocessors + residency acceptable (DB region AND LLM routing) |
 | 59 | 12. Privacy & GDPR | Medium | MANUAL | MAN + SPEC | Delete-account test, privacy adviser | Data-subject rights operable: notice, lawful basis, access, deletion (incl. backups/third parties), retention, breach handling |
@@ -88,7 +87,7 @@ but never prove a pass, and the tiers say so:
 | 66 | 14. Correctness & business logic | High | MANUAL | AI + MAN | AI review + edge-amount tests | Money/tax/currency: integer/decimal math, rounding rules, locale handling |
 | 67 | 14. Correctness & business logic | Medium | MANUAL | MAN | Device time-zone switch test | Dates/time zones/DST handled explicitly |
 | 68 | 14. Correctness & business logic | Medium | MANUAL | MAN | Revoke-while-logged-in test | Permission changes mid-session take effect; irreversible actions are auditable |
-| 69 | 15. Product readiness - testing (not a security score) | High | MANUAL | E2E | Playwright, Ghost Inspector, mabl | Automated checks for the primary business transaction and destructive actions |
+| 69 | 15. Product readiness - testing (not a security score) | High | MANUAL | E2E | Playwright | Automated checks for the primary business transaction and destructive actions |
 | 70 | 15. Product readiness - testing (not a security score) | High | MANUAL | E2E + AI | Playwright authz tests, AI test generation | Automated checks for auth + authorization/tenant separation |
 | 71 | 15. Product readiness - testing (not a security score) | Medium | MANUAL | E2E + AUTO | Checkly, deploy health check | Automated checks for payment/webhook handling where present; deployment startup/health |
 | 72 | 15. Product readiness - testing (not a security score) | Low | MANUAL | AI | AI-generated deterministic/property tests | Deterministic/property-based tests for complex critical calculations |
@@ -103,7 +102,7 @@ but never prove a pass, and the tiers say so:
 | 81 | 17. AI security (prompt injection & agents) | Medium | EVIDENCE | AUTO + MAN | vibecheck scanner, rendered-output check | LLM output rendered as text or sanitized; sensitive-output filtering; memory isolated between users/tenants |
 | 82 | 18. Ownership, continuity & usability | High | MANUAL | MAN | Second-person access walkthrough | Continuity: someone other than the original builder can access, deploy, restore and maintain the app |
 | 83 | 18. Ownership, continuity & usability | High | MANUAL | MAN | Owner login to every account | Account ownership: domain, hosting, DB, email, payment and AI-provider accounts owned by you/your company |
-| 84 | 18. Ownership, continuity & usability | Medium | MANUAL | MAN + E2E | Export test; Ghost Inspector | Data export: important business and user data can be exported in a usable format |
+| 84 | 18. Ownership, continuity & usability | Medium | MANUAL | MAN + E2E | Export test; Playwright | Data export: important business and user data can be exported in a usable format |
 | 85 | 18. Ownership, continuity & usability | Medium | MANUAL | MAN | Wifi-off mid-save, double-submit test | Failure & recovery behaviour: on external/network failure the app shows a clear message and avoids losing/duplicating data |
 | 86 | 18. Ownership, continuity & usability | Low | MANUAL | MAN + E2E | Test support message; Checkly synthetic | Support path: users have a working way to report a problem and someone receives it |
 | 87 | 18. Ownership, continuity & usability | Low | MANUAL | MAN | Plausible/PostHog funnel check | Product analytics: you can tell whether the main journey succeeds / where users drop off, without unnecessary PII |
@@ -113,37 +112,38 @@ but never prove a pass, and the tiers say so:
 ## Verdict gates (reviewer profile)
 
 NOT REVIEWED -> INCOMPLETE REVIEW (unreviewed Crit/High, N/A without reason, open screening,
-or coverage < 100%) -> BLOCK (any Critical fail or Critical marked Accepted) -> BLOCK - RISK ACCEPTANCE REQUIRED (any High fail)
--> FIX BEFORE RELEASE (pass-rate < 90%) -> RELEASE CANDIDATE. A high pass-rate never overrides a gate. Accepted risk (with mandatory reason) counts as reviewed, is excluded from pass-rate, clears High blocks only, and stays visible in counters.
+unsupported Crit/High Pass, or coverage < 100%) -> BLOCK (any Critical fail or Critical marked Accepted)
+-> BLOCK - RISK ACCEPTANCE REQUIRED (any High fail) -> FIX BEFORE RELEASE (any other Fail/Partial)
+-> REVIEW COMPLETE - NO OPEN FAIL/PARTIAL. Pass-rate is prioritisation data, never a release gate.
+Accepted risk (with mandatory reason) counts as reviewed, is excluded from pass-rate, clears High blocks only, and stays visible in counters.
 
 ## Verdict ladder (founder profile)
 
-NOT REVIEWED -> REVIEW INCOMPLETE (any Crit/High blank, N/A without reason, open screening)
+NOT REVIEWED -> REVIEW INCOMPLETE (incomplete coverage, unsupported Crit/High Pass, N/A without reason, open screening)
 -> DO NOT LAUNCH (any Critical fail or accepted) -> FIX BEFORE LAUNCH (any High fail)
--> LOOKS READY FOR A LIMITED LAUNCH. The percentage is supporting info only.
+-> FIX BEFORE LAUNCH (any other fail) -> REVIEW COMPLETE - NO OPEN FAILURES. The percentage is supporting info only.
 
 ## Coverage summary
 
-- DECISIVE: 14 items — a scanner FAIL settles the item.
-- EVIDENCE: 24 items — the scanner contributes evidence; a human decides.
+- DECISIVE: 0 items — reserved for conclusive automation.
+- EVIDENCE: 38 items — the scanner contributes evidence; a human decides.
 - MANUAL: 51 items — reviewer judgment, live probes, dashboard checks, or external evidence.
 
 No item is decided *Pass* by the scanner alone.
 
 ## EU AI Act note (timeline)
 
-The May 2026 Digital Omnibus deferred Annex III high-risk obligations to 2 December 2027, but
-Article 50 transparency rules apply from August 2026, and market surveillance / governance /
-sanctions chapters apply from 2 August 2026. Prohibited practices (Art. 5) enforceable since
-Feb 2025. Verify current status at enforcement time; do not treat the deferral as removal.
-Items 60-63 are unscored screening questions in both profiles; yes/uncertain answers escalate
-to a specialist ("Needs specialist" status).
+As of 11 August 2026, Article 50 transparency obligations apply from 2 August 2026 (with a
+limited marking/detection grace period for certain systems already on the market), while the
+AI Omnibus timeline puts Annex III high-risk rules at 2 December 2027 and high-risk systems
+embedded in regulated products at 2 August 2028. Verify the Commission implementation
+timeline and the enacted regulation at assessment time; a delayed obligation is not removed.
+Items 60-63 are unscored screening questions; yes/uncertain answers escalate to a specialist.
 
 ## Estonian data residency note
 
-No Estonian statute mandates in-country storage for private-sector SaaS. Governing law is
-GDPR + IKS (transfer rules outside EEA). EU-region hosting is compliant. Exceptions: public
-sector / vital services (E-ITS, riigipilv), accounting-record retention (Raamatupidamise
-seadus, ~7y, retrievable), sector rules (health, NIS2 via kuberturvalisuse seadus), and — most
-commonly binding in practice — enterprise-customer DPAs demanding EU-only processing incl.
-LLM routing (item 58 covers DB region AND LLM routing).
+Do not infer that EU-region hosting is sufficient from this checklist. GDPR/IKS, international
+transfer mechanisms, controller instructions/DPAs, public-sector or essential-service rules,
+health and other sector rules, and record-retention duties can all change the answer. Item 58
+covers database region and subprocessors such as LLM routing; obtain legal/contractual review
+for the actual data and customer context.

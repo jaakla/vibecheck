@@ -1,0 +1,23 @@
+Deck content source
+- /Users/jaak/git/vibecheck/outputs/vibecheck-workshop-slide-plan.md
+
+Regulation and standards sources checked 2026-08-11
+- GDPR data protection by design/default: https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations/what-does-data-protection-design-and-default-mean_en
+- EU B2C e-commerce and distance-selling guidance: https://europa.eu/youreurope/business/selling-in-eu/selling-goods-services/ecommerce-distance-selling/index_en.htm
+- European Accessibility Act scope: https://commission.europa.eu/strategy-and-policy/policies/justice-and-fundamental-rights/disability/european-accessibility-act-eaa_en
+- European Accessibility Act application overview: https://commission.europa.eu/news-and-media/news/eu-becomes-more-accessible-all-2025-07-31_en
+- EU AI Act overview and timeline: https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai
+- OWASP Top 10: https://owasp.org/Top10/
+- OWASP ASVS 5.0: https://owasp.org/www-project-application-security-verification-standard/
+- WCAG 2.2: https://www.w3.org/TR/WCAG22/
+
+Optional toolbox sources
+- Gitleaks: https://github.com/gitleaks/gitleaks
+- TruffleHog: https://github.com/trufflesecurity/trufflehog
+- Semgrep Community Edition: https://semgrep.dev/products/community-edition/
+- OSV-Scanner: https://github.com/google/osv-scanner
+- Trivy: https://trivy.dev/
+- OWASP ZAP: https://www.zaproxy.org/
+- Playwright: https://playwright.dev/
+- Lighthouse: https://developer.chrome.com/docs/lighthouse/
+- axe-core: https://github.com/dequelabs/axe-core
