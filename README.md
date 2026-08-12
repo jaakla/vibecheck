@@ -1,5 +1,9 @@
 # vibecheck
 
+## Install from GitHub
+
+In Claude Code Desktop, go to Settings → Plugins → Add marketplace → Add from repository, then enter `jaakla/vibecheck`.
+
 A Claude Code / Cowork plugin for organizing reviews of **vibecoded applications**. It combines lightweight static signals, guided code reading, live checks, and an 89-item workbook (technical and founder profiles, EN/ET). It is a review aid, not a security scanner replacement or certification.
 
 ## What the automation is worth
