@@ -63,11 +63,21 @@ information only; a checklist cannot prove an app safe or ready to ship.
 
 ## Output formats
 
-**Markdown report (default, client-friendly):** verdict at top (copy the workbook's), findings
-by category in severity order — each with reproducible evidence (file:line where applicable;
-otherwise path/config/command result), one-sentence impact, and fix. Put unscored AI Act
-Triage separately. Then list Not-tested/MANUAL work and "Needs specialist" escalations.
-Redact secrets and PII; never print raw secret-bearing or personal-data-bearing source lines.
+**Markdown report (default, client-friendly):** read the current `<repo_dir>/TECHNICAL_OVERVIEW.md`
+produced by `vibecheck-precheck`. Re-run the fingerprint helper before reporting; if it is stale,
+label the report incomplete and refresh/re-review the overview before relying on it. Put the verdict
+at top (copy the workbook's), state whether the overview was `HUMAN-REVIEWED` or
+`REVIEW-BYPASSED`, then add a compact overview summary: purpose and maturity, stack, architecture,
+data/trust boundaries, identity/access, entry points, integrations, configuration, and material
+unknowns. Follow with findings by category in severity order — each with
+reproducible evidence (file:line where applicable; otherwise path/config/command result), one-sentence
+impact, and fix. Put unscored AI Act Triage separately. Then list Not-tested/MANUAL work,
+reconnaissance gaps, and "Needs specialist" escalations. Redact secrets and PII; never print raw
+secret-bearing or personal-data-bearing source lines.
+
+If the overview is missing, hand off to `vibecheck-precheck`; do not reconstruct an unreviewed
+overview inside the report. Preserve its review status and human corrections when quoting or
+summarizing it.
 
 **Scored xlsx:** the builder needs `openpyxl`. Install it first if the import fails:
 

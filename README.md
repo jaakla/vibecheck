@@ -20,7 +20,8 @@ The scanner emits `WARN`, `NO_SIGNAL`, or `MANUAL`; `NO_SIGNAL` is never Pass.
 
 | Skill | Use |
 |-------|-----|
-| `vibecheck-scan` | Drive a repo review: triage WARN/NO_SIGNAL/MANUAL, add code-reading and live evidence, then report. |
+| `vibecheck-precheck` | Discover and reconcile existing documentation, cross-check the codebase, and write a fingerprinted `TECHNICAL_OVERVIEW.md` for human review before scanning. |
+| `vibecheck-scan` | After precheck review, triage WARN/NO_SIGNAL/MANUAL, add targeted code-reading and live evidence, then report. |
 | `vibecheck-supabase` | Live RLS / anon-exposure / explicit-record IDOR probe using a public anon/publishable key. Read-only by default. |
 | `vibecheck-fix` | Propose and apply remediations, diff-first, on a branch — then re-scan to confirm each finding cleared. Separates mechanical fixes from ones needing a human decision, and keeps leaked-secret rotation and history purging advisory. |
 | `vibecheck-report` | Fill the scored xlsx workbook or produce a client-ready markdown report. English or Estonian. |
@@ -32,6 +33,24 @@ Architecture is category one (#1-#6). Platforms constrain some choices but do no
 ### Prompt-injection coverage
 
 LLM applications get a dedicated prompt-injection block (items #77-#81). The scanner looks for co-located model and execution sinks, prompt interpolation, tool calling, retrieved content, and raw-HTML rendering. These are search signals, not dataflow proof; a reviewer must trace the path and authorization decisions.
+
+### Project and confidentiality review
+
+Every full review starts with `vibecheck-precheck`. It discovers existing READMEs, docs, ADRs,
+specifications, API schemas, diagrams, and runbooks, then verifies material claims against code and
+configuration. It writes a source-fingerprinted `TECHNICAL_OVERVIEW.md` covering purpose and maturity,
+stack, architecture, data flows and trust boundaries, identity/access, entry points, integrations,
+deployment, documentation discrepancies, and evidence gaps.
+
+The overview starts as `DRAFT`; the default workflow pauses so a human can correct and approve it.
+The full scan proceeds when the current fingerprint is `HUMAN-REVIEWED`, or after an explicit
+`REVIEW-BYPASSED` choice that remains visible as an evidence gap. A raw scanner-only request can still
+run without precheck, but it is not a completed Vibecheck review.
+
+The guided confidentiality pass traces credentials, sessions, route/CSRF/CORS boundaries, sensitive
+serialization and storage, TLS/proxies, outbound requests and SSRF, logs/prompts/analytics, third-party
+disclosure, and admin bootstrap/recovery. Confirmed issues retain the existing 89-item mapping and
+verdict model; ambiguous behavior remains Not tested/to-do rather than becoming a speculative finding.
 
 ## Prefer dedicated free tools for detection
 
@@ -50,6 +69,9 @@ These tools also have false positives/negatives, but they are substantially more
 Just ask: *"vibecheck this repo"*, *"review this Lovable app"*, *"is this safe to ship?"*, *"check my RLS"*. Or run the pieces directly:
 
 ```bash
+# Precheck source-state fingerprint (the skill writes TECHNICAL_OVERVIEW.md)
+python3 scripts/precheck_fingerprint.py /path/to/repo
+
 # Static scan — JSON lines, one finding per check
 bash scripts/vibecheck.sh /path/to/repo
 
@@ -82,7 +104,7 @@ There is deliberately no "READY TO SHIP" rung: a checklist cannot prove an app s
 ## Scope & limits
 
 - The scanner is a **first pass**, not a proof. Every WARN needs confirmation, and every `NO_SIGNAL` needs independent evidence before a checklist Pass.
-- It never writes to the reviewed repo. Credential/high-entropy shapes retain at most an 8-character prefix; low-entropy quoted secret literals retain at most 4. Evidence lines are capped at 200 characters and total evidence is bounded. This is credential redaction, not general PII or confidential-data anonymisation; treat scanner output as sensitive and review it before pasting elsewhere.
+- The scanner never writes to the reviewed repo. `vibecheck-precheck` is the bounded exception: it writes only `TECHNICAL_OVERVIEW.md` (or a non-destructive companion draft when that filename already belongs to the project). Credential/high-entropy shapes retain at most an 8-character prefix; low-entropy quoted secret literals retain at most 4. Evidence lines are capped at 200 characters and total evidence is bounded. This is credential redaction, not general PII or confidential-data anonymisation; treat scanner output as sensitive and review it before pasting elsewhere.
 - Dependency auditing is offline by default. `--online-audit` opts into an npm registry request that can disclose the dependency inventory.
 - The Supabase probe sends **no writes by default**. PostgREST has no dry-run insert, so an anon-write test can create a real row; that probe is opt-in behind `--write-probe`, and the report states plainly when it was not run.
 - The probe uses `HEAD` plus a one-row range rather than downloading rows or forcing an exact full-table count. Visible anonymous rows need intent review; zero rows can mean either RLS or an empty table. IDOR testing requires two distinct test accounts and an explicit known A-owned private record.

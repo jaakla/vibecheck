@@ -1,10 +1,10 @@
 {
   "name": "vibecheck",
-  "version": "0.3.0",
-  "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): lightweight static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening. Not a security certification or replacement for dedicated scanners.",
+  "version": "0.4.0",
+  "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): a human-reviewed technical precheck, lightweight static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening. Not a security certification or replacement for dedicated scanners.",
   "author": {
     "name": "Goplex / Jaak Laineste"
   },
-  "keywords": ["security-review", "vibecoding", "supabase", "rls", "audit", "checklist", "prompt-injection", "gdpr", "eu-ai-act"],
+  "keywords": ["security-review", "vibecoding", "technical-overview", "precheck", "supabase", "rls", "audit", "checklist", "prompt-injection", "gdpr", "eu-ai-act"],
   "license": "MIT"
 }

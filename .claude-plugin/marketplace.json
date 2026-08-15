@@ -9,7 +9,7 @@
     {
       "name": "vibecheck",
       "source": "./",
-      "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening.",
+      "description": "Review orchestration for vibecoded applications (Lovable, Claude Code, Codex, Bolt, v0): a human-reviewed technical precheck, static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based 89-item workbook including GDPR and EU AI Act screening.",
       "homepage": "https://github.com/jaakla/vibecheck",
       "repository": "https://github.com/jaakla/vibecheck",
       "license": "MIT",
@@ -17,6 +17,8 @@
       "keywords": [
         "security-review",
         "vibecoding",
+        "technical-overview",
+        "precheck",
         "supabase",
         "rls",
         "audit",
