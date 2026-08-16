@@ -34,6 +34,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _redact
@@ -162,6 +163,24 @@ def migrate(env, target_version=SCHEMA_VERSION):
 
 # ----------------------------------------------------------------- validation
 
+def _parse_instant(value):
+    """Parse a schema timestamp into a UTC-aware datetime.
+
+    JSON Schema permits both ``Z`` and numeric UTC offsets. Comparing those
+    strings lexicographically is incorrect because different representations
+    of the same instant do not sort chronologically.
+    """
+    if not isinstance(value, str):
+        return None
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        instant = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        return None
+    return instant.astimezone(timezone.utc)
+
 def _iter_refs(node, path=""):
     if isinstance(node, dict):
         for key, value in node.items():
@@ -272,8 +291,16 @@ def _check_supersedes(env, problems):
                 if target in seen:
                     problems.append("R13: supersedes cycle at %r in %s" % (target, section))
                     break
+                target_obj = by_id[target]
+                if (section == "assessments"
+                        and cur.get("control_id") != target_obj.get("control_id")):
+                    problems.append(
+                        "R13: assessment %r supersedes %r with a different "
+                        "control_id; supersedes links must keep the same control_id"
+                        % (cur.get("assessment_id"), target))
+                    break
                 seen.add(target)
-                cur = by_id[target]
+                cur = target_obj
 
 
 def current_assessments(env):
@@ -286,15 +313,25 @@ def current_assessments(env):
 
 def _check_assessments(env, problems):
     evidence = {e.get("evidence_id"): e for e in env.get("evidence") or []}
+    assessments = {a.get("assessment_id"): a
+                   for a in env.get("assessments") or []}
     index = _registry_index(env)
     for asm in current_assessments(env):
         aid = asm.get("assessment_id", "<no id>")
         status = asm.get("status")
         refs = (asm.get("basis") or {}).get("evidence_refs") or []
         assessed_at = asm.get("assessed_at", "")
+        assessed_instant = _parse_instant(assessed_at)
 
         def current(ev):
-            return "valid_until" not in ev or ev["valid_until"] >= assessed_at
+            observed = _parse_instant(ev.get("observed_at"))
+            if (observed is None or assessed_instant is None
+                    or observed > assessed_instant):
+                return False
+            if "valid_until" not in ev:
+                return True
+            valid_until = _parse_instant(ev.get("valid_until"))
+            return valid_until is not None and valid_until >= assessed_instant
 
         if status == "pass":
             supporting = [evidence[r] for r in refs if r in evidence
@@ -304,6 +341,34 @@ def _check_assessments(env, problems):
                 problems.append(
                     "R3: %s is pass without current supporting evidence "
                     "(neutral or expired evidence never counts)" % aid)
+        if status in ("pass", "partial") and asm.get("supersedes"):
+            previous = assessments.get(asm["supersedes"])
+            if (previous is not None and previous.get("status") == "fail"
+                    and previous.get("control_id") == asm.get("control_id")):
+                previous_refs = ((previous.get("basis") or {})
+                                 .get("evidence_refs") or [])
+                refuting_instants = [
+                    _parse_instant(evidence[r].get("observed_at"))
+                    for r in previous_refs
+                    if r in evidence
+                    and evidence[r].get("direction") == "refutes"
+                ]
+                refuting_instants = [t for t in refuting_instants if t is not None]
+                if refuting_instants:
+                    latest_refutation = max(refuting_instants)
+                    recovery_support = [
+                        evidence[r] for r in refs
+                        if r in evidence
+                        and evidence[r].get("direction") == "supports"
+                        and current(evidence[r])
+                        and _parse_instant(evidence[r].get("observed_at"))
+                        > latest_refutation
+                    ]
+                    if not recovery_support:
+                        problems.append(
+                            "R3: %s supersedes failed assessment %s without "
+                            "supporting evidence that post-dates its latest "
+                            "refutation" % (aid, previous.get("assessment_id")))
         if status in ("pass", "partial"):
             # Refuting evidence disagrees with a pass at any strength; with a
             # partial (which already concedes deficiency) only a decisive
@@ -314,10 +379,13 @@ def _check_assessments(env, problems):
             control = asm.get("control_id")
             for ev in evidence.values():
                 claim = ev.get("claim") or {}
+                observed_instant = _parse_instant(ev.get("observed_at"))
                 if (control in (claim.get("control_ids") or [])
                         and ev.get("direction") == "refutes"
                         and (status == "pass" or ev.get("strength") == "decisive")
-                        and ev.get("observed_at", "") <= assessed_at
+                        and observed_instant is not None
+                        and assessed_instant is not None
+                        and observed_instant <= assessed_instant
                         and ev.get("evidence_id") not in refs
                         and ev.get("evidence_id") not in resolved):
                     problems.append(

@@ -332,6 +332,13 @@ class TestEnvelopeValidator(unittest.TestCase):
         env2["supersedes_revision"] = 1
         self.assert_problem(env2, "supersedes_revision")
 
+    def test_supersedes_assessment_stays_within_one_control(self):
+        old = assessment("asm-old", CONTROL, "not_tested", [])
+        new = assessment("asm-new", MEDIUM_CONTROL, "not_tested", [],
+                         supersedes="asm-old")
+        env = mini_envelope(assessments=[old, new])
+        self.assert_problem(env, "same control_id")
+
     def test_r3_pass_needs_current_supporting_evidence(self):
         # neutral (NO_SIGNAL-class) evidence never supports a pass
         env = mini_envelope(
@@ -349,6 +356,57 @@ class TestEnvelopeValidator(unittest.TestCase):
         env = mini_envelope(
             evidence=[evidence("ev-s", CONTROL, "supports")],
             assessments=[assessment("asm-p", CONTROL, "pass", ["ev-s"])])
+        self.assertEqual([], canonical.validate_envelope(env))
+
+    def test_r3_evidence_expiry_compares_actual_instants(self):
+        # 01:00+02:00 is 23:00Z on the previous day, so this evidence is
+        # already expired at the assessment despite its lexically later hour.
+        supporting = evidence(
+            "ev-s", CONTROL, "supports",
+            observed_at="2026-08-15T22:00:00Z",
+            valid_until="2026-08-16T01:00:00+02:00")
+        passed = assessment(
+            "asm-p", CONTROL, "pass", ["ev-s"],
+            assessed_at="2026-08-16T00:00:00Z")
+        self.assert_problem(
+            mini_envelope(evidence=[supporting], assessments=[passed]),
+            "R3")
+
+    def test_r3_recovery_support_must_postdate_refutation(self):
+        refuting = evidence(
+            "ev-r", CONTROL, "refutes",
+            observed_at="2026-08-16T10:00:00Z", strength="decisive")
+        stale_support = evidence(
+            "ev-s", CONTROL, "supports",
+            observed_at="2026-08-16T09:00:00Z")
+        old = assessment(
+            "asm-old", CONTROL, "fail", ["ev-r"],
+            assessed_at="2026-08-16T10:30:00Z")
+        for status in ("partial", "pass"):
+            with self.subTest(status=status):
+                new = assessment(
+                    "asm-new", CONTROL, status, ["ev-s"],
+                    supersedes="asm-old",
+                    conflicts=[{
+                        "evidence_ref": "ev-r",
+                        "resolution": "the affected behavior was re-tested",
+                    }])
+                env = mini_envelope(
+                    evidence=[refuting, stale_support],
+                    assessments=[old, new])
+                self.assert_problem(env, "post-date")
+
+        fresh_support = copy.deepcopy(stale_support)
+        fresh_support["observed_at"] = "2026-08-16T11:00:00Z"
+        recovered = assessment(
+            "asm-new", CONTROL, "partial", ["ev-s"],
+            supersedes="asm-old",
+            conflicts=[{
+                "evidence_ref": "ev-r",
+                "resolution": "the affected behavior was re-tested",
+            }])
+        env = mini_envelope(
+            evidence=[refuting, fresh_support], assessments=[old, recovered])
         self.assertEqual([], canonical.validate_envelope(env))
 
     def test_r4_unresolved_refutation_blocks_pass(self):
