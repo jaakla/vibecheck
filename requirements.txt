@@ -1,3 +1,6 @@
-# Only the xlsx workbook builder needs a third-party package.
+# Only the xlsx workbook builder and the schema tests need third-party packages.
 # The scanner (vibecheck.sh) and the Supabase probe use the stdlib only.
 openpyxl>=3.1,<4
+# Validates schema/ definitions and examples (tests/test_rfc_schema.py);
+# the tests skip cleanly when it is absent.
+jsonschema>=4.18,<5

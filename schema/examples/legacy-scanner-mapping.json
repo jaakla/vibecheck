@@ -1,0 +1,109 @@
+{
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.0.0",
+  "assessment_id": "va-legacy-scanner-demo",
+  "revision": 1,
+  "created_at": "2026-08-14T10:00:00Z",
+  "context": {
+    "context_id": "ctx-legacy-scanner-demo",
+    "revision": 1,
+    "application": { "name": "Legacy mapping demo", "description": "Demonstrates the vibecheck.sh JSONL -> canonical mapping for one WARN, one NO_SIGNAL, and one MANUAL line." },
+    "target_scopes": [{ "environment": "developer_only", "intended_use": "prototype_demo" }],
+    "confirmation": { "state": "review_bypassed" }
+  },
+  "control_registry": { "name": "vibecheck.controls", "version": "1.0.0" },
+
+  "signals": [
+    {
+      "signal_id": "sig-warn-secrets-1",
+      "source": { "tool": "vibecheck.sh", "check_id": "secrets.hardcoded" },
+      "subject": { "kind": "repo", "locator": "." },
+      "environment": "developer_only",
+      "observed_at": "2026-08-14T09:58:01Z",
+      "raw_ref": { "kind": "inline", "value": "{\"check\":\"secrets.hardcoded\",\"checklist_items\":[7],\"status\":\"WARN\",\"title\":\"Secret-like literals assigned in source — confirm whether they are real credentials\",\"evidence\":\"src/lib/api.ts:12: const apiKey = \\\"sk_live_...\\\" [redacted]\"}" },
+      "notes": "Scanner status WARN maps to: Evidence with direction=refutes, strength=indicative. WARN is never a confirmed finding."
+    },
+    {
+      "signal_id": "sig-nosignal-sql-1",
+      "source": { "tool": "vibecheck.sh", "check_id": "inject.sql" },
+      "subject": { "kind": "repo", "locator": "." },
+      "environment": "developer_only",
+      "observed_at": "2026-08-14T09:58:02Z",
+      "raw_ref": { "kind": "inline", "value": "{\"check\":\"inject.sql\",\"checklist_items\":[29],\"status\":\"NO_SIGNAL\",\"title\":\"No string-built SQL found by this ruleset\",\"evidence\":\"\"}" },
+      "notes": "Scanner status NO_SIGNAL maps to: Evidence with direction=neutral. It can never support a pass (rule R3)."
+    },
+    {
+      "signal_id": "sig-manual-budget-1",
+      "source": { "tool": "vibecheck.sh", "check_id": "cost.budget_caps" },
+      "subject": { "kind": "repo", "locator": "." },
+      "environment": "developer_only",
+      "observed_at": "2026-08-14T09:58:03Z",
+      "raw_ref": { "kind": "inline", "value": "{\"check\":\"cost.budget_caps\",\"checklist_items\":[24],\"status\":\"MANUAL\",\"title\":\"Budget caps and billing alerts cannot be seen from source — verify in every paid provider's dashboard\",\"evidence\":\"\"}" },
+      "notes": "Scanner status MANUAL maps to: NO evidence at all, plus an open verify Action so the item cannot be silently skipped."
+    }
+  ],
+
+  "evidence": [
+    {
+      "evidence_id": "ev-warn-secrets-1",
+      "provider": { "name": "vibecheck.sh static scanner", "version": "0.4.0" },
+      "subject": { "kind": "file", "locator": "src/lib/api.ts" },
+      "environment": "developer_only",
+      "operation": "static_pattern_scan",
+      "scope": "Current working tree only; ruleset = secret-like literal assignment patterns. Both false positives and false negatives expected.",
+      "claim": {
+        "control_ids": ["vibecheck.control.secrets.no_frontend_literals"],
+        "statement": "No secret-like literals in frontend source."
+      },
+      "direction": "refutes",
+      "strength": "indicative",
+      "observed_at": "2026-08-14T09:58:01Z",
+      "valid_until": "2026-09-14T00:00:00Z",
+      "signal_refs": ["sig-warn-secrets-1"],
+      "raw_result_ref": { "kind": "inline", "value": "src/lib/api.ts:12: const apiKey = \"sk_live_...\" [redacted to 8-char prefix]" },
+      "redaction": "credential shapes capped at 8-char prefix per scanner policy",
+      "side_effects": { "writes": false, "destructive": false, "external_accounts": false, "data_egress": false }
+    },
+    {
+      "evidence_id": "ev-nosignal-sql-1",
+      "provider": { "name": "vibecheck.sh static scanner", "version": "0.4.0" },
+      "subject": { "kind": "repo", "locator": "." },
+      "environment": "developer_only",
+      "operation": "static_pattern_scan",
+      "scope": "Absence of matches for this ruleset only. Absence of a signal is not evidence of absence: an ORM misuse or dynamic identifier the regex does not know stays invisible.",
+      "claim": {
+        "control_ids": ["vibecheck.control.input.sql_parameterized"],
+        "statement": "All DB queries use parameter binding / a safe query API."
+      },
+      "direction": "neutral",
+      "strength": "indicative",
+      "observed_at": "2026-08-14T09:58:02Z",
+      "valid_until": "2026-09-14T00:00:00Z",
+      "signal_refs": ["sig-nosignal-sql-1"],
+      "raw_result_ref": { "kind": "inline", "value": "no matches" },
+      "side_effects": { "writes": false, "destructive": false, "external_accounts": false, "data_egress": false }
+    }
+  ],
+
+  "actions": [
+    {
+      "action_id": "act-verify-budget-caps",
+      "kind": "verify",
+      "outcome": "A hard budget cap and a billing alert confirmed to exist in every paid provider dashboard (AI, hosting, email), with screenshots or settings exports as evidence.",
+      "reason": "Scanner check cost.budget_caps is tier MANUAL: no static signal exists for provider dashboard settings. Emitted as an explicit to-do so it cannot be silently skipped.",
+      "urgency": "planned",
+      "deadline": {
+        "kind": "before_environment",
+        "value": "public_release",
+        "rationale": "Uncapped paid providers plus public traffic is how surprise bills happen."
+      },
+      "blocking_scope": [],
+      "owner": { "role": "founder" },
+      "state": "open",
+      "state_history": [{ "state": "open", "at": "2026-08-14T10:00:00Z", "by": "vibecheck.sh mapping" }],
+      "control_refs": ["vibecheck.control.cost.budget_caps"],
+      "success_evidence": "Owner-provided dashboard evidence per provider; self-certification without evidence is not enough.",
+      "reassess_control_ids": ["vibecheck.control.cost.budget_caps"]
+    }
+  ]
+}
