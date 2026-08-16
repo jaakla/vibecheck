@@ -396,29 +396,36 @@ Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult sta
 
 ### E. Tegevused
 
-| Tegevus | Liik | Nõutav tulemus | Vastutaja | Kiireloomulisus | Millal | Seis | Blokeerib | Kontrolli ID | Risk | Stsenaarium | Protseduur | Mis selle sulgeb |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `act-contain-cross-account-incident` | intsidendile reageerimine | Contain the cross-account order exposure and determine which records were accessed. | spetsialist | kohe | Paranda kohe | avatud | avalik väljalase + avalik toode | `vibecheck.control.authz.object_level` | — | — | `prc-contain-cross-account-incident` | Access is denied in a repeated two-account test, affected access is reviewed, and the control is reassessed. |
-| `act-decide-support-data` | otsus | Decide and document which order fields the support assistant is allowed to receive. | omanik | järgmisena | Enne avalikku väljalaset | avatud | avalik väljalase + avalik toode | `vibecheck.control.privacy.data_minimisation` | — | — | — | A reviewed field allowlist and retention statement are recorded. |
-| `act-refactor-test-helper` | parandus | Refactor the test-data helper when the next test suite cleanup is scheduled. | arendaja | ootenimekirjas | Ootenimekiri | avatud | — | — | — | — | — | The helper has focused tests and no duplicated setup. |
-| `act-verify-error-paths` | kontrollimine | Collect a bounded error-path inventory for the developer to instrument. | arendaja | järgmisena | Enne avalikku väljalaset | avatud | avalik väljalase + avalik toode | `vibecheck.control.obs.error_tracking` | — | — | `prc-inventory-error-paths` | The inventory names every reviewed server error path and its current handling. |
+| Tegevus | Liik | Nõutav tulemus | Vastutaja | Prioriteet | Kiireloomulisus | Millal | Seis | Blokeerib | Kontrolli ID | Risk | Stsenaarium | Protseduur | Mis selle sulgeb |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `act-contain-cross-account-incident` | intsidendile reageerimine | Contain the cross-account order exposure and determine which records were accessed. | spetsialist | teadmata | kohe | Paranda kohe | avatud | avalik väljalase + avalik toode | `vibecheck.control.authz.object_level` | — | — | `prc-contain-cross-account-incident` | Access is denied in a repeated two-account test, affected access is reviewed, and the control is reassessed. |
+| `act-decide-support-data` | otsus | Decide and document which order fields the support assistant is allowed to receive. | omanik | teadmata | järgmisena | Enne avalikku väljalaset | avatud | avalik väljalase + avalik toode | `vibecheck.control.privacy.data_minimisation` | — | — | — | A reviewed field allowlist and retention statement are recorded. |
+| `act-refactor-test-helper` | parandus | Refactor the test-data helper when the next test suite cleanup is scheduled. | arendaja | teadmata | ootenimekirjas | Ootenimekiri | avatud | — | — | — | — | — | The helper has focused tests and no duplicated setup. |
+| `act-verify-error-paths` | kontrollimine | Collect a bounded error-path inventory for the developer to instrument. | arendaja | teadmata | järgmisena | Enne avalikku väljalaset | avatud | avalik väljalase + avalik toode | `vibecheck.control.obs.error_tracking` | — | — | `prc-inventory-error-paths` | The inventory names every reviewed server error path and its current handling. |
 
 ### F. Protseduurid
 
-| Protseduur | Pealkiri | Täitja | Mehhanism | Nõusolek | Mõjud | Mis selle sulgeb |
-|---|---|---|---|---|---|---|
-| `prc-contain-cross-account-incident` | Disable the affected order endpoint and deploy an authorization fix | arendaja | code_change_and_deployment | selgesõnaline nõusolek | write, deployment | A repeated two-account test denies cross-account reads. |
-| `prc-inventory-error-paths` | Scan and review server error paths | Vibecheck | read_only_source_review | pole nõutav | puudub | A bounded path-and-handler inventory with review notes. |
+| Protseduur | Pealkiri | Täitja | Täitmisviis | Mehhanism | Nõusolek | Võrguühendus | Mõjud | Pärandvaade | Mis selle sulgeb |
+|---|---|---|---|---|---|---|---|---|---|
+| `prc-contain-cross-account-incident` | Disable the affected order endpoint and deploy an authorization fix | arendaja | juhendatud | code_change_and_deployment | selgesõnaline nõusolek | ei | write, deployment | PROPOSE | A repeated two-account test denies cross-account reads. |
+| `prc-inventory-error-paths` | Scan and review server error paths | Vibecheck | automatiseeritud | read_only_source_review | pole nõutav | ei | puudub | AUTO | A bounded path-and-handler inventory with review notes. |
 
-### G. Metoodika ja versioonid
+### G. Protseduuri katsed
+
+| Katse | Tegevus | Protseduur | Keskkond | Tulemus | Nõusolek | Mõjud | Tagasipööre | Tõendid | Uushinnang |
+|---|---|---|---|---|---|---|---|---|---|
+
+### H. Metoodika ja versioonid
 
 | Metoodika | Versioon |
 |---|---|
-| vibecheck.assessment | 1.2.0 |
+| vibecheck.assessment | 1.3.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
+| vibecheck.action_registry | 1.0.0 |
 | vibecheck.risk_derivation | 1.0.0 |
 | vibecheck.readiness | 1.0.0 |
-| vibecheck.report_derivation | 1.0.0 |
-| vibecheck.report | 1.0.0 |
-| vibecheck.report_wording | 1.0.0 |
+| vibecheck.report_derivation | 1.1.0 |
+| vibecheck.report | 1.1.0 |
+| vibecheck.action_policy | 1.0.0 |
+| vibecheck.report_wording | 1.1.0 |

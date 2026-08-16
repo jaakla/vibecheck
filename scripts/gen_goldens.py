@@ -27,6 +27,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
+import actions as actions_mod
 import context as ctx
 import controls
 import readiness as readiness_mod
@@ -53,6 +54,53 @@ def _claim(control_ids, aspect=None):
     if aspect:
         claim["aspect"] = aspect
     return claim
+
+
+def _action_records(spec, now):
+    records = copy.deepcopy(spec.get("actions") or [])
+    for action in records:
+        action.setdefault("action_key", action["action_id"].removeprefix("act-"))
+        action.setdefault("revision", 1)
+        action.setdefault("created_at", now)
+        action.setdefault("priority", "unknown")
+        deadline = action.setdefault("deadline", {
+            "kind": "unknown", "rationale": "Not scheduled."})
+        kind = deadline.get("kind")
+        trigger = {"kind": kind, **({"value": deadline["value"]}
+                   if deadline.get("value") else {})}
+        if kind in ("immediate", "none", "unknown"):
+            trigger = {"kind": "context_change"}
+        deadline.setdefault("reassess_trigger", trigger)
+        action.setdefault("state_history", [{
+            "state": action.get("state", "open"),
+            "at": now,
+            "by": "vibecheck golden-case generator",
+        }])
+    return records
+
+
+def _procedure_records(spec, now):
+    records = copy.deepcopy(spec.get("procedures") or [])
+    for procedure in records:
+        procedure.setdefault(
+            "procedure_key", procedure["procedure_id"].removeprefix("prc-"))
+        procedure.setdefault("revision", 1)
+        procedure.setdefault("created_at", now)
+        role = procedure.get("executor_role")
+        procedure.setdefault(
+            "execution_mode", "automated" if role == "vibecheck_agent"
+            else "guided" if role == "developer" else "manual")
+        egress = (procedure.get("data_egress") or {}).get("occurs", False)
+        procedure.setdefault("network", {
+            "required": bool(egress),
+            **({"destinations": list((procedure.get("data_egress") or {})
+                                     .get("destinations") or [])} if egress else {}),
+        })
+        procedure.setdefault("verification", {
+            "provider": "independent reviewer or named verification provider",
+            "independent_from_executor": True,
+        })
+    return records
 
 
 def _evidence(evidence_id, control_ids, spec, defaults):
@@ -121,10 +169,12 @@ def build_case(spec):
         "context": context,
         "control_registry": {"name": controls.REGISTRY_NAME,
                              "version": controls.REGISTRY_VERSION},
+        "action_registry": actions_mod.registry_ref(),
         "evidence": [],
         "assessments": [],
-        "actions": list(copy.deepcopy(spec.get("actions") or [])),
-        "procedures": list(copy.deepcopy(spec.get("procedures") or [])),
+        "actions": _action_records(spec, now),
+        "procedures": _procedure_records(spec, now),
+        "attempts": list(copy.deepcopy(spec.get("attempts") or [])),
     }
 
     for extra in spec.get("extra_evidence") or []:

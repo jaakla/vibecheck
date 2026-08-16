@@ -1,4 +1,8 @@
 {
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
   "actions": [],
   "assessment_id": "va-golden-private-invite-only-pilot",
   "assessments": [
@@ -763,6 +767,7 @@
       "status": "pass"
     }
   ],
+  "attempts": [],
   "context": {
     "application": {
       "description": "Order tracker used by twelve named testers from one customer while the team decides whether to launch it publicly.",
@@ -1384,5 +1389,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.2.0"
+  "schema_version": "1.3.0"
 }

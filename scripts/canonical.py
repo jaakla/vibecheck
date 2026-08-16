@@ -33,6 +33,8 @@ Semantic rules implemented here (numbering from RFC 0001 §10):
        cap says, each one is placed exactly once in a visible section, and no
        mandatory item is filed as work that can wait
   R13  supersedes chains resolve and are acyclic; envelope revisions monotonic
+  R16-R19 Action/Procedure lineage and lifecycle, usable deadlines, exact
+          attempt authorization, and evidence-backed completion (actions.py)
 
 The application context is validated too (context.validate_context): profile
 keys and values resolve against the context model, every field carries a usable
@@ -50,9 +52,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _redact
+import actions as actions_mod
 import context as context_mod
 
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -658,4 +661,5 @@ def validate_envelope(env):
     _check_risks(env, problems)
     _check_readiness(env, problems)
     _check_report(env, problems)
+    problems.extend(actions_mod.validate_registry(env))
     return problems

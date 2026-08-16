@@ -56,13 +56,18 @@ def label(group, key, lang, default=None):
 
     An unrecognised key is not silently blanked: it renders as the raw value,
     so an unmapped enum shows up in the output instead of disappearing from it.
+    A key that is absent is a different thing from one that is unmapped: an
+    optional field the envelope never set renders empty — which the table
+    writer turns into an em-dash — never as the literal text "None".
     """
     table = load_wording()["labels"]
     if group not in table:
         raise KeyError("report wording has no label group %r" % (group,))
     entry = table[group].get(key)
     if entry is None:
-        return default if default is not None else str(key)
+        if default is not None:
+            return default
+        return "" if key is None else str(key)
     return _pick(entry, lang, "labels.%s.%s" % (group, key))
 
 

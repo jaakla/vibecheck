@@ -35,6 +35,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
+import actions as actions_mod
 import context as ctx
 import risk as risk_mod
 from controls import FRAMEWORK, FRAMEWORK_VERSION
@@ -282,7 +283,7 @@ def _verdict_block(envelope, state):
 # ---------------------------------------------------------------- derivation
 
 def _open_blocking_actions(envelope, scope):
-    return [a for a in envelope.get("actions") or []
+    return [a for a in actions_mod.current_actions(envelope)
             if a.get("state") in OPEN_ACTION_STATES
             and _covers(a.get("blocking_scope"), scope)]
 

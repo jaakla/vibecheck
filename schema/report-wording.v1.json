@@ -1,6 +1,6 @@
 {
   "schema": "vibecheck.report_wording",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "languages": ["en", "et"],
   "description": "Founder and reviewer report vocabulary in English and Estonian (gh issue #5, epic #1). Wording is data so that a translation can never change what a control means: the report renders the same scenarios, the same disclosures and the same control identities in either language and either profile, and only the words differ (RFC 0001 section 9). This file also carries the Estonian wording for the context dimensions and their values, which the context model deliberately left to the founder report (RFC deferred question 11). Control wording itself is not duplicated here — it comes from schema/mappings/vibecheck_v1.json, so plain-language and technical phrasings keep a single source.",
 
@@ -43,7 +43,8 @@
     "h_appendix_scenarios": {"en": "D. Scenario traceability", "et": "D. Stsenaariumide jälgitavus"},
     "h_appendix_actions": {"en": "E. Actions", "et": "E. Tegevused"},
     "h_appendix_procedures": {"en": "F. Procedures", "et": "F. Protseduurid"},
-    "h_appendix_method": {"en": "G. Method and versions", "et": "G. Metoodika ja versioonid"},
+    "h_appendix_attempts": {"en": "G. Procedure attempts", "et": "G. Protseduuri katsed"},
+    "h_appendix_method": {"en": "H. Method and versions", "et": "H. Metoodika ja versioonid"},
     "h_can_do_now": {"en": "Vibecheck can do now", "et": "Vibecheck saab kohe teha"},
     "h_you_need_to_do": {"en": "You need to do", "et": "Sina pead tegema"},
     "h_needs_developer_or_specialist": {"en": "Needs a developer or a specialist", "et": "Vajab arendajat või spetsialisti"},
@@ -96,6 +97,15 @@
     "f_success_evidence": {"en": "What closes it", "et": "Mis selle sulgeb"},
     "f_blocking_scope": {"en": "Blocks", "et": "Blokeerib"},
     "f_procedures": {"en": "Candidate procedures", "et": "Võimalikud protseduurid"},
+    "t_priority": {"en": "Priority", "et": "Prioriteet"},
+    "t_execution_mode": {"en": "Execution mode", "et": "Täitmisviis"},
+    "t_network": {"en": "Network", "et": "Võrguühendus"},
+    "t_attempt": {"en": "Attempt", "et": "Katse"},
+    "t_environment": {"en": "Environment", "et": "Keskkond"},
+    "t_result": {"en": "Result", "et": "Tulemus"},
+    "t_rollback": {"en": "Rollback", "et": "Tagasipööre"},
+    "t_reassessment": {"en": "Reassessment", "et": "Uushinnang"},
+    "t_legacy_view": {"en": "Legacy view", "et": "Pärandvaade"},
     "t_item": {"en": "#", "et": "#"},
     "t_category": {"en": "Category", "et": "Kategooria"},
     "t_control": {"en": "Control", "et": "Kontroll"},
@@ -364,6 +374,18 @@
       "backlog": {"en": "backlog", "et": "ootenimekirjas"},
       "unknown": {"en": "not decided", "et": "otsustamata"}
     },
+    "priorities": {
+      "critical": {"en": "critical", "et": "kriitiline"},
+      "high": {"en": "high", "et": "kõrge"},
+      "moderate": {"en": "moderate", "et": "mõõdukas"},
+      "low": {"en": "low", "et": "madal"},
+      "unknown": {"en": "unknown", "et": "teadmata"}
+    },
+    "execution_modes": {
+      "automated": {"en": "automated", "et": "automatiseeritud"},
+      "guided": {"en": "guided", "et": "juhendatud"},
+      "manual": {"en": "manual", "et": "käsitsi"}
+    },
     "deadline_labels": {
       "overdue": {"en": "Overdue", "et": "Tähtaeg möödas"},
       "fix_now": {"en": "Fix now", "et": "Paranda kohe"},
@@ -374,6 +396,7 @@
       "before_event": {"en": "Before a named event", "et": "Enne nimetatud sündmust"},
       "by_date": {"en": "By a fixed date", "et": "Kindlaks kuupäevaks"},
       "backlog": {"en": "Backlog", "et": "Ootenimekiri"},
+      "unknown": {"en": "Unknown", "et": "Teadmata"},
       "unscheduled": {"en": "Not scheduled: decide when", "et": "Ajastamata: otsusta millal"}
     },
     "framework_verdicts": {

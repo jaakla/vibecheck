@@ -236,18 +236,131 @@ class TestCompletenessSafeReport(unittest.TestCase):
                       if a["action_id"] == "act-overdue-review")
         self.assertEqual("overdue", report.deadline_label_id(action, NOW))
 
-    def test_needs_specialist_screening_is_visible_without_an_action(self):
+    def test_needs_specialist_screening_materializes_one_visible_action(self):
         source = copy.deepcopy(self.source)
         screening = next(a for a in source["assessments"]
                          if a["status"] == "answered")
         screening["status"] = "needs_specialist"
         derived = report.derive_into(source, now=NOW)
+        self.assertEqual([], derived["report"]["mandatory_disclosures"][
+            "specialist_assessment_refs"])
         refs = derived["report"]["mandatory_disclosures"][
-            "specialist_assessment_refs"]
-        self.assertEqual([screening["assessment_id"]], refs)
+            "specialist_escalation_refs"]
+        action = next(a for a in derived["actions"]
+                      if a["action_id"] in refs
+                      and screening["control_id"] in a.get("control_refs", []))
+        self.assertEqual("specialist", action["owner"]["role"])
+        self.assertEqual([screening["control_id"]], action["control_refs"])
         placement = next(p for p in derived["report"]["disclosure_placement"]
-                         if p["ref"] == screening["assessment_id"])
+                         if p["ref"] == action["action_id"])
         self.assertEqual("mandatory_section", placement["rendered_in"])
+
+    def _screening_source(self, escalation_state=None):
+        source = copy.deepcopy(self.source)
+        screening = next(a for a in source["assessments"]
+                         if a["status"] == "answered")
+        screening["status"] = "needs_specialist"
+        if escalation_state is not None:
+            history = [{"state": "open", "at": NOW}]
+            if escalation_state == "done":
+                history.append({"state": "in_progress", "at": NOW})
+            if escalation_state != "open":
+                history.append({"state": escalation_state, "at": NOW,
+                                "note": "recorded decision"})
+            source["actions"].append({
+                "action_id": "act-escalate-existing", "revision": 1,
+                "action_key": "escalate-existing", "created_at": NOW,
+                "kind": "escalate", "outcome": "A specialist decides.",
+                "reason": "Screening row needs a specialist.",
+                "priority": "unknown", "urgency": "next",
+                "deadline": {"kind": "unknown", "rationale": "Depends on the use.",
+                             "reassess_trigger": {"kind": "context_change"}},
+                "blocking_scope": [], "owner": {"role": "specialist"},
+                "state": escalation_state, "state_history": history,
+                "control_refs": [screening["control_id"]],
+            })
+        return source, screening
+
+    def test_closed_escalation_never_hides_a_needs_specialist_row(self):
+        """A done or rejected escalation must not fall between both sets.
+
+        specialist_escalations() lists open actions only, so counting a closed
+        one as coverage would drop the screening row out of the escalation set
+        and the assessment set at the same time (rule R12).
+        """
+        for state in ("done", "rejected"):
+            with self.subTest(state=state):
+                source, screening = self._screening_source(state)
+                derived = report.derive_into(source, now=NOW)
+                disclosures = derived["report"]["mandatory_disclosures"]
+                covering = {
+                    a["action_id"] for a in derived["actions"]
+                    if screening["control_id"] in (a.get("control_refs") or [])
+                    and (a.get("kind") == "escalate"
+                         or (a.get("owner") or {}).get("role") == "specialist")
+                    and a["state"] in report.load_policy()[
+                        "mandatory_disclosures"]["open_action_states"]}
+                visible = (
+                    ({screening["assessment_id"]}
+                     & set(disclosures["specialist_assessment_refs"]))
+                    | (covering & set(disclosures["specialist_escalation_refs"])))
+                self.assertTrue(
+                    visible,
+                    "this screening row is in no mandatory set: the closed "
+                    "escalation stopped it counting as an assessment without "
+                    "it counting as an open escalation")
+                placed = {p["ref"]
+                          for p in derived["report"]["disclosure_placement"]}
+                self.assertTrue(visible <= placed)
+
+    def test_open_escalation_still_covers_the_screening_row_once(self):
+        source, screening = self._screening_source("open")
+        derived = report.derive_into(source, now=NOW)
+        disclosures = derived["report"]["mandatory_disclosures"]
+        self.assertEqual([], disclosures["specialist_assessment_refs"])
+        self.assertIn("act-escalate-existing",
+                      disclosures["specialist_escalation_refs"])
+        self.assertEqual(
+            [], [a for a in derived["actions"]
+                 if a["action_id"].startswith("act-escalate-")
+                 and a["action_id"] != "act-escalate-existing"])
+
+    def test_closing_a_derived_escalation_reopens_the_screening_row(self):
+        """Re-deriving must not fork the derived Action's own lineage."""
+        source, screening = self._screening_source()
+        once = report.derive_into(source, now=NOW)
+        derived_action = next(a for a in once["actions"]
+                              if a["action_id"].startswith("act-escalate-"))
+        derived_action["state"] = "rejected"
+        derived_action["state_history"].append(
+            {"state": "rejected", "at": NOW, "note": "specialist declined"})
+        twice = report.derive_into(once, now=NOW)
+        self.assertEqual(
+            [derived_action["action_id"]],
+            [a["action_id"] for a in twice["actions"]
+             if a["action_id"].startswith("act-escalate-")])
+        self.assertEqual([screening["assessment_id"]],
+                         twice["report"]["mandatory_disclosures"][
+                             "specialist_assessment_refs"])
+        self.assertEqual([], canonical.validate_envelope(twice))
+
+    def test_an_unset_optional_field_never_renders_as_the_word_none(self):
+        """priority and execution_mode are optional below schema 1.3."""
+        source = copy.deepcopy(self.source)
+        source["schema_version"] = "1.2.0"
+        for action in source["actions"]:
+            action.pop("priority", None)
+        for procedure in source["procedures"]:
+            procedure.pop("execution_mode", None)
+        for language in wording.LANGUAGES:
+            with self.subTest(language=language):
+                markdown = report.render(
+                    report.derive_into(source, now=NOW), "reviewer",
+                    language, NOW)
+                self.assertNotIn("| None |", markdown)
+        self.assertEqual("", wording.label("priorities", None, "en"))
+        self.assertEqual("bogus", wording.label("priorities", "bogus", "en"),
+                         "an unmapped enum must still show up in the output")
 
     def test_appendix_has_all_89_items_and_full_trace_chain(self):
         appendix = self.derived["report"]["appendix"]

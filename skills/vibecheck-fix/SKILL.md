@@ -1,61 +1,61 @@
 ---
 name: vibecheck-fix
 description: >
-  Propose and apply remediations for vibecheck findings. Use after vibecheck-scan when the
-  user says "fix these", "remediate", "patch the issues", "apply the safe fixes", or asks to
-  resolve findings from a review. Works diff-first: proposes changes, gets consent, applies on
-  a branch, then re-scans to confirm each finding cleared. Distinguishes fixes that can be
-  applied mechanically from ones needing a human decision.
+  Turn Vibecheck findings into versioned Actions and candidate Procedures, execute only an
+  explicitly selected and authorized Procedure, record the exact ProcedureAttempt, and
+  independently verify the result before completing the Action. Use after vibecheck-scan
+  when the user asks to fix, remediate, patch, or resolve review findings.
 ---
 
 # Vibecheck Fix
 
-Remediate findings from `vibecheck-scan`. The guiding rule: **never silently change security-relevant behaviour, and never claim a fix you cannot verify.** Some findings (leaked secrets in history) cannot be "fixed" by editing files at all — they require rotation and history rewrite, which are advisory.
+Remediate findings from `vibecheck-scan`. Never silently change security-relevant behaviour, and never claim a fix without fresh success evidence and reassessment.
 
-## Fix taxonomy
+## Canonical remediation model
 
-Classify every finding into one of three tiers before touching anything:
+Do not classify work canonically as AUTO, PROPOSE, or ADVISORY. Create:
 
-**AUTO — mechanical, deterministic, safe to apply after showing the diff:**
-- `.env` tracked → `git rm --cached` + add to `.gitignore`
-- Wildcard CORS on a known endpoint → replace `*` with an allowlist constant
-- Empty catch blocks → add error logging (never leave silent)
-- `console.log` of secrets/PII → remove or redact
-- Missing `.gitignore` entries for build/secret artifacts
+- an `Action` for the required, testable outcome, with its reason, priority, owner, dependencies, lifecycle state, urgency, deadline policy, blocking environment/use scopes, success evidence, and controls to reassess;
+- one `Procedure` per possible method. Keep `executor_role`, `execution_mode`, mechanism, exact tool/steps, inputs, effect targets, reversibility, consent, cost, network/data egress, failure/rollback, and verification separate;
+- one immutable `ProcedureAttempt` for an execution, including the exact consent record and scope, authorized effects, environment, input references, observed side effects, result, rollback state, produced evidence, and reassessments.
 
-**PROPOSE — needs a project-specific value; draft it and ask before applying:**
-- Missing lockfile → with explicit permission for networked registry resolution, generate it without lifecycle scripts (`npm install --package-lock-only --ignore-scripts --no-audit --fund=false`). First inspect `.npmrc`/registry configuration; never send credentials to an untrusted registry.
-- `rls.missing` → generate `alter table X enable row level security;` plus a starter owner policy, but the owner column (`user_id`?) must be confirmed
-- `rls.permissive` (`using(true)`) → propose `using (auth.uid() = <owner_col>)`; confirm the column and whether the table is meant to be public
-- `inject.sql` → rewrite as parameterized query / ORM call
-- `inject.llm_to_exec` (#77) → remove the exec sink or wrap model output in a strict validator/allowlist; propose the specific guard
-- `inject.tool_agent` (#79) → add a tool allowlist + argument schema validation
-- `cost.client_llm` → move the call to a server route/edge function and proxy it
-- `integ.webhook_sig` → insert the provider's signature-verification snippet (needs the signing secret env var name)
+One Action may offer automated, guided, and specialist Procedures. Automation is not authorization. Approval is a consent policy, not a mechanism. Specialist is an executor role, not a mechanism. Destructiveness is an effect property, not an effect target.
 
-**ADVISORY — cannot be fixed by editing code; state plainly as required human actions:**
-- Any secret found in git **history** (`secrets.env_history`, `secrets.history_content`) → the key is compromised. Required: (1) rotate the key at the provider now, (2) purge history with `git filter-repo` or BFG, (3) force-push and have collaborators re-clone. Editing the current tree does **not** undo the leak.
-- Backups/restore, budget caps, data residency, DPA, Annex III classification → dashboard or organisational actions.
+AUTO / PROPOSE / ADVISORY may be shown only through the derived `vibecheck.action_legacy_view` compatibility view. Never read that view to decide whether execution is allowed.
+
+## Procedure patterns
+
+Represent current fixes without overloading their meaning:
+
+- Mechanical repository hygiene can use an automated `vibecheck_agent` Procedure, but any write remains `explicit_consent` and branch/diff scope must be exact.
+- Project-specific code or policy changes usually offer a guided developer Procedure. Confirm inputs such as ownership columns, origin allowlists, provider secret names, and business rules before authorizing the attempt.
+- Secret rotation, git-history purging, backups/restore, budget caps, data residency, DPA, and legal classification use founder/platform/specialist Procedures. Editing the tree does not complete them.
+- A leaked secret in history requires separate Procedures for provider rotation and history cleanup. Never claim either happened without its own attempt evidence.
 
 ## Workflow
 
-1. Take the scan findings (re-run `vibecheck-scan` if you don't have them fresh).
-2. Print the fix plan grouped by tier. For AUTO and PROPOSE, show the exact diff you intend to make. For ADVISORY, show the checklist of human actions.
-3. Get explicit consent. Default to a new branch: `git checkout -b vibecheck-fixes`.
-4. Apply AUTO fixes. Apply PROPOSE fixes only for items the user confirmed. Never touch ADVISORY items automatically.
-5. For mechanical git-hygiene fixes you may use the helper. Preview first:
+1. Use fresh scan/review evidence. Create or revise Actions for unresolved outcomes; do not duplicate the same outcome merely to offer another method.
+2. Offer candidate Procedures. For each, state executor, execution mode, prerequisites/input references, exact method, network/egress, effect targets and booleans, reversibility, consent policy, failure/rollback, cost, expected evidence, and an independent verifier.
+3. Show the proposed diff or exact non-code operation before authorization. Default code changes to a new branch. Keep secrets redacted and store inputs by reference only.
+4. Get consent for one exact attempt. Bind consent to its attempt ID, authorized targets/effects, environment, grant time, expiry if any, and provenance. Consent for one attempt never authorizes a later run or a different side effect.
+5. Execute only within that scope. For repository hygiene, preview the bounded helper first:
+
    ```bash
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply_safe_fixes.sh <repo_dir> --dry-run
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply_safe_fixes.sh <repo_dir>
    ```
-   It only does scoped, reversible repository actions and prints what it did. Lockfile generation is skipped unless the user has approved registry access and you add `--allow-network-lockfile`; even then lifecycle scripts and the implicit audit are disabled. It never rewrites history or rotates keys.
-6. **Re-run `vibecheck-scan` and confirm each targeted warning cleared to `NO_SIGNAL`, then verify the control independently.** A cleared regex signal is not proof that the vulnerability is fixed. Report any remaining warnings or failed functional/security tests.
-7. Summarise: what was fixed, what still needs the user's decision, and the outstanding ADVISORY actions.
+
+   Lockfile generation also needs approved network access and `--allow-network-lockfile`; lifecycle scripts and implicit audit remain disabled. The helper never rotates secrets or rewrites history.
+6. Record actual side effects, result, rollback state, and evidence. A failed, partial, or aborted attempt leaves the Action open/in progress/blocked.
+7. Verify independently and create a superseding Assessment from fresh evidence. A cleared regex warning is not proof. Mark the Action `done` only when a succeeded attempt produced the defined evidence and a reassessment cites it.
+8. Report the Action state, every attempt result, remaining blockers, and which Procedures still need owner/developer/specialist action.
 
 ## Hard rules
 
-- Diff-first. No edits before the user has seen them, except when they say "apply all safe fixes" — then AUTO tier only.
-- Never weaken a control to make a check pass (e.g. do not delete a test, suppress a warning, or broaden a type to silence a validator).
-- Never fabricate a rotation or a history purge. If you can't verify it, it stays ADVISORY.
-- Keep secrets redacted in all output.
-- One logical fix per commit, with a message naming the checklist item (e.g. `fix(#14): scope RLS policy on profiles to owner`).
+- Diff-first and branch-first for code changes.
+- Never execute from a legacy AUTO label or from execution mode alone.
+- Never expand consent beyond the exact attempt, target, environment, inputs, or effects recorded.
+- Never weaken a control to make a check pass.
+- Never store secret input values in an attempt record.
+- Never fabricate rotation, deployment, rollback, history purge, evidence, or reassessment.
+- One failed or partial attempt never completes the Action; a disappeared warning is never success evidence.
