@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/jaakla/vibecheck/main/schema/vibecheck.assessment.v1.schema.json",
   "title": "Vibecheck assessment envelope v1",
-  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation only; semantic rules R1-R15 in the RFC apply on top. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added the context/risk/readiness derivation (gh issue #4). Schema version 1.2.0 additively adds deterministic risk scenarios, completeness-safe report placement, full appendix traceability, and EN/ET founder/reviewer presentation metadata (gh issue #5).",
+  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation is supplemented by semantic rules in scripts/canonical.py and scripts/actions.py. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added context/risk/readiness (gh issue #4), 1.2.0 added founder scenarios and completeness-safe reports (gh issue #5), and 1.3.0 adds the versioned Action/Procedure registry, exact-attempt consent and evidence-backed completion (gh issue #6).",
   "type": "object",
   "required": ["schema", "schema_version", "assessment_id", "revision", "created_at", "context"],
   "properties": {
@@ -20,6 +20,15 @@
       "properties": {
         "name": { "type": "string" },
         "version": { "type": "string" }
+      }
+    },
+    "action_registry": {
+      "type": "object",
+      "description": "Version of the Action/Procedure/ProcedureAttempt contract used by this envelope. Required semantically for schema 1.3+ envelopes that contain any of those records.",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "vibecheck.action_registry" },
+        "version": { "$ref": "#/$defs/semver" }
       }
     },
     "signals": { "type": "array", "items": { "$ref": "#/$defs/signal" } },
@@ -594,9 +603,14 @@
       "required": ["action_id", "kind", "outcome", "reason", "urgency", "deadline", "blocking_scope", "owner", "state"],
       "properties": {
         "action_id": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" },
+        "action_key": { "type": "string", "pattern": "^[a-z][a-z0-9._:-]+$", "description": "Stable lineage identity shared by all revisions of this Action." },
+        "revision": { "type": "integer", "minimum": 1 },
+        "supersedes": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
         "kind": { "enum": ["remediate", "verify", "escalate", "incident_response", "decide"] },
         "outcome": { "type": "string", "description": "The required outcome, phrased testably." },
         "reason": { "type": "string" },
+        "priority": { "enum": ["critical", "high", "moderate", "low", "unknown"], "description": "Ordering importance, separate from when work starts (urgency) and what transition it blocks (deadline/blocking_scope)." },
         "urgency": { "enum": ["immediate", "next", "planned", "backlog", "unknown"] },
         "deadline": {
           "type": "object",
@@ -604,7 +618,8 @@
           "properties": {
             "kind": { "enum": ["immediate", "before_environment", "before_intended_use", "before_event", "calendar_date", "none", "unknown"] },
             "value": { "type": "string" },
-            "rationale": { "type": "string" }
+            "rationale": { "type": "string" },
+            "reassess_trigger": { "$ref": "#/$defs/trigger", "description": "When this deadline policy itself must be revisited." }
           },
           "allOf": [
             {
@@ -636,7 +651,8 @@
               "state": { "enum": ["open", "in_progress", "blocked", "done", "superseded", "rejected"] },
               "at": { "$ref": "#/$defs/timestamp" },
               "by": { "type": "string" },
-              "note": { "type": "string" }
+              "note": { "type": "string" },
+              "decision_ref": { "type": "string", "description": "Required semantically for a rejected Action unless the decision is captured in note." }
             }
           }
         },
@@ -656,8 +672,13 @@
       "required": ["procedure_id", "title", "executor_role", "mechanism", "effects", "authorization", "method", "cost", "data_egress", "failure_behavior", "success_evidence"],
       "properties": {
         "procedure_id": { "type": "string", "pattern": "^prc-[A-Za-z0-9._:-]+$" },
+        "procedure_key": { "type": "string", "pattern": "^[a-z][a-z0-9._:-]+$", "description": "Stable lineage identity shared by immutable revisions of this Procedure." },
+        "revision": { "type": "integer", "minimum": 1 },
+        "supersedes": { "type": "string", "pattern": "^prc-[A-Za-z0-9._:-]+$" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
         "title": { "type": "string" },
         "executor_role": { "enum": ["founder", "developer", "specialist", "vibecheck_agent", "platform"] },
+        "execution_mode": { "enum": ["automated", "guided", "manual"], "description": "How the method is carried out. This is independent of executor_role and never implies authorization." },
         "mechanism": { "type": "string", "description": "e.g. sql_migration, code_change, dashboard_setting, account_transfer" },
         "prerequisites": { "type": "array", "items": { "type": "string" } },
         "required_inputs": { "type": "array", "items": { "type": "string" } },
@@ -700,6 +721,15 @@
             "notes": { "type": "string" }
           }
         },
+        "network": {
+          "type": "object",
+          "required": ["required"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "destinations": { "type": "array", "items": { "type": "string" } },
+            "purpose": { "type": "string" }
+          }
+        },
         "data_egress": {
           "type": "object",
           "required": ["occurs"],
@@ -717,6 +747,15 @@
           }
         },
         "success_evidence": { "type": "string" },
+        "verification": {
+          "type": "object",
+          "required": ["provider", "independent_from_executor"],
+          "properties": {
+            "provider": { "type": "string" },
+            "independent_from_executor": { "type": "boolean" },
+            "provider_ref": { "type": "string", "pattern": "^prov-[A-Za-z0-9._:-]+$" }
+          }
+        },
         "verification_provider_ref": { "type": "string", "pattern": "^prov-[A-Za-z0-9._:-]+$" }
       },
       "allOf": [
@@ -751,7 +790,7 @@
     "procedure_attempt": {
       "type": "object",
       "description": "One authorized execution of a procedure: exact authorization, what happened, what evidence it produced, and which reassessments followed.",
-      "required": ["attempt_id", "procedure_ref", "action_ref", "authorization", "executor", "started_at", "result", "effects_observed"],
+      "required": ["attempt_id", "procedure_ref", "action_ref", "authorization", "executor", "started_at", "result"],
       "properties": {
         "attempt_id": { "type": "string", "pattern": "^att-[A-Za-z0-9._:-]+$" },
         "procedure_ref": { "type": "string", "pattern": "^prc-[A-Za-z0-9._:-]+$" },
@@ -760,11 +799,28 @@
           "type": "object",
           "required": ["authorized_by", "granted_at", "scope", "mode"],
           "properties": {
+            "authorization_id": { "type": "string", "pattern": "^auth-[A-Za-z0-9._:-]+$", "description": "Single-use authorization record identity; unique across attempts." },
+            "attempt_ref": { "type": "string", "pattern": "^att-[A-Za-z0-9._:-]+$", "description": "Binds this embedded authorization to one exact attempt." },
             "authorized_by": { "type": "string" },
             "granted_at": { "$ref": "#/$defs/timestamp" },
+            "expires_at": { "$ref": "#/$defs/timestamp" },
             "scope": { "type": "string", "description": "Exactly what was authorized, no more." },
-            "mode": { "enum": ["explicit_consent", "pre_authorized"] },
-            "record": { "type": "string", "description": "Where the consent record lives." }
+            "mode": { "enum": ["not_required", "explicit_consent", "pre_authorized"] },
+            "record": { "type": "string", "description": "Consent provenance: where the authorization record lives." },
+            "effects": {
+              "type": "object",
+              "required": ["targets", "write", "destructive", "deployment", "data", "external_accounts", "data_egress", "data_egress_destinations"],
+              "properties": {
+                "targets": { "type": "array", "items": { "type": "string" } },
+                "write": { "type": "boolean" },
+                "destructive": { "type": "boolean" },
+                "deployment": { "type": "boolean" },
+                "data": { "type": "boolean" },
+                "external_accounts": { "type": "boolean" },
+                "data_egress": { "type": "boolean" },
+                "data_egress_destinations": { "type": "array", "items": { "type": "string" } }
+              }
+            }
           }
         },
         "executor": {
@@ -775,10 +831,64 @@
             "id": { "type": "string" }
           }
         },
+        "execution_environment": { "$ref": "#/$defs/environment" },
+        "execution_context": {
+          "type": "object",
+          "description": "Concrete place and revision where this attempt ran, distinct from the assessment environment label.",
+          "required": ["kind", "locator"],
+          "properties": {
+            "kind": { "enum": ["local", "ci", "sandbox", "staging", "production", "provider_dashboard", "other"] },
+            "locator": { "type": "string" },
+            "source_ref": { "type": "string", "description": "Branch, commit, deployment or configuration revision." },
+            "tool_versions": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "input_refs": {
+          "type": "array",
+          "description": "References only. Secret or sensitive input values never enter an attempt record.",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "locator"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "enum": ["file", "environment_variable", "secret_store", "record", "artifact", "other"] },
+              "locator": { "type": "string" },
+              "sensitive": { "type": "boolean" },
+              "value": false,
+              "secret": false,
+              "content": false,
+              "raw_value": false
+            }
+          }
+        },
         "started_at": { "$ref": "#/$defs/timestamp" },
         "finished_at": { "$ref": "#/$defs/timestamp" },
         "result": { "enum": ["succeeded", "partially_succeeded", "failed", "aborted"] },
-        "effects_observed": { "type": "array", "items": { "type": "string" } },
+        "effects_observed": { "type": "array", "description": "Legacy free-text observation; schema 1.3 uses side_effects_observed.", "items": { "type": "string" } },
+        "side_effects_observed": {
+          "type": "object",
+          "required": ["targets", "write", "destructive", "deployment", "data", "external_accounts", "data_egress", "data_egress_destinations"],
+          "properties": {
+            "targets": { "type": "array", "items": { "type": "string" } },
+            "write": { "type": "boolean" },
+            "destructive": { "type": "boolean" },
+            "deployment": { "type": "boolean" },
+            "data": { "type": "boolean" },
+            "external_accounts": { "type": "boolean" },
+            "data_egress": { "type": "boolean" },
+            "data_egress_destinations": { "type": "array", "items": { "type": "string" } },
+            "details": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "rollback": {
+          "type": "object",
+          "required": ["state"],
+          "properties": {
+            "state": { "enum": ["not_needed", "not_attempted", "pending", "succeeded", "failed"] },
+            "notes": { "type": "string" },
+            "finished_at": { "$ref": "#/$defs/timestamp" }
+          }
+        },
         "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^ev-[A-Za-z0-9._:-]+$" } },
         "reassessment_refs": { "type": "array", "items": { "type": "string", "pattern": "^asm-[A-Za-z0-9._:-]+$" } },
         "notes": { "type": "string" }
@@ -993,7 +1103,7 @@
             "incident_response_action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
             "specialist_escalation_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
             "deadline_blocking_action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
-            "specialist_assessment_refs": { "type": "array", "description": "Screening rows a reviewer marked as needing a specialist. They are escalations with no action object yet, and leaving them out until one exists would break the completeness invariant.", "items": { "type": "string", "pattern": "^asm-[A-Za-z0-9._:-]+$" } }
+            "specialist_assessment_refs": { "type": "array", "description": "Compatibility fallback for needs_specialist assessments not yet materialized as Increment-4 Actions.", "items": { "type": "string", "pattern": "^asm-[A-Za-z0-9._:-]+$" } }
           }
         },
         "disclosure_placement": {
@@ -1045,13 +1155,16 @@
           "properties": {
             "framework": { "type": "string" },
             "framework_version": { "type": "string" },
+            "action_registry": { "type": "object" },
             "item_count": { "type": "integer", "minimum": 1 },
             "assessment_refs": { "type": "array", "items": { "type": "string" } },
             "evidence_refs": { "type": "array", "items": { "type": "string" } },
             "risk_refs": { "type": "array", "items": { "type": "string" } },
             "scenario_refs": { "type": "array", "items": { "type": "string" } },
             "action_refs": { "type": "array", "items": { "type": "string" } },
-            "procedure_refs": { "type": "array", "items": { "type": "string" } }
+            "procedure_refs": { "type": "array", "items": { "type": "string" } },
+            "attempt_refs": { "type": "array", "items": { "type": "string" } },
+            "legacy_action_view": { "type": "object", "description": "Lossy derived AUTO/PROPOSE/ADVISORY compatibility view. Never authorization." }
           }
         },
         "derivation": { "$ref": "#/$defs/derivation_record" },

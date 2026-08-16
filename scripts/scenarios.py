@@ -33,6 +33,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
+import actions as actions_mod
 import context as ctx
 import risk as risk_mod
 import wording
@@ -187,7 +188,7 @@ def _linked_actions(envelope, scenario_id, control_ids, risk_ids):
     presentation layer that edits its own inputs is how traceability rots.
     """
     linked = []
-    for action in envelope.get("actions") or []:
+    for action in actions_mod.current_actions(envelope):
         refs = set(action.get("control_refs") or [])
         risks = set(action.get("risk_refs") or [])
         scenes = set(action.get("scenario_refs") or [])
@@ -241,7 +242,7 @@ def traceability(envelope, scenario):
     action_ids = set(scenario.get("action_refs") or [])
     action_ids.update(_linked_actions(
         envelope, scenario.get("scenario_id"), control_ids, risk_ids))
-    actions = {action["action_id"]: action for action in envelope.get("actions") or []
+    actions = {action["action_id"]: action for action in actions_mod.current_actions(envelope)
                if action.get("action_id")}
     procedure_ids = set()
     for action_id in action_ids:

@@ -1,7 +1,12 @@
 {
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
   "actions": [
     {
       "action_id": "act-close-anon-read",
+      "action_key": "close-anon-read",
       "blocking_scope": [
         {
           "environment": "public_release",
@@ -11,9 +16,13 @@
       "control_refs": [
         "vibecheck.control.authz.anon_data_access"
       ],
+      "created_at": "2026-08-16T12:00:00Z",
       "deadline": {
         "kind": "immediate",
-        "rationale": "The product is live and the data is reachable with a key that ships in the app bundle."
+        "rationale": "The product is live and the data is reachable with a key that ships in the app bundle.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
       },
       "kind": "remediate",
       "outcome": "An independent re-probe with the anon key returns no rows from public.bookings on a table separately established as non-empty.",
@@ -21,10 +30,12 @@
         "name": "developer:sam",
         "role": "developer"
       },
+      "priority": "unknown",
       "reason": "Anon callers can currently read every booking, including names, phone numbers and addresses.",
       "reassess_control_ids": [
         "vibecheck.control.authz.anon_data_access"
       ],
+      "revision": 1,
       "state": "open",
       "state_history": [
         {
@@ -93,6 +104,7 @@
       "status": "fail"
     }
   ],
+  "attempts": [],
   "context": {
     "application": {
       "description": "Live booking product with open signup, card payments through a hosted checkout, and email confirmations.",
@@ -559,5 +571,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.2.0"
+  "schema_version": "1.3.0"
 }

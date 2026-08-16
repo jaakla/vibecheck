@@ -1,4 +1,8 @@
 {
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
   "actions": [],
   "assessment_id": "va-golden-developer-only-prototype",
   "assessments": [
@@ -747,6 +751,7 @@
       "status": "pass"
     }
   ],
+  "attempts": [],
   "context": {
     "application": {
       "description": "A weekend Lovable prototype that sorts recipes; runs on the builder's laptop against seeded fixtures.",
@@ -1300,5 +1305,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.2.0"
+  "schema_version": "1.3.0"
 }

@@ -1,0 +1,284 @@
+{
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.3.0",
+  "assessment_id": "va-action-registry-example",
+  "revision": 1,
+  "created_at": "2026-08-16T12:00:00Z",
+  "context": {
+    "context_id": "ctx-action-registry-example",
+    "revision": 1,
+    "application": {
+      "name": "Example application"
+    },
+    "target_scopes": [
+      {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    ],
+    "confirmation": {
+      "state": "draft"
+    }
+  },
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
+  "actions": [
+    {
+      "action_id": "act-enforce-order-access-v1",
+      "action_key": "enforce-order-access",
+      "revision": 1,
+      "created_at": "2026-08-16T12:00:00Z",
+      "kind": "remediate",
+      "outcome": "A repeated two-account test proves that an account cannot read another account's order.",
+      "reason": "Object-level authorization has not been established.",
+      "priority": "high",
+      "urgency": "next",
+      "deadline": {
+        "kind": "before_environment",
+        "value": "public_release",
+        "rationale": "Cross-account access must be denied before the public environment is used.",
+        "reassess_trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "blocking_scope": [
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "owner": {
+        "role": "developer"
+      },
+      "state": "in_progress",
+      "state_history": [
+        {
+          "state": "open",
+          "at": "2026-08-16T12:00:00Z",
+          "by": "reviewer:example"
+        },
+        {
+          "state": "in_progress",
+          "at": "2026-08-16T12:05:00Z",
+          "by": "developer:example"
+        }
+      ],
+      "procedure_refs": [
+        "prc-read-only-plan-v1",
+        "prc-guided-code-change-v1",
+        "prc-specialist-review-v1"
+      ],
+      "success_evidence": "A fresh independent two-account test denies the cross-account read and a new assessment cites that evidence.",
+      "reassess_control_ids": []
+    }
+  ],
+  "procedures": [
+    {
+      "procedure_id": "prc-read-only-plan-v1",
+      "procedure_key": "read-only-plan",
+      "revision": 1,
+      "created_at": "2026-08-16T12:00:00Z",
+      "title": "Prepare a bounded authorization-fix plan",
+      "executor_role": "vibecheck_agent",
+      "execution_mode": "automated",
+      "mechanism": "read_only_source_review",
+      "prerequisites": ["Current source tree"],
+      "required_inputs": ["Repository path"],
+      "effects": {
+        "targets": ["current source tree"],
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "data": false,
+        "external_accounts": false,
+        "reversibility": "reversible"
+      },
+      "authorization": {
+        "consent": "not_required"
+      },
+      "method": {
+        "tool": "Vibecheck source review",
+        "steps": ["Trace the object lookup and its owner check.", "Propose a diff without applying it."]
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "network": {
+        "required": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "failure_behavior": {
+        "on_failure": "Record the unreviewed path as a coverage gap.",
+        "rollback": "No changes were made."
+      },
+      "success_evidence": "A bounded plan names the exact code path, proposed guard and independent test.",
+      "verification": {
+        "provider": "human reviewer",
+        "independent_from_executor": true
+      }
+    },
+    {
+      "procedure_id": "prc-guided-code-change-v1",
+      "procedure_key": "guided-code-change",
+      "revision": 1,
+      "created_at": "2026-08-16T12:00:00Z",
+      "title": "Apply the reviewed owner check on a branch",
+      "executor_role": "developer",
+      "execution_mode": "guided",
+      "mechanism": "branch_first_code_change",
+      "prerequisites": ["The owner relation is confirmed", "A branch is available"],
+      "required_inputs": ["Confirmed ownership field"],
+      "effects": {
+        "targets": ["authorization query", "authorization tests"],
+        "write": true,
+        "destructive": false,
+        "deployment": false,
+        "data": false,
+        "external_accounts": false,
+        "reversibility": "reversible"
+      },
+      "authorization": {
+        "consent": "explicit_consent",
+        "scope": "The reviewed branch diff only."
+      },
+      "method": {
+        "tool": "project editor and test runner"
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "network": {
+        "required": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "failure_behavior": {
+        "on_failure": "Leave the Action open and retain the failed test output.",
+        "rollback": "Revert the branch commit."
+      },
+      "success_evidence": "The focused test passes and an independent two-account test is recorded.",
+      "verification": {
+        "provider": "independent two-account test",
+        "independent_from_executor": true
+      }
+    },
+    {
+      "procedure_id": "prc-specialist-review-v1",
+      "procedure_key": "specialist-review",
+      "revision": 1,
+      "created_at": "2026-08-16T12:00:00Z",
+      "title": "Have an authorization specialist review the design",
+      "executor_role": "specialist",
+      "execution_mode": "manual",
+      "mechanism": "specialist_design_review",
+      "prerequisites": ["Architecture and data model are available"],
+      "required_inputs": ["Authorization design"],
+      "effects": {
+        "targets": ["authorization design"],
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "data": false,
+        "external_accounts": false,
+        "reversibility": "reversible"
+      },
+      "authorization": {
+        "consent": "not_required"
+      },
+      "method": {
+        "tool": "specialist review"
+      },
+      "cost": {
+        "monetary": "unknown"
+      },
+      "network": {
+        "required": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "failure_behavior": {
+        "on_failure": "Keep the Action open and record the unresolved questions.",
+        "rollback": "No changes were made."
+      },
+      "success_evidence": "The specialist records a scoped recommendation and its assumptions.",
+      "verification": {
+        "provider": "accountable reviewer",
+        "independent_from_executor": true
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "attempt_id": "att-read-only-plan-1",
+      "procedure_ref": "prc-read-only-plan-v1",
+      "action_ref": "act-enforce-order-access-v1",
+      "authorization": {
+        "authorization_id": "auth-read-only-plan-1",
+        "attempt_ref": "att-read-only-plan-1",
+        "authorized_by": "policy:local-read-only-review",
+        "granted_at": "2026-08-16T12:04:00Z",
+        "scope": "Read the current source tree only; make no changes and use no network.",
+        "mode": "not_required",
+        "record": "Vibecheck local read-only policy v1",
+        "effects": {
+          "targets": [],
+          "write": false,
+          "destructive": false,
+          "deployment": false,
+          "data": false,
+          "external_accounts": false,
+          "data_egress": false,
+          "data_egress_destinations": []
+        }
+      },
+      "executor": {
+        "kind": "agent",
+        "id": "vibecheck"
+      },
+      "execution_environment": "developer_only",
+      "execution_context": {
+        "kind": "local",
+        "locator": "founder-owned developer sandbox",
+        "source_ref": "working tree at review start",
+        "tool_versions": {
+          "vibecheck": "1.3.0"
+        }
+      },
+      "input_refs": [
+        {
+          "name": "repository",
+          "kind": "file",
+          "locator": ".",
+          "sensitive": false
+        }
+      ],
+      "started_at": "2026-08-16T12:05:00Z",
+      "finished_at": "2026-08-16T12:06:00Z",
+      "result": "failed",
+      "side_effects_observed": {
+        "targets": [],
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "data": false,
+        "external_accounts": false,
+        "data_egress": false,
+        "data_egress_destinations": [],
+        "details": ["The owner relation could not be established from the available source."]
+      },
+      "rollback": {
+        "state": "not_needed",
+        "notes": "No side effects occurred."
+      },
+      "evidence_refs": [],
+      "reassessment_refs": []
+    }
+  ]
+}

@@ -389,29 +389,36 @@ A blank status means the row was never reviewed. That is deliberately different 
 
 ### E. Actions
 
-| Action | Kind | Required outcome | Owner | Urgency | When | State | Blocks | Control ID | Risk | Scenario | Procedure | What closes it |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `act-contain-cross-account-incident` | incident response | Contain the cross-account order exposure and determine which records were accessed. | a specialist | immediate | Fix now | open | public release + public product | `vibecheck.control.authz.object_level` | — | — | `prc-contain-cross-account-incident` | Access is denied in a repeated two-account test, affected access is reviewed, and the control is reassessed. |
-| `act-decide-support-data` | decision | Decide and document which order fields the support assistant is allowed to receive. | the owner | next | Before public launch | open | public release + public product | `vibecheck.control.privacy.data_minimisation` | — | — | — | A reviewed field allowlist and retention statement are recorded. |
-| `act-refactor-test-helper` | fix | Refactor the test-data helper when the next test suite cleanup is scheduled. | a developer | backlog | Backlog | open | — | — | — | — | — | The helper has focused tests and no duplicated setup. |
-| `act-verify-error-paths` | verify | Collect a bounded error-path inventory for the developer to instrument. | a developer | next | Before public launch | open | public release + public product | `vibecheck.control.obs.error_tracking` | — | — | `prc-inventory-error-paths` | The inventory names every reviewed server error path and its current handling. |
+| Action | Kind | Required outcome | Owner | Priority | Urgency | When | State | Blocks | Control ID | Risk | Scenario | Procedure | What closes it |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `act-contain-cross-account-incident` | incident response | Contain the cross-account order exposure and determine which records were accessed. | a specialist | unknown | immediate | Fix now | open | public release + public product | `vibecheck.control.authz.object_level` | — | — | `prc-contain-cross-account-incident` | Access is denied in a repeated two-account test, affected access is reviewed, and the control is reassessed. |
+| `act-decide-support-data` | decision | Decide and document which order fields the support assistant is allowed to receive. | the owner | unknown | next | Before public launch | open | public release + public product | `vibecheck.control.privacy.data_minimisation` | — | — | — | A reviewed field allowlist and retention statement are recorded. |
+| `act-refactor-test-helper` | fix | Refactor the test-data helper when the next test suite cleanup is scheduled. | a developer | unknown | backlog | Backlog | open | — | — | — | — | — | The helper has focused tests and no duplicated setup. |
+| `act-verify-error-paths` | verify | Collect a bounded error-path inventory for the developer to instrument. | a developer | unknown | next | Before public launch | open | public release + public product | `vibecheck.control.obs.error_tracking` | — | — | `prc-inventory-error-paths` | The inventory names every reviewed server error path and its current handling. |
 
 ### F. Procedures
 
-| Procedure | Title | Executor | Mechanism | Consent | Effects | What closes it |
-|---|---|---|---|---|---|---|
-| `prc-contain-cross-account-incident` | Disable the affected order endpoint and deploy an authorization fix | a developer | code_change_and_deployment | explicit consent | write, deployment | A repeated two-account test denies cross-account reads. |
-| `prc-inventory-error-paths` | Scan and review server error paths | Vibecheck | read_only_source_review | not required | none | A bounded path-and-handler inventory with review notes. |
+| Procedure | Title | Executor | Execution mode | Mechanism | Consent | Network | Effects | Legacy view | What closes it |
+|---|---|---|---|---|---|---|---|---|---|
+| `prc-contain-cross-account-incident` | Disable the affected order endpoint and deploy an authorization fix | a developer | guided | code_change_and_deployment | explicit consent | no | write, deployment | PROPOSE | A repeated two-account test denies cross-account reads. |
+| `prc-inventory-error-paths` | Scan and review server error paths | Vibecheck | automated | read_only_source_review | not required | no | none | AUTO | A bounded path-and-handler inventory with review notes. |
 
-### G. Method and versions
+### G. Procedure attempts
+
+| Attempt | Action | Procedure | Environment | Result | Consent | Effects | Rollback | Evidence | Reassessment |
+|---|---|---|---|---|---|---|---|---|---|
+
+### H. Method and versions
 
 | Method | Version |
 |---|---|
-| vibecheck.assessment | 1.2.0 |
+| vibecheck.assessment | 1.3.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
+| vibecheck.action_registry | 1.0.0 |
 | vibecheck.risk_derivation | 1.0.0 |
 | vibecheck.readiness | 1.0.0 |
-| vibecheck.report_derivation | 1.0.0 |
-| vibecheck.report | 1.0.0 |
-| vibecheck.report_wording | 1.0.0 |
+| vibecheck.report_derivation | 1.1.0 |
+| vibecheck.report | 1.1.0 |
+| vibecheck.action_policy | 1.0.0 |
+| vibecheck.report_wording | 1.1.0 |

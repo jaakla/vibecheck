@@ -1,6 +1,6 @@
 {
   "schema": "vibecheck.report_derivation",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "description": "How derived contextual risks become founder-facing risk scenarios, how those scenarios are ranked and capped, and what may never be hidden behind the cap (gh issue #5, epic #1; RFC 0001 sections 5 and 9). Rules live here as data so that the same normalized inputs always produce the same scenarios, the same order and the same disclosures, and so that the reasoning can be reviewed without reading Python. Nothing in this file may change a control status, an intrinsic severity or an accepted-risk record: aggregation is presentation over assessments, never a re-assessment of them (rules R12, R14).",
 
   "scenario_grouping": {
@@ -196,7 +196,7 @@
     "specialist_assessment_refs": {
       "source": "assessments",
       "statuses": ["needs_specialist"],
-      "description": "Screening rows a reviewer marked as needing a specialist. These are escalations that have no action object yet — Increment 4 gives them one — and leaving them out until then would break the completeness invariant."
+      "description": "Compatibility fallback for a screening row marked needs_specialist before it has been materialized as an Increment-4 Action. A modern derived report normally lists the Action instead. Only an open escalation Action counts as covering the row: specialist_escalation_refs lists open actions only, so treating a done or rejected escalation as coverage would drop the row out of both sets at once."
     }
   },
 
@@ -229,68 +229,6 @@
       "owner_roles": ["developer", "specialist", "platform", "unassigned"],
       "description": "Actions that need someone who writes or operates the code, or a specialist. An unowned action lands here rather than on the founder: deciding it is safe to skip is exactly the judgement they do not have."
     }
-  },
-
-  "deadline_labels": {
-    "rule": "Founder labels are derived display text (RFC 0001 section 7.2), never stored. The first matching rule wins; every rule reads only urgency, deadline kind, deadline value and whether a calendar deadline has passed.",
-    "rules": [
-      {
-        "label_id": "overdue",
-        "mode": "all",
-        "deadline_kinds": ["calendar_date"],
-        "overdue": true
-      },
-      {
-        "label_id": "fix_now",
-        "mode": "any",
-        "urgencies": ["immediate"],
-        "deadline_kinds": ["immediate"]
-      },
-      {
-        "label_id": "before_inviting_users",
-        "mode": "all",
-        "deadline_kinds": ["before_environment", "before_intended_use"],
-        "deadline_values": ["private_test", "invite_only_pilot"]
-      },
-      {
-        "label_id": "before_public_launch",
-        "mode": "all",
-        "deadline_kinds": ["before_environment", "before_intended_use"],
-        "deadline_values": ["public_release", "public_product"]
-      },
-      {
-        "label_id": "before_sensitive_data",
-        "mode": "all",
-        "deadline_kinds": ["before_environment", "before_intended_use"],
-        "deadline_values": ["sensitive_or_high_impact"]
-      },
-      {
-        "label_id": "before_scaling",
-        "mode": "all",
-        "deadline_kinds": ["before_event"],
-        "value_tokens": ["scale", "scaling", "growth", "traffic", "volume"]
-      },
-      {
-        "label_id": "before_event",
-        "mode": "all",
-        "deadline_kinds": ["before_event"]
-      },
-      {
-        "label_id": "by_date",
-        "mode": "all",
-        "deadline_kinds": ["calendar_date"]
-      },
-      {
-        "label_id": "backlog",
-        "mode": "all",
-        "urgencies": ["backlog"],
-        "deadline_kinds": ["none", "unknown"]
-      },
-      {
-        "label_id": "unscheduled",
-        "mode": "all"
-      }
-    ]
   },
 
   "framework_verdict_profiles": {

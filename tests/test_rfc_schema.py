@@ -83,7 +83,8 @@ class SchemaAndExamples(unittest.TestCase):
         names = [os.path.basename(p) for p in example_paths()]
         for required in ("end-to-end.json", "legacy-scanner-mapping.json",
                          "legacy-workbook-row.json",
-                         "vibecheck-v1-framework-mapping.json"):
+                         "vibecheck-v1-framework-mapping.json",
+                         "action-procedure-registry.json"):
             self.assertIn(required, names)
 
 

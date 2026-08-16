@@ -23,8 +23,8 @@ swallow:
   * an unresolved Critical or High control,
   * a material unknown that keeps a scope from being clear,
   * an open incident-response action,
-  * a specialist escalation, including a screening row a reviewer marked as
-    needing one but that has no action object yet,
+  * a specialist escalation, including a legacy screening row that has not
+    yet been materialized as an Increment-4 Action,
   * an action whose deadline blocks the assessed environment and intended use,
     or whose calendar deadline has already passed.
 
@@ -49,6 +49,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
+import actions as actions_mod
 import context as ctx
 import readiness as readiness_mod
 import risk as risk_mod
@@ -56,7 +57,7 @@ import scenarios as scenarios_mod
 import wording
 
 POLICY_NAME = "vibecheck.report"
-POLICY_VERSION = "1.0.0"
+POLICY_VERSION = "1.1.0"
 
 MANDATORY_CATEGORIES = (
     "unresolved_critical_high_refs",
@@ -94,7 +95,8 @@ def _index(objects, key):
 
 def _open_actions(envelope):
     states = load_policy()["mandatory_disclosures"]["open_action_states"]
-    return [a for a in envelope.get("actions") or [] if a.get("state") in states]
+    return [a for a in actions_mod.current_actions(envelope)
+            if a.get("state") in states]
 
 
 def _target_scopes(envelope):
@@ -114,10 +116,7 @@ def is_overdue(action, now):
     if deadline.get("kind") not in rules["deadline_blocking_action_refs"][
             "overdue_deadline_kinds"]:
         return False
-    due = ctx.parse_instant(deadline.get("value"))
-    # an unparseable date fails closed: a deadline nobody can read is not a
-    # deadline anybody is meeting
-    return due is None or due < ctx.instant(now)
+    return actions_mod.is_overdue(action, now)
 
 
 def unresolved_critical_high(envelope):
@@ -172,13 +171,18 @@ def deadline_blocking_actions(envelope, now=None):
 def specialist_assessments(envelope):
     statuses = load_policy()["mandatory_disclosures"][
         "specialist_assessment_refs"]["statuses"]
+    # Only an *open* escalation covers the row. specialist_escalations() lists
+    # open actions only, so treating a done or rejected one as coverage here
+    # would drop the escalation out of both sets at once.
+    covered = actions_mod.open_escalation_controls(envelope)
     return sorted(a["assessment_id"] for a in canonical.current_assessments(envelope)
-                  if a.get("status") in statuses)
+                  if a.get("status") in statuses
+                  and a.get("control_id") not in covered)
 
 
 def mandatory_disclosures(envelope, now=None):
-    """The five required sets of rule R12, plus the specialist screening rows
-    that have no action object until Increment 4 ships one."""
+    """The five required sets of rule R12, plus legacy specialist rows that
+    have not yet been materialized as Increment-4 Actions."""
     now_dt = ctx.instant(now)
     return {
         "unresolved_critical_high_refs": unresolved_critical_high(envelope),
@@ -273,36 +277,8 @@ def disclosure_placement(envelope, disclosures, headline_refs):
 # -------------------------------------------------------------- action sections
 
 def deadline_label_id(action, now=None):
-    """Which founder label this action's schedule produces (RFC §7.2).
-
-    Derived display text, never stored: the first matching rule in
-    schema/report-derivation.v1.json wins.
-    """
-    now_dt = ctx.instant(now)
-    deadline = action.get("deadline") or {}
-    kind = deadline.get("kind")
-    value = deadline.get("value") or ""
-    urgency = action.get("urgency")
-    overdue = is_overdue(action, now_dt)
-
-    for rule in load_policy()["deadline_labels"]["rules"]:
-        checks = []
-        if "urgencies" in rule:
-            checks.append(urgency in rule["urgencies"])
-        if "deadline_kinds" in rule:
-            checks.append(kind in rule["deadline_kinds"])
-        if "deadline_values" in rule:
-            checks.append(value in rule["deadline_values"])
-        if "value_tokens" in rule:
-            checks.append(any(token in value.lower()
-                              for token in rule["value_tokens"]))
-        if "overdue" in rule:
-            checks.append(overdue == rule["overdue"])
-        if not checks:
-            return rule["label_id"]
-        if (any(checks) if rule.get("mode") == "any" else all(checks)):
-            return rule["label_id"]
-    return "unscheduled"
+    """Compatibility wrapper for the Increment-4 action policy."""
+    return actions_mod.deadline_label_id(action, now)
 
 
 def _executor_roles(envelope, action):
@@ -378,6 +354,7 @@ def _appendix(envelope):
         "framework": mapping["framework"],
         "framework_version": mapping["framework_version"],
         "control_registry": dict(envelope.get("control_registry") or {}),
+        "action_registry": dict(envelope.get("action_registry") or {}),
         "item_count": len(mapping["entries"]),
         "assessment_refs": sorted(a["assessment_id"]
                                   for a in envelope.get("assessments") or []),
@@ -389,6 +366,9 @@ def _appendix(envelope):
         "action_refs": sorted(a["action_id"] for a in envelope.get("actions") or []),
         "procedure_refs": sorted(p["procedure_id"]
                                  for p in envelope.get("procedures") or []),
+        "attempt_refs": sorted(a["attempt_id"]
+                               for a in envelope.get("attempts") or []),
+        "legacy_action_view": actions_mod.legacy_view(envelope),
     }
 
 
@@ -441,7 +421,8 @@ def derive_into(envelope, audience="founder", language="en", now=None):
     presentation from the assessments and evidence without any of them being
     able to write back.
     """
-    derived = readiness_mod.derive_into(envelope, now)
+    source = actions_mod.materialize_specialist_actions(envelope, now)
+    derived = readiness_mod.derive_into(source, now)
     derived = scenarios_mod.apply_scenarios(derived, now)
     return apply_report(derived, audience, language, now)
 
@@ -998,6 +979,7 @@ def _render_appendix(envelope, report, profile, lang):
             wording.label("action_kinds", action.get("kind"), lang),
             action.get("outcome"),
             wording.label("owner_roles", (action.get("owner") or {}).get("role"), lang),
+            wording.label("priorities", action.get("priority"), lang),
             wording.label("urgencies", action.get("urgency"), lang),
             wording.label("deadline_labels",
                           deadline_label_id(action, report["generated_at"]), lang),
@@ -1014,6 +996,7 @@ def _render_appendix(envelope, report, profile, lang):
                          wording.text("t_kind", lang),
                          wording.text("f_outcome", lang),
                          wording.text("f_owner", lang),
+                         wording.text("t_priority", lang),
                          wording.text("t_urgency", lang),
                          wording.text("f_deadline", lang),
                          wording.text("f_state", lang),
@@ -1027,29 +1010,75 @@ def _render_appendix(envelope, report, profile, lang):
 
     lines.extend(["### %s" % wording.text("h_appendix_procedures", lang), ""])
     procedure_rows = []
+    legacy_rows = {
+        row["procedure_ref"]: row
+        for action_row in actions_mod.legacy_view(envelope)["actions"]
+        for row in action_row["procedure_views"]
+    }
     for procedure in sorted(envelope.get("procedures") or [],
                             key=lambda p: p["procedure_id"]):
         effects = procedure.get("effects") or {}
         enabled_effects = [key for key in (
             "write", "destructive", "deployment", "data", "external_accounts")
                            if effects.get(key)]
+        if (procedure.get("data_egress") or {}).get("occurs"):
+            enabled_effects.append("data_egress")
         procedure_rows.append((
             "`%s`" % procedure["procedure_id"],
             procedure.get("title"),
             wording.label("executor_roles", procedure.get("executor_role"), lang),
+            wording.label("execution_modes", procedure.get("execution_mode"), lang),
             procedure.get("mechanism"),
             wording.label("consent", (procedure.get("authorization") or {}).get(
                 "consent"), lang),
+            wording.text("v_yes" if (procedure.get("network") or {}).get("required")
+                         else "v_no", lang),
             ", ".join(enabled_effects) or wording.text("v_none", lang),
+            (legacy_rows.get(procedure["procedure_id"]) or {}).get(
+                "classification"),
             procedure.get("success_evidence"),
         ))
     lines.extend(_table([wording.text("t_procedure", lang),
                          wording.text("t_title", lang),
                          wording.text("t_executor", lang),
+                         wording.text("t_execution_mode", lang),
                          wording.text("t_mechanism", lang),
                          wording.text("t_consent", lang),
+                         wording.text("t_network", lang),
                          wording.text("t_effects", lang),
+                         wording.text("t_legacy_view", lang),
                          wording.text("f_success_evidence", lang)], procedure_rows))
+    lines.append("")
+
+    lines.extend(["### %s" % wording.text("h_appendix_attempts", lang), ""])
+    attempt_rows = []
+    for attempt in sorted(envelope.get("attempts") or [],
+                          key=lambda item: item["attempt_id"]):
+        observed = attempt.get("side_effects_observed") or {}
+        enabled_effects = [key for key in actions_mod.load_policy()["effect_flags"]
+                           if observed.get(key)]
+        attempt_rows.append((
+            "`%s`" % attempt["attempt_id"],
+            "`%s`" % attempt.get("action_ref"),
+            "`%s`" % attempt.get("procedure_ref"),
+            attempt.get("execution_environment"),
+            attempt.get("result"),
+            (attempt.get("authorization") or {}).get("mode"),
+            ", ".join(enabled_effects) or wording.text("v_none", lang),
+            (attempt.get("rollback") or {}).get("state"),
+            _refs(attempt.get("evidence_refs") or []),
+            _refs(attempt.get("reassessment_refs") or []),
+        ))
+    lines.extend(_table([wording.text("t_attempt", lang),
+                         wording.text("t_action", lang),
+                         wording.text("t_procedure", lang),
+                         wording.text("t_environment", lang),
+                         wording.text("t_result", lang),
+                         wording.text("t_consent", lang),
+                         wording.text("t_effects", lang),
+                         wording.text("t_rollback", lang),
+                         wording.text("t_evidence", lang),
+                         wording.text("t_reassessment", lang)], attempt_rows))
     lines.append("")
 
     lines.extend(["### %s" % wording.text("h_appendix_method", lang), ""])
@@ -1059,10 +1088,13 @@ def _render_appendix(envelope, report, profile, lang):
         (appendix["framework"], appendix["framework_version"]),
         ((appendix.get("control_registry") or {}).get("name"),
          (appendix.get("control_registry") or {}).get("version")),
+        ((appendix.get("action_registry") or {}).get("name"),
+         (appendix.get("action_registry") or {}).get("version")),
         (risk_mod.POLICY_NAME, risk_mod.load_policy()["schema_version"]),
         (readiness_mod.POLICY_NAME, readiness_mod.POLICY_VERSION),
         (scenarios_mod.POLICY_NAME, load_policy()["schema_version"]),
         (POLICY_NAME, POLICY_VERSION),
+        (actions_mod.POLICY_NAME, actions_mod.load_policy()["schema_version"]),
         (wording.WORDING_NAME, wording.load_wording()["schema_version"]),
     ]
     lines.extend(_table([wording.text("t_method", lang),

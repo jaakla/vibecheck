@@ -2,14 +2,15 @@
 
 | | |
 |---|---|
-| Status | Accepted; implemented through Increment 3 |
+| Status | Accepted; implemented through Increment 4 |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
 | Context model | [`schema/vibecheck.context.v1.json`](../schema/vibecheck.context.v1.json) |
 | Report policy and wording | [`schema/report-derivation.v1.json`](../schema/report-derivation.v1.json) + [`schema/report-wording.v1.json`](../schema/report-wording.v1.json) |
+| Action policy | [`schema/action-policy.v1.json`](../schema/action-policy.v1.json) |
 | Examples | [`schema/examples/`](../schema/examples/), [`tests/golden/`](../tests/golden/) |
-| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py) |
+| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
 Vibecheck assessments. It is the normative design dependency for every implementation
@@ -19,8 +20,10 @@ Implementation status: Increment 1 (#3) shipped the envelope, the stable control
 the legacy adapters. Increment 2 (#4) shipped the context profile, the contextual-risk
 derivation and environment-scoped readiness. Increment 3 (#5) shipped deterministic
 founder scenarios, completeness-safe mandatory placement, the full reviewer appendix, and
-founder/reviewer EN/ET rendering. Sections 4.3, 5.3, and 9 are normative for the shipped code
-(schema version 1.2.0, additive).
+founder/reviewer EN/ET rendering. Increment 4 (#6) shipped the versioned Action/Procedure
+registry, exact-scope attempts, consent and completion guards, and deterministic deadline
+labels. Sections 4.3, 5.3, 7, and 9 are normative for the shipped code (schema version 1.3.0,
+additive).
 
 ## 1. Invariants this design preserves
 
@@ -35,7 +38,7 @@ These are inherited from the current product and are non-negotiable in every sec
    plus the schema forbids `intrinsic_severity` on assessments).
 4. Unknown stays Unknown and keeps readiness incomplete when it could hide a blocker
    (rules R6, R8).
-5. Write, destructive, deployment, data, and external-account effects require explicit
+5. Write, destructive, deployment, data, external-account, network, and data-egress effects require explicit
    authorization (rule R11; schema-enforced on procedures).
 6. Vibecheck is not certification or proof of security. Readiness has no "secure" state and
    the schema structurally rejects `secure`/`certified` fields on readiness objects.
@@ -98,8 +101,10 @@ Every document starts:
   exception: they resolve against the named `control_registry` version.
 - Signals, evidence, and attempts are **immutable** records of what happened. Assessments
   and risks are immutable too; corrections create a new object with `supersedes` pointing at
-  the old one. Supersedes chains must be acyclic (rule R13). Actions are the only mutable
-  objects: their `state` moves, and `state_history` is append-only.
+  the old one. Supersedes chains must be acyclic (rule R13). Actions carry a stable
+  `action_key`, monotonic `revision`, and append-only `state_history`; Procedures carry a
+  stable `procedure_key` and immutable revisions. Attempts reference one exact Action and
+  Procedure revision.
 - The envelope `revision` is a monotonically increasing integer; a re-issued envelope names
   `supersedes_revision`. Historical envelopes keep the `schema_version`,
   `control_registry` version, and framework-mapping version that were current at assessment
@@ -424,8 +429,9 @@ Three objects, deliberately separate:
 
 ### 7.1 Action
 
-Required: `kind` (`remediate` / `verify` / `escalate` / `incident_response` / `decide`),
-testable `outcome`, `reason`, `urgency`, `deadline`, `blocking_scope`, `owner`, `state`.
+Required: lineage (`action_key`, `revision`, `created_at`), `kind` (`remediate` / `verify` /
+`escalate` / `incident_response` / `decide`), testable `outcome`, `reason`, `priority`,
+`urgency`, `deadline`, `blocking_scope`, `owner`, `state`.
 Plus dependencies, linked controls/risks/scenarios, candidate procedures,
 `success_evidence` (what closes it — never a disappeared warning), and
 `reassess_control_ids`.
@@ -457,7 +463,7 @@ A single action-horizon enum is replaced by orthogonal fields:
   start.
 - `deadline.kind`: `immediate` / `before_environment` / `before_intended_use` /
   `before_event` / `calendar_date` / `none` / `unknown`, with `value` required for the
-  parameterized kinds and a mandatory `rationale`.
+  parameterized kinds and a mandatory `rationale` plus `reassess_trigger`.
 - `blocking_scope`: the environment/use pairs that must not proceed until done. This is what
   readiness derivation consumes.
 
@@ -474,25 +480,38 @@ Founder labels are **derived display text**, never stored:
 
 ### 7.3 Procedure
 
-Orthogonal required fields: `executor_role`, `mechanism`, `effects` (targets + write /
+Orthogonal required fields: lineage, `executor_role`, `execution_mode`, `mechanism`, `effects` (targets + write /
 destructive / deployment / data / external_accounts booleans + reversibility),
-`authorization.consent`, exact `method` (tool, steps), `cost`, `data_egress`,
+`authorization.consent`, exact `method` (tool, steps), `cost`, `network`, `data_egress`,
 `failure_behavior` (on-failure + rollback), `success_evidence`; optionally the verification
-provider that will confirm it worked.
+provider that will confirm it worked. The canonical fields never contain AUTO, PROPOSE, or
+ADVISORY. `scripts/actions.py` may derive those labels as an explicitly lossy compatibility
+view, while retaining the real execution mode, executor role, effects, and consent beside it.
 
-**R11 (schema-enforced):** if any effect boolean is true, `authorization.consent` must be
+**R11 (schema-enforced and semantically validated):** if any effect boolean is true, or the
+Procedure requires network access/data egress, `authorization.consent` must be
 `explicit_consent` or `explicit_consent_per_run`. A silent-effect procedure cannot be
 expressed. This carries the existing diff-first / branch-first / opt-in write-probe policy
 into the data model.
 
 ### 7.4 ProcedureAttempt
 
-The audit record: exact `authorization` (who, when, precise scope, consent mode, where the
-consent record lives), executor, timestamps, `result` (`succeeded` / `partially_succeeded` /
-`failed` / `aborted`), `effects_observed` (what actually happened, including side effects),
-the **new evidence** produced, and the reassessments it triggered. The remediation loop
+The audit record: exact `authorization` (attempt binding, who, when, expiry, precise scope,
+authorized targets/effect booleans, consent mode, and provenance), executor, execution
+environment, input references (never secret values), timestamps, `result` (`succeeded` /
+`partially_succeeded` / `failed` / `aborted`), structured `side_effects_observed`, rollback
+state, the **new evidence** produced, and the reassessments it triggered. The remediation loop
 closes only through fresh evidence → superseding assessment → recomputed risk → recomputed
 readiness.
+
+Effect scope narrows at every step: the Procedure declares the targets it may touch, the
+authorization grants exact targets within them, and the attempt reports targets no wider
+than it was granted. Targets are hierarchical — an inner target is inside an outer one when
+it is the same string or names a part of it, written as the outer target, a separator, and
+the narrower name (`schema/action-policy.v1.json`, `effect_target_refinement`). Effect
+booleans and data-egress destinations are not hierarchical: a boolean must already be true
+one level out, and a destination must match exactly, because a hostname that merely starts
+with an approved one is a different host.
 
 ## 8. Verification providers
 
@@ -530,8 +549,12 @@ One object can match several sets — for example an immediate incident-response
 by a specialist — but still receives exactly one visible disclosure placement. That
 placement records every matching category and either the headline scenario that visibly
 names it or its primary category in the mandatory section. Screening assessments marked
-`needs_specialist` are treated as specialist escalations until Increment 4 gives them an
-Action, so the absence of that later object cannot hide them now.
+`needs_specialist` are materialized as open specialist-owned escalation Actions by
+Increment 4. The direct assessment disclosure remains as a compatibility fallback for older
+envelopes, so a missing derived Action still cannot hide the escalation. Only an **open**
+escalation Action covers its control: the escalation set lists open Actions only, so a
+`done` or `rejected` escalation whose assessment still reads `needs_specialist` returns the
+screening row to the assessment set rather than falling between the two.
 Founder sections (`vibecheck_can_do_now`, `you_need_to_do`,
 `needs_developer_or_specialist`, `can_wait`) partition actions by owner and urgency —
 presentation again, derived, never stored truth.
@@ -558,6 +581,10 @@ validator (several already have structural halves in the schema and tests today)
 | R13 | Supersedes chains acyclic; envelope revisions monotonic; superseded objects retained. |
 | R14 | Intrinsic severity only in the registry; no object may override it contextually. |
 | R15 | Stale evidence can't support `pass`; stale risk counts as unknown for readiness. |
+| R16 | Action/Procedure lineages are monotonic and acyclic; Action state histories use only allowed transitions; dependencies are acyclic; and an Action's dependencies and offered Procedures both name current revisions. |
+| R17 | Deadlines are parseable, carry reassessment triggers, and parameterized blocking deadlines agree with `blocking_scope`. |
+| R18 | Attempt authorization is bound to one attempt; authorized effects fit the Procedure and observed effects fit the authorization, with targets narrowing but never widening; inputs are references and rollback state is recorded. |
+| R19 | `done` requires a succeeded attempt with produced evidence and reassessment; failed/partial/aborted attempts never complete an Action. |
 
 ## 11. Legacy mapping and migration
 
@@ -656,10 +683,12 @@ Increment-5 vertical slice through every object type, at envelope revision 2:
 | `schema/risk-matrix.v1.json` | The deterministic risk method as data |
 | `schema/vibecheck.context.v1.json` | The context dimensions, values and field states as data |
 | `schema/risk-derivation.v1.json` | How context and severity choose the matrix inputs, as data |
+| `schema/action-policy.v1.json` | Action lifecycle, effect-scope, founder deadline-label, and derived legacy-view rules |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
 | `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
 | `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
+| `tests/test_actions.py` | Increment-4 tests pinning multi-procedure Actions, exact consent scope, attempt effects/rollback, lifecycle completion, deadline labels, and the derived legacy view |
 
 Acceptance criteria → verification:
 

@@ -310,23 +310,30 @@ Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult sta
 
 ### E. Tegevused
 
-| Tegevus | Liik | Nõutav tulemus | Vastutaja | Kiireloomulisus | Millal | Seis | Blokeerib | Kontrolli ID | Risk | Stsenaarium | Protseduur | Mis selle sulgeb |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Tegevus | Liik | Nõutav tulemus | Vastutaja | Prioriteet | Kiireloomulisus | Millal | Seis | Blokeerib | Kontrolli ID | Risk | Stsenaarium | Protseduur | Mis selle sulgeb |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 ### F. Protseduurid
 
-| Protseduur | Pealkiri | Täitja | Mehhanism | Nõusolek | Mõjud | Mis selle sulgeb |
-|---|---|---|---|---|---|---|
+| Protseduur | Pealkiri | Täitja | Täitmisviis | Mehhanism | Nõusolek | Võrguühendus | Mõjud | Pärandvaade | Mis selle sulgeb |
+|---|---|---|---|---|---|---|---|---|---|
 
-### G. Metoodika ja versioonid
+### G. Protseduuri katsed
+
+| Katse | Tegevus | Protseduur | Keskkond | Tulemus | Nõusolek | Mõjud | Tagasipööre | Tõendid | Uushinnang |
+|---|---|---|---|---|---|---|---|---|---|
+
+### H. Metoodika ja versioonid
 
 | Metoodika | Versioon |
 |---|---|
-| vibecheck.assessment | 1.2.0 |
+| vibecheck.assessment | 1.3.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
+| vibecheck.action_registry | 1.0.0 |
 | vibecheck.risk_derivation | 1.0.0 |
 | vibecheck.readiness | 1.0.0 |
-| vibecheck.report_derivation | 1.0.0 |
-| vibecheck.report | 1.0.0 |
-| vibecheck.report_wording | 1.0.0 |
+| vibecheck.report_derivation | 1.1.0 |
+| vibecheck.report | 1.1.0 |
+| vibecheck.action_policy | 1.0.0 |
+| vibecheck.report_wording | 1.1.0 |

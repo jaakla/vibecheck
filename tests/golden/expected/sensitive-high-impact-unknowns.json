@@ -1,4 +1,8 @@
 {
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
   "actions": [],
   "assessment_id": "va-golden-sensitive-high-impact-unknowns",
   "assessments": [
@@ -51,6 +55,7 @@
       "status": "fail"
     }
   ],
+  "attempts": [],
   "context": {
     "application": {
       "description": "Note-taking app used by a care provider's staff, with a pending decision to open it to client families.",
@@ -736,5 +741,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.2.0"
+  "schema_version": "1.3.0"
 }

@@ -19,6 +19,8 @@ Export (envelope -> current output contracts):
                                byte-for-byte from the archived signals
   export_workbook_rows(env)    per-item status/notes wording for the
                                reviewer/founder workbook paths
+  export_legacy_action_view(env) lossy AUTO/PROPOSE/ADVISORY display only;
+                                 never an authorization input
 """
 import datetime
 import json
@@ -27,6 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
+import actions as actions_mod
 import items
 from controls import (CONTROL_IDS, ITEM_NUMBERS, STATUS_MAP,
                       REGISTRY_NAME, REGISTRY_VERSION)
@@ -87,6 +90,7 @@ def _envelope(assessment_id, context_id, app_name, description,
             "confirmation": {"state": "draft"},
         },
         "control_registry": {"name": REGISTRY_NAME, "version": REGISTRY_VERSION},
+        "action_registry": actions_mod.registry_ref(),
         "signals": [],
         "evidence": [],
         "actions": [],
@@ -205,18 +209,23 @@ def import_scanner_jsonl(lines, app_name="unknown application",
         elif status == "MANUAL" and claim["control_ids"]:
             env["actions"].append({
                 "action_id": "act-scan-%04d" % seq,
+                "action_key": "scan-%04d" % seq,
+                "revision": 1,
+                "created_at": observed_at,
                 "kind": "verify",
                 "outcome": "Verified with recorded evidence: %s"
                            % (obj.get("title") or claim["statement"]),
                 "reason": ("Scanner check %s is tier MANUAL: no static signal "
                            "exists for it. Emitted as an explicit to-do so it "
                            "cannot be silently skipped." % check),
+                "priority": "unknown",
                 "urgency": "planned",
                 "deadline": {
                     "kind": "unknown",
                     "rationale": ("The deadline depends on the confirmed "
                                   "target environment and intended use; set it "
                                   "during review."),
+                    "reassess_trigger": {"kind": "context_change"},
                 },
                 "blocking_scope": [],
                 "owner": {"role": "unassigned"},
@@ -365,18 +374,23 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
         if verdict.startswith("NOT_TESTED"):
             env["actions"].append({
                 "action_id": "act-probe-%04d" % seq,
+                "action_key": "probe-%04d" % seq,
+                "revision": 1,
+                "created_at": observed_at,
                 "kind": "verify",
                 "outcome": ("Probe the %s aspect with the required consent and "
                             "inputs, and record the resulting evidence."
                             % check),
                 "reason": ("Probe check %s was NOT_TESTED: %s"
                            % (check, finding.get("note", ""))),
+                "priority": "unknown",
                 "urgency": "planned",
                 "deadline": {
                     "kind": "unknown",
                     "rationale": ("The deadline depends on the confirmed "
                                   "target environment and intended use; set it "
                                   "during review."),
+                    "reassess_trigger": {"kind": "context_change"},
                 },
                 "blocking_scope": [],
                 "owner": {"role": "unassigned"},
@@ -428,6 +442,9 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
         if verdict.startswith("REVIEW_rows_readable_by_anon"):
             env["actions"].append({
                 "action_id": "act-probe-%04d" % seq,
+                "action_key": "probe-%04d" % seq,
+                "revision": 1,
+                "created_at": observed_at,
                 "kind": "decide",
                 "outcome": ("A recorded owner decision whether table %r is "
                             "intended to be publicly readable; if not, anon "
@@ -436,11 +453,13 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
                            "by an unauthenticated caller; this is a failure "
                            "only if the table is meant to be private, and "
                            "only the owner can decide that." % table),
+                "priority": "high",
                 "urgency": "next",
                 "deadline": {
                     "kind": "unknown",
                     "rationale": ("Until decided, this exposure blocks any "
                                   "claim that anon access is intended."),
+                    "reassess_trigger": {"kind": "context_change"},
                 },
                 "blocking_scope": [],
                 "owner": {"role": "founder"},
@@ -470,6 +489,11 @@ def export_scanner_jsonl(env):
              if (s.get("source") or {}).get("tool") == SCANNER_TOOL
              and (s.get("raw_ref") or {}).get("kind") == "inline"]
     return "".join(line + "\n" for line in lines)
+
+
+def export_legacy_action_view(env):
+    """Derived migration display; canonical execution reads Procedure fields."""
+    return actions_mod.legacy_view(env)
 
 
 def export_workbook_rows(env, lang="en"):

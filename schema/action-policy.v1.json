@@ -1,0 +1,126 @@
+{
+  "schema": "vibecheck.action_policy",
+  "schema_version": "1.0.0",
+  "description": "Normative lifecycle, deadline-label and legacy-display policy for Action, Procedure and ProcedureAttempt records (gh issue #6, epic #1). AUTO/PROPOSE/ADVISORY exists only in the derived legacy view. It never grants authorization and it never replaces executor_role, execution_mode, effects or consent.",
+  "registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
+  "open_states": ["open", "in_progress", "blocked"],
+  "terminal_states": ["done", "superseded", "rejected"],
+  "lifecycle": {
+    "initial_state": "open",
+    "transitions": {
+      "open": ["in_progress", "blocked", "superseded", "rejected"],
+      "in_progress": ["blocked", "done", "superseded", "rejected"],
+      "blocked": ["in_progress", "superseded", "rejected"],
+      "done": [],
+      "superseded": [],
+      "rejected": []
+    },
+    "done_rule": "done requires a succeeded attempt for that exact Action revision, produced evidence, and at least one reassessment. Failed, partial and aborted attempts never complete an Action.",
+    "rejected_rule": "rejected requires a recorded decision in the final state-history entry."
+  },
+  "effect_flags": [
+    "write",
+    "destructive",
+    "deployment",
+    "data",
+    "external_accounts",
+    "data_egress"
+  ],
+  "effect_target_refinement": {
+    "rule": "Effect targets are hierarchical. An inner target is inside an outer target when it is the same string, or when it names a part of it, written as the outer target followed by a separator and the narrower name. A Procedure therefore declares the target scope it may touch, an authorization narrows that to the exact targets it grants, and an attempt reports targets no wider than what it was granted. Anything that is not a refinement of a declared target is outside the scope, whatever it is named. Data-egress destinations are deliberately excluded: a destination must match exactly, because a hostname that merely starts with an approved one is a different host.",
+    "separators": ["/", ":", " > "]
+  },
+  "deadline_labels": {
+    "rule": "Founder labels are a deterministic display view. The first matching rule wins; labels are never stored on an Action.",
+    "rules": [
+      {
+        "label_id": "overdue",
+        "mode": "all",
+        "deadline_kinds": ["calendar_date"],
+        "overdue": true
+      },
+      {
+        "label_id": "fix_now",
+        "mode": "any",
+        "urgencies": ["immediate"],
+        "deadline_kinds": ["immediate"]
+      },
+      {
+        "label_id": "before_inviting_users",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["private_test", "invite_only_pilot"]
+      },
+      {
+        "label_id": "before_public_launch",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["public_release", "public_product"]
+      },
+      {
+        "label_id": "before_sensitive_data",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["sensitive_or_high_impact"]
+      },
+      {
+        "label_id": "before_scaling",
+        "mode": "all",
+        "deadline_kinds": ["before_event"],
+        "value_tokens": ["scale", "scaling", "growth", "traffic", "volume"]
+      },
+      {
+        "label_id": "before_event",
+        "mode": "all",
+        "deadline_kinds": ["before_event"]
+      },
+      {
+        "label_id": "by_date",
+        "mode": "all",
+        "deadline_kinds": ["calendar_date"]
+      },
+      {
+        "label_id": "backlog",
+        "mode": "all",
+        "urgencies": ["backlog"],
+        "deadline_kinds": ["none", "unknown"]
+      },
+      {
+        "label_id": "unknown",
+        "mode": "any",
+        "urgencies": ["unknown"],
+        "deadline_kinds": ["unknown"]
+      },
+      {
+        "label_id": "unscheduled",
+        "mode": "all"
+      }
+    ]
+  },
+  "legacy_view": {
+    "schema": "vibecheck.action_legacy_view",
+    "schema_version": "1.0.0",
+    "lossy": true,
+    "warning": "AUTO describes an automated method, not permission to run it. PROPOSE describes a guided method, not an approval requirement. ADVISORY is the fallback for manual work or an Action with no executable Procedure. Read the canonical executor, effects and consent fields before acting.",
+    "procedure_rules": [
+      {
+        "classification": "AUTO",
+        "execution_modes": ["automated"],
+        "executor_roles": ["vibecheck_agent"]
+      },
+      {
+        "classification": "PROPOSE",
+        "execution_modes": ["guided"]
+      },
+      {
+        "classification": "ADVISORY",
+        "execution_modes": ["manual"]
+      }
+    ],
+    "action_precedence": ["AUTO", "PROPOSE", "ADVISORY"],
+    "no_procedure_classification": "ADVISORY"
+  }
+}
