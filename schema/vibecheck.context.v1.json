@@ -1,0 +1,209 @@
+{
+  "schema": "vibecheck.context_model",
+  "schema_version": "1.0.0",
+  "description": "The application-context dimension model (gh issue #4, epic #1; RFC 0001 section 4). It fixes which context facts Vibecheck captures, which values each may take, and which of them feed the deterministic contextual-risk derivation in schema/risk-derivation.v1.json. Every captured field carries its own state (confirmed / inferred / conflicting / unknown) with a source and rationale, so a conclusion can never quietly rest on a guess. Labels are English only in v1; founder-facing EN/ET wording arrives with the founder report increment (gh issue #5).",
+  "field_states": [
+    {
+      "id": "confirmed",
+      "description": "A human with authority over the application stated this value. Only a confirmed field can support a readiness claim without an accompanying assumption.",
+      "requires": ["value", "source"]
+    },
+    {
+      "id": "inferred",
+      "description": "Derived from code, configuration or documentation without human confirmation. Usable, but it lowers the confidence of every risk it feeds and stays visible as an assumption.",
+      "requires": ["value", "source", "rationale"]
+    },
+    {
+      "id": "conflicting",
+      "description": "Two or more sources disagree and the disagreement is unresolved. Treated exactly like unknown by the derivation: it can never be resolved silently in the safer direction.",
+      "requires": ["candidates", "rationale"]
+    },
+    {
+      "id": "unknown",
+      "description": "Not established. Never a synonym for the benign value: any unknown dimension that feeds a risk input makes that input unknown, and unknown is never low.",
+      "requires": []
+    }
+  ],
+  "environments": [
+    {
+      "id": "developer_only",
+      "band": 1,
+      "description": "Isolated development or sandbox deployment. No external users, synthetic or non-sensitive data."
+    },
+    {
+      "id": "private_test",
+      "band": 2,
+      "description": "Named testers only. No public discovery, no open signup, explicit data and operation constraints."
+    },
+    {
+      "id": "public_release",
+      "band": 3,
+      "description": "Internet-accessible production, or broadly available signup, with real users, data and operations."
+    }
+  ],
+  "intended_uses": [
+    {
+      "id": "prototype_demo",
+      "band": 1,
+      "description": "Demonstrating an idea. Nothing depends on the result and no real data is at stake."
+    },
+    {
+      "id": "internal_tool",
+      "band": 2,
+      "description": "Used inside one organisation by people who are accountable to it."
+    },
+    {
+      "id": "invite_only_pilot",
+      "band": 3,
+      "description": "Real work by a known, invited group under an explicit arrangement."
+    },
+    {
+      "id": "public_product",
+      "band": 4,
+      "description": "Anyone may sign up and rely on it."
+    },
+    {
+      "id": "sensitive_or_high_impact",
+      "band": 5,
+      "description": "Health, financial, safety, children's, or otherwise high-impact use where a failure harms people or triggers regulatory consequences."
+    }
+  ],
+  "dimensions": [
+    {
+      "id": "lifecycle",
+      "label_en": "Lifecycle stage",
+      "question_en": "Where is the application in its life right now?",
+      "role": "captured_only",
+      "description": "Recorded for the narrative and cross-checked against the declared environment: a live application described as developer_only is a contradiction the review must surface, not average away.",
+      "values": [
+        { "id": "building", "band": 0, "description": "Under construction; nobody outside the builder uses it." },
+        { "id": "internal_use", "band": 1, "description": "Used by the builder or their organisation for real work." },
+        { "id": "piloting", "band": 2, "description": "A named group is using it under an explicit arrangement." },
+        { "id": "live", "band": 3, "description": "In production use by people who did not build it." }
+      ],
+      "consistent_environments": {
+        "building": ["developer_only", "private_test"],
+        "internal_use": ["developer_only", "private_test", "public_release"],
+        "piloting": ["private_test", "public_release"],
+        "live": ["public_release"]
+      }
+    },
+    {
+      "id": "audience_scale",
+      "label_en": "Audience and scale",
+      "question_en": "Who can use it today, and how many of them are there?",
+      "role": "derivation_input",
+      "description": "The population that a failure reaches. Drives impact, not exposure: a small named audience bounds the harm but does not make a flaw harder to reach.",
+      "values": [
+        { "id": "none_yet", "band": 0, "description": "Nobody but the builder." },
+        { "id": "named_handful", "band": 1, "description": "Up to roughly 20 named individuals who can each be contacted directly." },
+        { "id": "known_group", "band": 2, "description": "Up to roughly 200 known users, e.g. one organisation or an invited cohort." },
+        { "id": "open_small", "band": 3, "description": "Open to anyone, currently in the hundreds." },
+        { "id": "open_large", "band": 4, "description": "Open to anyone, thousands or more, or growing without a ceiling." }
+      ]
+    },
+    {
+      "id": "network_exposure",
+      "label_en": "Network exposure",
+      "question_en": "From where can the running application be reached?",
+      "role": "derivation_input",
+      "description": "The 'exposure' dimension of gh issue #4, named network_exposure here so it is never confused with the exposure input of the risk matrix, which this dimension only helps compute.",
+      "values": [
+        { "id": "local_only", "band": 0, "description": "Localhost or a developer machine only; not deployed." },
+        { "id": "private_network", "band": 1, "description": "Reachable only inside a VPN, office network, or platform-private network." },
+        { "id": "unlisted_public_url", "band": 2, "description": "On the public internet but not advertised or indexed. Unlisted is not access control." },
+        { "id": "public_internet", "band": 3, "description": "Publicly reachable and discoverable." }
+      ]
+    },
+    {
+      "id": "authentication",
+      "label_en": "Authentication",
+      "question_en": "What does someone need in order to get in?",
+      "role": "derivation_input",
+      "description": "How hard it is for an untrusted actor to reach an authenticated position. Open signup means an attacker can always obtain a legitimate account.",
+      "values": [
+        { "id": "none", "band": 0, "description": "No login at all; anyone who reaches the app is inside it." },
+        { "id": "shared_secret", "band": 1, "description": "One shared password, link token, or basic-auth credential for everyone." },
+        { "id": "invite_only_accounts", "band": 2, "description": "Individual accounts created only by invitation or allowlist." },
+        { "id": "open_signup", "band": 3, "description": "Anyone can create an account, with or without email verification." }
+      ]
+    },
+    {
+      "id": "tenancy",
+      "label_en": "Tenancy",
+      "question_en": "Whose data lives next to whose?",
+      "role": "captured_only",
+      "description": "Recorded for scenario narratives and for reviewer judgement. Deliberately not a second automatic impact adjustment in v1: audience_scale already accounts for how many parties a failure reaches, and counting both would double-count blast radius. A multi-tenant shared store is recorded as an explicit assumption on every derived risk instead.",
+      "values": [
+        { "id": "single_user", "band": 0, "description": "One person's data only." },
+        { "id": "single_tenant", "band": 1, "description": "One organisation's data in one deployment." },
+        { "id": "multi_tenant_shared_store", "band": 2, "description": "Many customers' rows in the same tables, separated by application or policy logic." },
+        { "id": "multi_tenant_isolated_store", "band": 3, "description": "Many customers, each with a separate database, schema or project." }
+      ]
+    },
+    {
+      "id": "data_sensitivity",
+      "label_en": "Data sensitivity",
+      "question_en": "What is the most sensitive data the application holds or touches?",
+      "role": "derivation_input",
+      "description": "The most sensitive class present, not the average. Synthetic data lowers impact only while it is genuinely synthetic.",
+      "values": [
+        { "id": "synthetic_or_none", "band": 0, "description": "Test fixtures, seeded demo content, or nothing worth protecting." },
+        { "id": "internal_non_personal", "band": 1, "description": "Real but non-personal business data." },
+        { "id": "personal_data", "band": 2, "description": "Personal data of identifiable people (names, emails, addresses, usage tied to a person)." },
+        { "id": "special_category_or_financial", "band": 3, "description": "Health, biometric, children's, credentials, government identifiers, or payment and account data." }
+      ]
+    },
+    {
+      "id": "financial_operations",
+      "label_en": "Financial operations",
+      "question_en": "Does the application move money?",
+      "role": "derivation_input",
+      "description": "Money movement adds a direct, hard-to-reverse loss channel to security and financial risk.",
+      "values": [
+        { "id": "none", "band": 0, "description": "No payments, payouts, credits, or metered spend on the user's behalf." },
+        { "id": "charges_or_payouts", "band": 1, "description": "Charges customers, issues payouts, or spends metered third-party budget." },
+        { "id": "custody_of_user_funds", "band": 2, "description": "Holds balances or funds belonging to someone else." }
+      ]
+    },
+    {
+      "id": "privileged_operations",
+      "label_en": "Privileged operations",
+      "question_en": "What can the application do beyond reading and writing its own data?",
+      "role": "derivation_input",
+      "description": "Side effects that leave the application boundary are hard to undo and often visible to third parties.",
+      "values": [
+        { "id": "none", "band": 0, "description": "Reads and writes its own data only." },
+        { "id": "internal_admin_actions", "band": 1, "description": "Has administrative operations over its own users or content." },
+        { "id": "external_side_effects", "band": 2, "description": "Sends email or messages, calls paid third-party APIs, or acts in external systems." },
+        { "id": "infrastructure_control", "band": 3, "description": "Can change infrastructure, deployments, or account configuration." }
+      ]
+    },
+    {
+      "id": "business_criticality",
+      "label_en": "Business criticality",
+      "question_en": "What happens to the business or its users if this stops working or misbehaves?",
+      "role": "derivation_input",
+      "description": "How much depends on the application being right. Independent of how many people use it.",
+      "values": [
+        { "id": "experiment", "band": 0, "description": "Nothing depends on it; it can be switched off without consequence." },
+        { "id": "supporting", "band": 1, "description": "Useful, but the work can continue another way." },
+        { "id": "core_operation", "band": 2, "description": "A core business process or a paying customer's daily work runs on it." },
+        { "id": "sole_revenue_or_safety", "band": 3, "description": "The only revenue channel, or a process where failure harms people." }
+      ]
+    }
+  ],
+  "compensating_control": {
+    "description": "A measure that is already in place and evidenced, which reduces how likely a failure is to be exercised in this scope. It may reduce the exposure input by at most one step, never impact, and only while at least one supporting evidence record is current (RFC 0001 rules R7 and R15). An aspiration ('we plan to restrict signups') is not a compensating control; enforced_by must name the mechanism or the accountable person.",
+    "required_fields": ["compensating_control_id", "description", "enforced_by", "evidence_refs"],
+    "readiness_condition": "When readiness_condition is true, the measure also becomes an enforceable condition on any conditional readiness that relies on it, carrying its expiry and reassessment trigger."
+  },
+  "reassessment": {
+    "description": "Context freshness is tracked independently of the source-code fingerprint. A context revision changes when the recorded facts change, whether or not a single line of code moved; a code change invalidates the source fingerprint without necessarily changing the context.",
+    "default_triggers": [
+      { "kind": "context_change" },
+      { "kind": "before_environment", "value": "public_release" }
+    ],
+    "expiry_effect": "Past context.valid_until, the context counts as unconfirmed: readiness for every scope falls to incomplete until it is reconfirmed."
+  }
+}

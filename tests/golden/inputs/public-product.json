@@ -1,0 +1,117 @@
+{
+  "case_id": "public-product",
+  "title": "Live public product with a failed Critical control and an open blocking action",
+  "pins": [
+    "The same anon-access failure that is low risk in a laptop prototype is critical here: environment and intended use move the inputs, never the status.",
+    "An open remediation action whose blocking scope covers this pair blocks the scope on its own, independently of the risk levels.",
+    "An accepted risk on a non-Critical control becomes an enforceable condition with the acceptance review date, so an acceptance nobody revisits cannot quietly become permanent."
+  ],
+  "now": "2026-08-16T12:00:00Z",
+  "assessment_id": "va-golden-public-product",
+  "context_id": "ctx-golden-public-product",
+  "reviewer": "reviewer:vibecheck",
+  "application": {
+    "name": "Bookings",
+    "description": "Live booking product with open signup, card payments through a hosted checkout, and email confirmations.",
+    "platform": "lovable+supabase+stripe"
+  },
+  "target_scopes": [
+    { "environment": "public_release", "intended_use": "public_product" }
+  ],
+  "current_scope": { "environment": "public_release", "intended_use": "public_product" },
+  "data_summary": "Customer names, emails, phone numbers, booking history and payment references for several thousand users. Cards are handled by the hosted checkout.",
+  "context_valid_until": "2026-11-16T00:00:00Z",
+  "confirmation": {
+    "state": "human_reviewed",
+    "confirmed_by": "founder:tom",
+    "confirmed_at": "2026-08-16T07:45:00Z",
+    "source_fingerprint": "sha256:3b9d1c2e4f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdef1"
+  },
+  "profile": {
+    "lifecycle": { "state": "confirmed", "value": "live", "source": "founder:tom" },
+    "audience_scale": { "state": "confirmed", "value": "open_large", "source": "founder:tom" },
+    "network_exposure": { "state": "confirmed", "value": "public_internet", "source": "founder:tom" },
+    "authentication": { "state": "confirmed", "value": "open_signup", "source": "founder:tom" },
+    "tenancy": { "state": "confirmed", "value": "multi_tenant_shared_store", "source": "founder:tom" },
+    "data_sensitivity": { "state": "confirmed", "value": "personal_data", "source": "founder:tom" },
+    "financial_operations": { "state": "confirmed", "value": "charges_or_payouts", "source": "founder:tom" },
+    "privileged_operations": { "state": "confirmed", "value": "external_side_effects", "source": "founder:tom" },
+    "business_criticality": { "state": "confirmed", "value": "core_operation", "source": "founder:tom" }
+  },
+  "findings": [
+    {
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "fail",
+      "rationale": "An authorized read-only probe returned booking rows to a caller holding nothing but the public anon key.",
+      "evidence": {
+        "provider": "vibecheck supabase probe",
+        "subject_kind": "table",
+        "subject_locator": "public.bookings",
+        "environment": "public_release",
+        "operation": "http_select_anon_head",
+        "strength": "decisive",
+        "scope": "One authorized read-only request against public.bookings with the anon key on 16 August 2026. Decisive that anon can read this table; it says nothing about other tables or about write access.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "fail",
+      "rationale": "No spending cap or billing alert exists on either paid provider; the reviewer confirmed both dashboards with the founder.",
+      "evidence": {
+        "provider": "reviewer, provider dashboards",
+        "subject_kind": "account",
+        "subject_locator": "stripe + email provider billing settings",
+        "environment": "public_release",
+        "operation": "dashboard_review",
+        "strength": "decisive",
+        "scope": "The two billing dashboards as shown on 16 August 2026. Covers configured caps and alerts only, not actual spend.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.data_export",
+      "status": "risk_accepted",
+      "rationale": "There is no self-service export; support runs a manual SQL dump on request. The founder accepted this until the next quarter.",
+      "acceptance": {
+        "accepted_by": "founder:tom",
+        "reason": "Two export requests in twelve months, both served manually within a day. Building self-service export is scheduled after the authorization work.",
+        "review_by": "2026-11-01T00:00:00Z"
+      },
+      "evidence": {
+        "provider": "reviewer, product walkthrough",
+        "subject_kind": "process",
+        "subject_locator": "support export procedure",
+        "environment": "public_release",
+        "operation": "reviewer_walkthrough",
+        "strength": "indicative",
+        "scope": "The product's account area and the documented support procedure on 16 August 2026.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "action_id": "act-close-anon-read",
+      "kind": "remediate",
+      "outcome": "An independent re-probe with the anon key returns no rows from public.bookings on a table separately established as non-empty.",
+      "reason": "Anon callers can currently read every booking, including names, phone numbers and addresses.",
+      "urgency": "immediate",
+      "deadline": {
+        "kind": "immediate",
+        "rationale": "The product is live and the data is reachable with a key that ships in the app bundle."
+      },
+      "blocking_scope": [
+        { "environment": "public_release", "intended_use": "public_product" }
+      ],
+      "owner": { "role": "developer", "name": "developer:sam" },
+      "state": "open",
+      "state_history": [
+        { "state": "open", "at": "2026-08-16T12:00:00Z", "by": "reviewer:vibecheck" }
+      ],
+      "control_refs": ["vibecheck.control.authz.anon_data_access"],
+      "success_evidence": "A re-probe recorded after the policy change, plus the migration diff. A disappeared scanner warning is not sufficient.",
+      "reassess_control_ids": ["vibecheck.control.authz.anon_data_access"]
+    }
+  ]
+}

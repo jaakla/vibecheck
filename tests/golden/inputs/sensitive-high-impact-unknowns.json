@@ -1,0 +1,115 @@
+{
+  "case_id": "sensitive-high-impact-unknowns",
+  "title": "Sensitive, high-impact use where the context itself is not established",
+  "pins": [
+    "An unknown dimension and a conflicting one both make the inputs they feed unknown, and unknown levels never read as low: they keep every scope incomplete.",
+    "A context past its valid_until counts as unconfirmed however it was confirmed before, and a pass resting on expired evidence becomes a material unknown rather than staying a pass.",
+    "Inferred answers are usable but visible: they appear as assumptions on every derived risk and hold confidence down."
+  ],
+  "now": "2026-08-16T12:00:00Z",
+  "assessment_id": "va-golden-sensitive-high-impact-unknowns",
+  "context_id": "ctx-golden-sensitive-high-impact-unknowns",
+  "reviewer": "reviewer:vibecheck",
+  "application": {
+    "name": "CareNotes",
+    "description": "Note-taking app used by a care provider's staff, with a pending decision to open it to client families.",
+    "platform": "lovable+supabase"
+  },
+  "target_scopes": [
+    { "environment": "private_test", "intended_use": "invite_only_pilot" },
+    { "environment": "public_release", "intended_use": "sensitive_or_high_impact" }
+  ],
+  "current_scope": { "environment": "private_test", "intended_use": "invite_only_pilot" },
+  "data_summary": "Care notes about identifiable people. Whether they include health details is exactly what nobody has confirmed yet.",
+  "assumptions": [
+    "The reviewer could not reach the data controller before this revision; the sensitive-data question is open."
+  ],
+  "context_valid_until": "2026-07-01T00:00:00Z",
+  "confirmation": {
+    "state": "human_reviewed",
+    "confirmed_by": "founder:lena",
+    "confirmed_at": "2026-04-01T09:00:00Z",
+    "source_fingerprint": "sha256:4c8e2d1f30425160718293a4b5c6d7e8f90123456789abcdef0123456789abcd"
+  },
+  "profile": {
+    "lifecycle": { "state": "confirmed", "value": "piloting", "source": "founder:lena" },
+    "audience_scale": { "state": "confirmed", "value": "known_group", "source": "founder:lena" },
+    "network_exposure": {
+      "state": "inferred",
+      "value": "unlisted_public_url",
+      "source": "deployment configuration in the repository",
+      "rationale": "The deploy target is a public platform URL with no listing or index, but nobody confirmed whether the address is shared beyond the staff."
+    },
+    "authentication": {
+      "state": "inferred",
+      "value": "invite_only_accounts",
+      "source": "supabase auth settings export",
+      "rationale": "Signup is disabled in the exported settings; whether invitations are restricted in practice is unconfirmed."
+    },
+    "tenancy": { "state": "confirmed", "value": "multi_tenant_shared_store", "source": "founder:lena" },
+    "data_sensitivity": {
+      "state": "unknown",
+      "source": "reviewer",
+      "rationale": "The care notes may contain health information. The data controller has not answered, and guessing the benign answer here would be the whole mistake this model exists to prevent."
+    },
+    "financial_operations": {
+      "state": "conflicting",
+      "candidates": ["none", "charges_or_payouts"],
+      "rationale": "The founder says the app never charges anyone; the repository contains a live payment integration with a configured price. Unresolved.",
+      "source": "founder:lena vs repository payment integration"
+    },
+    "privileged_operations": { "state": "confirmed", "value": "internal_admin_actions", "source": "founder:lena" },
+    "business_criticality": { "state": "confirmed", "value": "core_operation", "source": "founder:lena" }
+  },
+  "findings": [
+    {
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "fail",
+      "rationale": "A staff account could open another staff member's client note by changing the record id in the URL; reproduced twice.",
+      "assessed_at": "2026-08-16T11:00:00Z",
+      "evidence": {
+        "provider": "vibecheck supabase probe",
+        "subject_kind": "table",
+        "subject_locator": "public.notes",
+        "environment": "private_test",
+        "operation": "http_select_authenticated_cross_account",
+        "strength": "decisive",
+        "scope": "Account B read one known record owned by account A in public.notes. Decisive for that record; it is not proof for other tables or operations.",
+        "observed_at": "2026-08-16T11:00:00Z",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.no_pii_leakage",
+      "status": "fail",
+      "rationale": "Full note bodies are sent to a third-party model provider and written to the request log, with no redaction step.",
+      "assessed_at": "2026-08-16T11:00:00Z",
+      "evidence": {
+        "provider": "vibecheck.sh static scanner",
+        "operation": "static_pattern_scan",
+        "strength": "indicative",
+        "scope": "Current working tree only, rulesets llm.prompt_pii and obs.log_pii. Matches in api/summarize.js and lib/logger.js.",
+        "observed_at": "2026-08-16T11:00:00Z",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.integ.webhook_signatures",
+      "status": "pass",
+      "rationale": "The inbound webhook verified signatures and timestamps when it was reviewed in April; nothing has re-verified it since.",
+      "assessed_at": "2026-04-01T10:00:00Z",
+      "evidence": {
+        "provider": "reviewer, code walkthrough",
+        "subject_kind": "endpoint",
+        "subject_locator": "POST /api/webhooks/provider",
+        "environment": "private_test",
+        "operation": "reviewer_walkthrough",
+        "strength": "indicative",
+        "direction": "supports",
+        "scope": "The handler as it stood on 1 April 2026, read end to end with the developer.",
+        "observed_at": "2026-04-01T10:00:00Z",
+        "valid_until": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

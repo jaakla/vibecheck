@@ -23,23 +23,33 @@ Semantic rules implemented here (numbering from RFC 0001 §10):
   R5   screening statuses only on screening controls; risk_accepted never on
        Critical severity
   R6   risk level = matrix(impact, exposure); unknown in -> unknown out;
-       downgrades are at most one level below the matrix result
+       downgrades are at most one level below the matrix result and name
+       supporting evidence that is current at the time of assessment
+  R7   a compensating control lowers exposure only while at least one cited
+       supporting evidence record is current
+  R8   unknown is never low: a material unknown keeps readiness at incomplete
+       or worse, and a listed blocker means the state is blocked
   R13  supersedes chains resolve and are acyclic; envelope revisions monotonic
 
+The application context is validated too (context.validate_context): profile
+keys and values resolve against the context model, every field carries a usable
+provenance state, undeclared x_ scope extensions are rejected, and a
+compensating control with no enforcing mechanism or no stated scope is refused.
+
 R2/R9/R10/R11/R14 are structural halves enforced by the JSON Schema itself;
-R8/R12/R15 need the readiness/report derivations of Increments 2-3 and are not
-checked here.
+R12 needs the report derivation of Increment 3 and R15's freshness reading of
+risks lives in the readiness derivation (scripts/readiness.py), not here.
 """
 import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _redact
+import context as context_mod
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -163,23 +173,11 @@ def migrate(env, target_version=SCHEMA_VERSION):
 
 # ----------------------------------------------------------------- validation
 
-def _parse_instant(value):
-    """Parse a schema timestamp into a UTC-aware datetime.
+#: Timestamp parsing lives in context.py so both modules read instants the same
+#: way; comparing the string forms would be wrong, because different
+#: representations of one instant do not sort chronologically.
+_parse_instant = context_mod.parse_instant
 
-    JSON Schema permits both ``Z`` and numeric UTC offsets. Comparing those
-    strings lexicographically is incorrect because different representations
-    of the same instant do not sort chronologically.
-    """
-    if not isinstance(value, str):
-        return None
-    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
-    try:
-        instant = datetime.fromisoformat(normalized)
-    except ValueError:
-        return None
-    if instant.tzinfo is None:
-        return None
-    return instant.astimezone(timezone.utc)
 
 def _iter_refs(node, path=""):
     if isinstance(node, dict):
@@ -233,6 +231,10 @@ def _iter_control_ids(env):
             for j, cov in enumerate(obj.get("coverage") or []):
                 if isinstance(cov, dict) and isinstance(cov.get("control_id"), str):
                     yield "%s.coverage[%d]" % (where, j), cov["control_id"]
+    for i, measure in enumerate((env.get("context") or {})
+                                .get("compensating_controls") or []):
+        for cid in (measure.get("applies_to") or {}).get("control_ids") or []:
+            yield "context.compensating_controls[%d].applies_to" % i, cid
     for i, mapping in enumerate(env.get("framework_mappings") or []):
         for j, entry in enumerate(mapping.get("entries") or []):
             if isinstance(entry, dict) and isinstance(entry.get("control_id"), str):
@@ -406,6 +408,28 @@ def _check_assessments(env, problems):
 _LEVEL_ORDER = ["low", "moderate", "high", "critical"]
 
 
+def _current_supporting_refs(env, refs, at):
+    """Referenced evidence that supports its claim and is still valid at `at`."""
+    evidence = {e.get("evidence_id"): e for e in env.get("evidence") or []}
+    instant = _parse_instant(at)
+    if instant is None:
+        return []
+    current = []
+    for ref in refs or []:
+        item = evidence.get(ref)
+        if item is None or item.get("direction") != "supports":
+            continue
+        observed = _parse_instant(item.get("observed_at"))
+        valid_until = _parse_instant(item.get("valid_until"))
+        if observed is None or observed > instant:
+            continue
+        if "valid_until" in item and (
+                valid_until is None or valid_until < instant):
+            continue
+        current.append(ref)
+    return current
+
+
 def _check_risks(env, problems):
     matrix = load_matrix()["matrix"]
     for rsk in env.get("risks") or []:
@@ -413,6 +437,17 @@ def _check_risks(env, problems):
         inputs = rsk.get("inputs") or {}
         impact, exposure = inputs.get("impact"), inputs.get("exposure")
         level = rsk.get("level")
+
+        # R7: a compensating control counts only while its evidence is current
+        for i, measure in enumerate(inputs.get("compensating_controls") or []):
+            if not measure.get("exposure_reduction_applied"):
+                continue
+            if not _current_supporting_refs(env, measure.get("evidence_refs"),
+                                            rsk.get("assessed_at")):
+                problems.append(
+                    "R7: %s inputs.compensating_controls[%d] lowered exposure "
+                    "without current supporting evidence" % (rid, i))
+
         if "unknown" in (impact, exposure):
             expected = "unknown"
         else:
@@ -427,6 +462,12 @@ def _check_risks(env, problems):
                 problems.append(
                     "R6: %s downgrade must be exactly one level below the "
                     "matrix result %r, got %r" % (rid, expected, level))
+            if not _current_supporting_refs(env, rsk["downgrade"].get("evidence_refs"),
+                                            rsk.get("assessed_at")):
+                problems.append(
+                    "R6: %s is downgraded without current supporting evidence; "
+                    "a downgrade must name the exact evidence that holds now"
+                    % rid)
         elif expected == "unknown":
             if level != "unknown":
                 problems.append(
@@ -441,6 +482,33 @@ def _check_risks(env, problems):
             problems.append(
                 "R6: %s level %r is below matrix(%s, %s) = %r without a "
                 "downgrade record" % (rid, level, impact, exposure, expected))
+
+
+def _check_readiness(env, problems):
+    """R8's structural half: a state that hides what it lists is invalid.
+
+    Whether a *derivation* found the right blockers is readiness.py's job; what
+    is checked here is that a stored readiness object cannot claim less than
+    its own contents. A material unknown or a listed blocker can only coexist
+    with a state that keeps the scope shut.
+    """
+    for i, readiness in enumerate(env.get("readiness") or []):
+        if not isinstance(readiness, dict):
+            continue
+        where = readiness.get("readiness_id", "readiness[%d]" % i)
+        state = readiness.get("state")
+        if readiness.get("blockers") and state != "blocked":
+            problems.append(
+                "R8: %s lists %d blocker(s) but its state is %r; a listed "
+                "blocker means blocked"
+                % (where, len(readiness["blockers"]), state))
+        material = [u for u in readiness.get("unknowns") or []
+                    if isinstance(u, dict) and u.get("material")]
+        if material and state not in ("incomplete", "blocked"):
+            problems.append(
+                "R8: %s carries %d material unknown(s) but its state is %r; "
+                "unknown is never low and never permission to proceed"
+                % (where, len(material), state))
 
 
 def _schema_errors(env):
@@ -468,8 +536,10 @@ def validate_envelope(env):
     except MigrationError:
         problems.append("unparseable schema_version %r" % version)
     problems.extend(_schema_errors(env))
+    problems.extend(context_mod.validate_context(env.get("context") or {}))
     _check_references(env, problems)
     _check_supersedes(env, problems)
     _check_assessments(env, problems)
     _check_risks(env, problems)
+    _check_readiness(env, problems)
     return problems

@@ -50,6 +50,9 @@ jobs:
       - name: Generated control registry and mapping are current
         run: python3 scripts/gen_canonical.py --check
 
+      - name: Golden context, risk and readiness cases are current
+        run: python3 scripts/gen_goldens.py --check
+
       - name: Workbooks build in all four variants
         run: |
           mkdir -p out

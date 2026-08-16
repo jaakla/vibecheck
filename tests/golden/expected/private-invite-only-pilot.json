@@ -1,0 +1,1387 @@
+{
+  "actions": [],
+  "assessment_id": "va-golden-private-invite-only-pilot",
+  "assessments": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-aiact.high_risk_screen",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [],
+        "rationale": "Screening question answered during the walkthrough: the pilot does not fall into the EU AI Act category this row screens for."
+      },
+      "control_id": "vibecheck.control.aiact.high_risk_screen",
+      "status": "answered"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-aiact.prohibited_practice_screen",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [],
+        "rationale": "Screening question answered during the walkthrough: the pilot does not fall into the EU AI Act category this row screens for."
+      },
+      "control_id": "vibecheck.control.aiact.prohibited_practice_screen",
+      "status": "answered"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-aiact.specialist_escalation",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [],
+        "rationale": "Screening question answered during the walkthrough: the pilot does not fall into the EU AI Act category this row screens for."
+      },
+      "control_id": "vibecheck.control.aiact.specialist_escalation",
+      "status": "answered"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-aiact.transparency_screen",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [],
+        "rationale": "Screening question answered during the walkthrough: the pilot does not fall into the EU AI Act category this row screens for."
+      },
+      "control_id": "vibecheck.control.aiact.transparency_screen",
+      "status": "answered"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-arch.datastore_fit",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.arch.datastore_fit",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-arch.mainstream_stack",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.arch.mainstream_stack",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-arch.proven_auth_provider",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.arch.proven_auth_provider",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.admin_actions_server_side",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.authz.admin_actions_server_side",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.anon_data_access",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-anon_data_access-01"
+        ],
+        "rationale": "Row-level security now denies anon reads on public.orders, verified against a non-empty table. The anon write path was never probed: no write-probe consent was given, so the requirement is only partly established."
+      },
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "partial"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.object_level",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.server_side_default_deny",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.authz.server_side_default_deny",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.tenant_isolation",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.authz.tenant_isolation",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-continuity.account_ownership",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.continuity.account_ownership",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-continuity.bus_factor",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.continuity.bus_factor",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-cost.bounded_agent_loops",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.cost.bounded_agent_loops",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-cost.budget_caps",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-cost.expensive_endpoints_auth",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.cost.expensive_endpoints_auth",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-cost.usage_quotas",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.cost.usage_quotas",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-data.safe_prod_migrations",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.data.safe_prod_migrations",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-data.tested_backups",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.data.tested_backups",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-deploy.cors_restricted",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.deploy.cors_restricted",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-deploy.debug_disabled",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.deploy.debug_disabled",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-deploy.env_separation",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.deploy.env_separation",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-input.output_encoding",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.input.output_encoding",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-input.server_side_validation",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.input.server_side_validation",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-input.sql_parameterized",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.input.sql_parameterized",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-integ.idempotent_handlers",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.integ.idempotent_handlers",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-integ.webhook_signatures",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.integ.webhook_signatures",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-llm.no_output_to_exec",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.llm.no_output_to_exec",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-llm.tool_call_authorization",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.llm.tool_call_authorization",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-llm.untrusted_content_isolation",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.llm.untrusted_content_isolation",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-logic.concurrency_safety",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.logic.concurrency_safety",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-logic.invariant_enforcement",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.logic.invariant_enforcement",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-logic.money_math",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.logic.money_math",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-obs.error_tracking",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-error_tracking-02"
+        ],
+        "rationale": "No error tracking on either side; server errors are printed to a console nobody reads."
+      },
+      "control_id": "vibecheck.control.obs.error_tracking",
+      "status": "fail"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-obs.no_leaked_internals",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.obs.no_leaked_internals",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-privacy.no_pii_leakage",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.privacy.no_pii_leakage",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-privacy.password_hashing",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.privacy.password_hashing",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-product.data_persistence",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.product.data_persistence",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-product.no_mocked_output",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.product.no_mocked_output",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-product.payment_mode_match",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.product.payment_mode_match",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-secrets.leak_incident_response",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.secrets.leak_incident_response",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-secrets.no_client_provider_keys",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.secrets.no_client_provider_keys",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-secrets.no_frontend_literals",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.secrets.no_frontend_literals",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-secrets.no_repo_history_leaks",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.secrets.no_repo_history_leaks",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-secrets.secure_runtime_injection",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.secrets.secure_runtime_injection",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-testing.authz_tests",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.testing.authz_tests",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-testing.core_flow_tests",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-baseline-review"
+        ],
+        "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings."
+      },
+      "control_id": "vibecheck.control.testing.core_flow_tests",
+      "status": "pass"
+    }
+  ],
+  "context": {
+    "application": {
+      "description": "Order tracker used by twelve named testers from one customer while the team decides whether to launch it publicly.",
+      "name": "Acme Orders",
+      "platform": "lovable+supabase"
+    },
+    "compensating_controls": [
+      {
+        "applies_to": {
+          "domains": [
+            "security",
+            "privacy"
+          ],
+          "scopes": [
+            {
+              "environment": "private_test",
+              "intended_use": "invite_only_pilot"
+            }
+          ]
+        },
+        "compensating_control_id": "cc-access-proxy",
+        "description": "The API hostname sits behind an identity-aware proxy that only lets the twelve named testers' verified identities through; requests without a session never reach the database API.",
+        "enforced_by": "Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari",
+        "evidence_refs": [
+          "ev-access-proxy-config"
+        ],
+        "readiness_condition": true,
+        "reassess_trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        },
+        "valid_until": "2026-09-15T00:00:00Z"
+      }
+    ],
+    "confirmation": {
+      "confirmed_at": "2026-08-16T08:30:00Z",
+      "confirmed_by": "founder:mari",
+      "source_fingerprint": "sha256:2f7c1a44b0e9d3aa61c5f0b8e2d94c7a913e5b6f8d0a2c4e6b8d0f2a4c6e8b0d",
+      "state": "human_reviewed"
+    },
+    "context_fingerprint": "sha256:7f4c1ef61ff17e5a4c8a7ef9e7e5819fc2851b64ea3cb8570778a2c716ac657a",
+    "context_id": "ctx-golden-private-invite-only-pilot",
+    "context_model": {
+      "name": "vibecheck.context_model",
+      "version": "1.0.0"
+    },
+    "current_scope": {
+      "environment": "private_test",
+      "intended_use": "invite_only_pilot"
+    },
+    "data_summary": "Names, emails, delivery addresses and order lines of the pilot testers' own customers. No card data (hosted checkout).",
+    "profile": {
+      "audience_scale": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "named_handful"
+      },
+      "authentication": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "invite_only_accounts"
+      },
+      "business_criticality": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "supporting"
+      },
+      "data_sensitivity": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "personal_data"
+      },
+      "financial_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "none"
+      },
+      "lifecycle": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "piloting"
+      },
+      "network_exposure": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "unlisted_public_url"
+      },
+      "privileged_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "internal_admin_actions"
+      },
+      "tenancy": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "multi_tenant_shared_store"
+      }
+    },
+    "reassess_triggers": [
+      {
+        "kind": "context_change"
+      },
+      {
+        "kind": "before_environment",
+        "value": "public_release"
+      }
+    ],
+    "revision": 1,
+    "target_scopes": [
+      {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    ],
+    "valid_until": "2026-11-16T00:00:00Z"
+  },
+  "control_registry": {
+    "name": "vibecheck.controls",
+    "version": "1.0.0"
+  },
+  "created_at": "2026-08-16T12:00:00Z",
+  "evidence": [
+    {
+      "claim": {
+        "aspect": "reachability of the data API from outside the tester allowlist",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-access-proxy-config",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "config_export_review",
+      "provider": {
+        "name": "reviewer, Cloudflare dashboard export"
+      },
+      "scope": "The exported Access policy on 16 August 2026, plus one unauthenticated request from outside the allowlist that the proxy rejected. Covers the proxied hostname only; it says nothing about the Supabase project's own hostname.",
+      "strength": "decisive",
+      "subject": {
+        "kind": "config",
+        "locator": "cloudflare:access-policy/acme-orders-pilot"
+      },
+      "valid_until": "2026-09-15T00:00:00Z"
+    },
+    {
+      "claim": {
+        "aspect": "anon write access to public.orders",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-anon_data_access-01",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "vibecheck supabase probe"
+      },
+      "scope": "Anon reads of public.orders are denied on a table separately established as non-empty. The anon INSERT path was not exercised: that needs explicit write-probe consent, which was not given.",
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      },
+      "valid_until": "2026-09-15T00:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.arch.datastore_fit",
+          "vibecheck.control.arch.mainstream_stack",
+          "vibecheck.control.arch.proven_auth_provider",
+          "vibecheck.control.authz.admin_actions_server_side",
+          "vibecheck.control.authz.object_level",
+          "vibecheck.control.authz.server_side_default_deny",
+          "vibecheck.control.authz.tenant_isolation",
+          "vibecheck.control.continuity.account_ownership",
+          "vibecheck.control.continuity.bus_factor",
+          "vibecheck.control.cost.bounded_agent_loops",
+          "vibecheck.control.cost.budget_caps",
+          "vibecheck.control.cost.expensive_endpoints_auth",
+          "vibecheck.control.cost.usage_quotas",
+          "vibecheck.control.data.safe_prod_migrations",
+          "vibecheck.control.data.tested_backups",
+          "vibecheck.control.deploy.cors_restricted",
+          "vibecheck.control.deploy.debug_disabled",
+          "vibecheck.control.deploy.env_separation",
+          "vibecheck.control.input.output_encoding",
+          "vibecheck.control.input.server_side_validation",
+          "vibecheck.control.input.sql_parameterized",
+          "vibecheck.control.integ.idempotent_handlers",
+          "vibecheck.control.integ.webhook_signatures",
+          "vibecheck.control.llm.no_output_to_exec",
+          "vibecheck.control.llm.tool_call_authorization",
+          "vibecheck.control.llm.untrusted_content_isolation",
+          "vibecheck.control.logic.concurrency_safety",
+          "vibecheck.control.logic.invariant_enforcement",
+          "vibecheck.control.logic.money_math",
+          "vibecheck.control.obs.no_leaked_internals",
+          "vibecheck.control.privacy.no_pii_leakage",
+          "vibecheck.control.privacy.password_hashing",
+          "vibecheck.control.product.data_persistence",
+          "vibecheck.control.product.no_mocked_output",
+          "vibecheck.control.product.payment_mode_match",
+          "vibecheck.control.secrets.leak_incident_response",
+          "vibecheck.control.secrets.no_client_provider_keys",
+          "vibecheck.control.secrets.no_frontend_literals",
+          "vibecheck.control.secrets.no_repo_history_leaks",
+          "vibecheck.control.secrets.secure_runtime_injection",
+          "vibecheck.control.testing.authz_tests",
+          "vibecheck.control.testing.core_flow_tests"
+        ],
+        "statement": "The requirement of Primary data store fits the workload and hosting model: managed persistent DB for multi-user data; no SQLite/JSON-file/localStorage as system of record on serverless or ephemeral hosting is met; The requirement of Stack choices are mainstream and maintainable: widely-used language, framework and database with documentation, community and hireable developers is met; The requirement of Authentication is a proven provider or library (Supabase Auth, Firebase, Auth0, NextAuth, Clerk, etc.); no hand-rolled password hashing, session tokens or JWT schemes is met; The requirement of Privileged/admin actions enforced server-side (Critical where admin functions are meaningful) is met; The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met; The requirement of Authorization enforced server-side, default-deny is met; The requirement of Tenant isolation: no cross-tenant data access is met; The requirement of Account ownership: domain, hosting, DB, email, payment and AI-provider accounts owned by you/your company is met; The requirement of Continuity: someone other than the original builder can access, deploy, restore and maintain the app is met; The requirement of No unbounded loops / recursive agent steps; max-steps enforced is met; The requirement of Hard budget caps + billing alerts on every paid provider is met; The requirement of Expensive endpoints require auth; unauthenticated search/query bounded is met; The requirement of Quotas, per-user budgets, per-operation maximums, timeouts and concurrency caps on paid/LLM work is met; The requirement of No silent destructive migrations on prod; rollback/forward-recovery plan exists is met; The requirement of Backups configured, encrypted, access-controlled - and a restore has actually been tested (RPO/RTO known) is met; The requirement of CORS allows only intended origins/methods/headers; credentialed cross-origin narrowly restricted and tested is met; The requirement of Debug off in prod; verbose error pages disabled; no source maps/debug endpoints in public build is met; The requirement of Prod vs dev/staging config & data separated; no prod secrets in preview builds is met; The requirement of Output encoded per context (HTML/attr/JS/URL); HTML sanitized only when intentionally allowed; dangerous URL schemes blocked is met; The requirement of Server-side validation on all inputs is met; The requirement of All DB queries use parameter binding / safe query API; raw fragments & dynamic identifiers allowlisted is met; The requirement of Idempotency + retry/backoff + dead-letter handling on payment/order/webhook handlers is met; The requirement of Inbound webhooks verify signatures + timestamp; endpoint rejects unrelated event types is met; The requirement of LLM output never reaches an exec/eval/shell/SQL sink without validation/schema is met; The requirement of Tool-call authorisation based on the authenticated user, not model output; tools allowlisted; args validated; high-impact actions need human confirmation is met; The requirement of Untrusted content is separated and identified as data; it cannot modify trusted instructions/permissions/policy is met; The requirement of Concurrency safe: idempotency beyond payments, optimistic concurrency / stale-write handling, transactional boundaries is met; The requirement of Invariants + DB constraints enforce core rules; state-machine transitions validated is met; The requirement of Money/tax/currency: integer/decimal math, rounding rules, locale handling is met; The requirement of No stack traces / internal errors leaked to users is met; The requirement of PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed is met; The requirement of Passwords never stored plaintext; sensitive data encrypted; tokens hashed is met; The requirement of Data truly persists (verified in the datastore) is met; The requirement of Behaviour matches the documented product claim; mocks/fixtures/fallbacks not presented as live output is met; The requirement of Payment account, keys, webhooks AND mode match the intended deployment environment is met; The requirement of Any exposed active credential treated as an incident: rotated, sessions revoked, logs inspected, removed from history is met; The requirement of No provider key prefixes shipped to client (sk-, AKIA, service_role, etc.) is met; The requirement of No secret-like literals in frontend source is met; The requirement of No secrets in current tree, git history, or public build bundle (.env excluded from VCS) is met; The requirement of Secrets injected securely at runtime; not in code/images/logs; access restricted; rotation supported is met; The requirement of Automated checks for auth + authorization/tenant separation is met; The requirement of Automated checks for the primary business transaction and destructive actions is met"
+      },
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-baseline-review",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "reviewer_walkthrough",
+      "provider": {
+        "name": "vibecheck reviewer"
+      },
+      "scope": "One reviewer walkthrough of the working tree and the Supabase project settings on 16 August 2026. Covers what could be seen in that session and nothing beyond it.",
+      "strength": "indicative",
+      "subject": {
+        "kind": "repo",
+        "locator": "."
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.obs.error_tracking"
+        ],
+        "statement": "The requirement of Error tracking on client AND server; structured logs with correlation IDs; secrets/PII redacted is met"
+      },
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-error_tracking-02",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "static_pattern_scan",
+      "provider": {
+        "name": "vibecheck.sh static scanner"
+      },
+      "scope": "Current working tree only, ruleset obs.no_error_tracking. No Sentry, Bugsnag or equivalent client found in the dependency manifest.",
+      "strength": "indicative",
+      "subject": {
+        "kind": "repo",
+        "locator": "."
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  ],
+  "readiness": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blocked_transitions": [
+        {
+          "reason": "Moving to this scope is a separate question with its own answer: blocked (2 blocker(s), 0 material unknown(s)). Readiness here is not permission to go there.",
+          "refs": [
+            "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+            "rsk-obs.error_tracking-public_release.public_product-event_triggered-r1"
+          ],
+          "scope": {
+            "environment": "public_release",
+            "intended_use": "public_product"
+          },
+          "state": "blocked"
+        }
+      ],
+      "blockers": [],
+      "conditions": [
+        {
+          "condition_id": "cond-private_test.invite_only_pilot-access-proxy",
+          "enforced_by": "Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari",
+          "expires_at": "2026-09-15T00:00:00Z",
+          "reassess_trigger": {
+            "kind": "before_environment",
+            "value": "public_release"
+          },
+          "requirement": "The API hostname sits behind an identity-aware proxy that only lets the twelve named testers' verified identities through; requests without a session never reach the database API.",
+          "verification_evidence_refs": [
+            "ev-access-proxy-config"
+          ]
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.conditional.enforced_conditions"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is incomplete because rows below Critical and High are still unfilled. Readiness counts what could block this scope: every applicable Critical and High control here is assessed, and the scope runs under the listed enforced conditions. Finishing the review can still add blockers.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-private_test.invite_only_pilot",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      "state": "conditional",
+      "unknowns": [],
+      "valid_until": "2026-09-15T00:00:00Z"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blockers": [
+        {
+          "reason": "Critical contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.anon_data_access (assessment status: partial)",
+          "ref": "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1"
+        },
+        {
+          "reason": "High contextual reliability risk in this scope for unresolved control(s) vibecheck.control.obs.error_tracking (assessment status: fail)",
+          "ref": "rsk-obs.error_tracking-public_release.public_product-event_triggered-r1"
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.blocked.contextual_risk_critical",
+          "readiness.blocked.contextual_risk_high"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is still incomplete, and readiness for this scope is already blocked by what is known: completing the review can add blockers, never remove this one.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-public_release.public_product",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      },
+      "state": "blocked",
+      "unknowns": [],
+      "valid_until": "2026-09-15T00:00:00Z"
+    }
+  ],
+  "revision": 1,
+  "risks": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Assessment asm-authz.anon_data_access is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.private_test",
+          "exposure.compensating_control.cc-access-proxy"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-anon_data_access-01"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: unlisted_public_url (On the public internet but not advertised or indexed. Unlisted is not access control), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: named_handful (Up to roughly 20 named individuals who can each be contacted directly). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [
+          {
+            "compensating_control_id": "cc-access-proxy",
+            "description": "The API hostname sits behind an identity-aware proxy that only lets the twelve named testers' verified identities through; requests without a session never reach the database API. (enforced by Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari)",
+            "evidence_refs": [
+              "ev-access-proxy-config"
+            ],
+            "exposure_reduction_applied": true,
+            "valid_until": "2026-09-15T00:00:00Z"
+          }
+        ],
+        "exposure": "unlikely",
+        "impact": "major",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all. Compensating control cc-access-proxy (enforced by Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari) lowers exposure by one step."
+      },
+      "level": "moderate",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies audience_scale of at least 'open_small'; authentication of at least 'open_signup'; network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Assessment asm-authz.anon_data_access is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.use.public_product",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.public_release"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-anon_data_access-01"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication open_signup (Anyone can create an account, with or without email verification).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: open_small (Open to anyone, currently in the hundreds). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.obs.error_tracking"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Medium",
+          "impact.audience.named_handful",
+          "exposure.base.environment.private_test"
+        ]
+      },
+      "domain": "reliability",
+      "evidence_refs": [
+        "ev-error_tracking-02"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Normal operation and load in this scope; no attacker required.",
+        "affected": "Error tracking on client AND server; structured logs with correlation IDs; secrets/PII redacted. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: reliability.",
+        "blast_radius": "Audience reached: named_handful (Up to roughly 20 named individuals who can each be contacted directly). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "plausible",
+        "impact": "minor",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "low",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T12:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-obs.error_tracking-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies audience_scale of at least 'open_small'; authentication of at least 'open_signup'; network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.obs.error_tracking"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Medium",
+          "impact.use.public_product",
+          "impact.audience.named_handful",
+          "exposure.base.environment.public_release"
+        ]
+      },
+      "domain": "reliability",
+      "evidence_refs": [
+        "ev-error_tracking-02"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Normal operation and load in this scope; no attacker required.",
+        "affected": "Error tracking on client AND server; structured logs with correlation IDs; secrets/PII redacted. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: reliability.",
+        "blast_radius": "Audience reached: open_small (Open to anyone, currently in the hundreds). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "moderate",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "high",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T12:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-obs.error_tracking-public_release.public_product-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    }
+  ],
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.1.0"
+}

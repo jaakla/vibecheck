@@ -1,0 +1,727 @@
+{
+  "actions": [],
+  "assessment_id": "va-golden-sensitive-high-impact-unknowns",
+  "assessments": [
+    {
+      "assessed_at": "2026-08-16T11:00:00Z",
+      "assessment_id": "asm-authz.object_level",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-object_level-01"
+        ],
+        "rationale": "A staff account could open another staff member's client note by changing the record id in the URL; reproduced twice."
+      },
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "fail"
+    },
+    {
+      "assessed_at": "2026-04-01T10:00:00Z",
+      "assessment_id": "asm-integ.webhook_signatures",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-webhook_signatures-03"
+        ],
+        "rationale": "The inbound webhook verified signatures and timestamps when it was reviewed in April; nothing has re-verified it since."
+      },
+      "control_id": "vibecheck.control.integ.webhook_signatures",
+      "status": "pass"
+    },
+    {
+      "assessed_at": "2026-08-16T11:00:00Z",
+      "assessment_id": "asm-privacy.no_pii_leakage",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-no_pii_leakage-02"
+        ],
+        "rationale": "Full note bodies are sent to a third-party model provider and written to the request log, with no redaction step."
+      },
+      "control_id": "vibecheck.control.privacy.no_pii_leakage",
+      "status": "fail"
+    }
+  ],
+  "context": {
+    "application": {
+      "description": "Note-taking app used by a care provider's staff, with a pending decision to open it to client families.",
+      "name": "CareNotes",
+      "platform": "lovable+supabase"
+    },
+    "assumptions": [
+      "The reviewer could not reach the data controller before this revision; the sensitive-data question is open."
+    ],
+    "confirmation": {
+      "confirmed_at": "2026-04-01T09:00:00Z",
+      "confirmed_by": "founder:lena",
+      "source_fingerprint": "sha256:4c8e2d1f30425160718293a4b5c6d7e8f90123456789abcdef0123456789abcd",
+      "state": "human_reviewed"
+    },
+    "context_fingerprint": "sha256:62bc2eb22303f5ed490c66166f85f1cd0354e67aa4704c310cdce17402e3cc07",
+    "context_id": "ctx-golden-sensitive-high-impact-unknowns",
+    "context_model": {
+      "name": "vibecheck.context_model",
+      "version": "1.0.0"
+    },
+    "current_scope": {
+      "environment": "private_test",
+      "intended_use": "invite_only_pilot"
+    },
+    "data_summary": "Care notes about identifiable people. Whether they include health details is exactly what nobody has confirmed yet.",
+    "profile": {
+      "audience_scale": {
+        "source": "founder:lena",
+        "state": "confirmed",
+        "value": "known_group"
+      },
+      "authentication": {
+        "rationale": "Signup is disabled in the exported settings; whether invitations are restricted in practice is unconfirmed.",
+        "source": "supabase auth settings export",
+        "state": "inferred",
+        "value": "invite_only_accounts"
+      },
+      "business_criticality": {
+        "source": "founder:lena",
+        "state": "confirmed",
+        "value": "core_operation"
+      },
+      "data_sensitivity": {
+        "rationale": "The care notes may contain health information. The data controller has not answered, and guessing the benign answer here would be the whole mistake this model exists to prevent.",
+        "source": "reviewer",
+        "state": "unknown"
+      },
+      "financial_operations": {
+        "candidates": [
+          "none",
+          "charges_or_payouts"
+        ],
+        "rationale": "The founder says the app never charges anyone; the repository contains a live payment integration with a configured price. Unresolved.",
+        "source": "founder:lena vs repository payment integration",
+        "state": "conflicting"
+      },
+      "lifecycle": {
+        "source": "founder:lena",
+        "state": "confirmed",
+        "value": "piloting"
+      },
+      "network_exposure": {
+        "rationale": "The deploy target is a public platform URL with no listing or index, but nobody confirmed whether the address is shared beyond the staff.",
+        "source": "deployment configuration in the repository",
+        "state": "inferred",
+        "value": "unlisted_public_url"
+      },
+      "privileged_operations": {
+        "source": "founder:lena",
+        "state": "confirmed",
+        "value": "internal_admin_actions"
+      },
+      "tenancy": {
+        "source": "founder:lena",
+        "state": "confirmed",
+        "value": "multi_tenant_shared_store"
+      }
+    },
+    "reassess_triggers": [
+      {
+        "kind": "context_change"
+      },
+      {
+        "kind": "before_environment",
+        "value": "public_release"
+      }
+    ],
+    "revision": 1,
+    "target_scopes": [
+      {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      {
+        "environment": "public_release",
+        "intended_use": "sensitive_or_high_impact"
+      }
+    ],
+    "valid_until": "2026-07-01T00:00:00Z"
+  },
+  "control_registry": {
+    "name": "vibecheck.controls",
+    "version": "1.0.0"
+  },
+  "created_at": "2026-08-16T12:00:00Z",
+  "evidence": [
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.privacy.no_pii_leakage"
+        ],
+        "statement": "The requirement of PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed is met"
+      },
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-no_pii_leakage-02",
+      "observed_at": "2026-08-16T11:00:00Z",
+      "operation": "static_pattern_scan",
+      "provider": {
+        "name": "vibecheck.sh static scanner"
+      },
+      "scope": "Current working tree only, rulesets llm.prompt_pii and obs.log_pii. Matches in api/summarize.js and lib/logger.js.",
+      "strength": "indicative",
+      "subject": {
+        "kind": "repo",
+        "locator": "."
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.authz.object_level"
+        ],
+        "statement": "The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met"
+      },
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-object_level-01",
+      "observed_at": "2026-08-16T11:00:00Z",
+      "operation": "http_select_authenticated_cross_account",
+      "provider": {
+        "name": "vibecheck supabase probe"
+      },
+      "scope": "Account B read one known record owned by account A in public.notes. Decisive for that record; it is not proof for other tables or operations.",
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.notes"
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.integ.webhook_signatures"
+        ],
+        "statement": "The requirement of Inbound webhooks verify signatures + timestamp; endpoint rejects unrelated event types is met"
+      },
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-webhook_signatures-03",
+      "observed_at": "2026-04-01T10:00:00Z",
+      "operation": "reviewer_walkthrough",
+      "provider": {
+        "name": "reviewer, code walkthrough"
+      },
+      "scope": "The handler as it stood on 1 April 2026, read end to end with the developer.",
+      "strength": "indicative",
+      "subject": {
+        "kind": "endpoint",
+        "locator": "POST /api/webhooks/provider"
+      },
+      "valid_until": "2026-05-01T00:00:00Z"
+    }
+  ],
+  "readiness": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blocked_transitions": [
+        {
+          "reason": "Moving to this scope is a separate question with its own answer: incomplete (0 blocker(s), 6 material unknown(s)). Readiness here is not permission to go there.",
+          "refs": [],
+          "scope": {
+            "environment": "public_release",
+            "intended_use": "sensitive_or_high_impact"
+          },
+          "state": "incomplete"
+        }
+      ],
+      "blockers": [],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.incomplete.context_expired",
+          "readiness.incomplete.expired_supporting_evidence",
+          "readiness.incomplete.unassessed_critical_high",
+          "readiness.incomplete.unknown_context_dimensions",
+          "readiness.incomplete.unknown_risk"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "aligned",
+        "explanation": "The vibecheck_v1 checklist verdict and the readiness state for this scope agree. The verdict is one judgement for the whole application; readiness is scoped to this environment and intended use.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-private_test.invite_only_pilot",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      "state": "incomplete",
+      "unknowns": [
+        {
+          "description": "Contextual risk for vibecheck.control.authz.object_level is unknown in this scope. Unknown is never low and never permission to proceed.",
+          "material": true,
+          "ref": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1"
+        },
+        {
+          "description": "Contextual risk for vibecheck.control.privacy.no_pii_leakage is unknown in this scope. Unknown is never low and never permission to proceed.",
+          "material": true,
+          "ref": "rsk-privacy.no_pii_leakage-private_test.invite_only_pilot-current-r1"
+        },
+        {
+          "description": "The application context is past its valid_until and counts as unconfirmed until it is reconfirmed.",
+          "material": true,
+          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+        },
+        {
+          "description": "Context dimensions that feed risk derivation are unknown or conflicting: data_sensitivity, financial_operations. Any risk that needed them came out unknown.",
+          "dimensions": [
+            "data_sensitivity",
+            "financial_operations"
+          ],
+          "material": true,
+          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+        },
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.anon_data_access",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.budget_caps",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "40 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true
+        },
+        {
+          "description": "Pass on vibecheck.control.integ.webhook_signatures rests only on evidence that has expired; it needs re-verification before it can support this scope (rule R15).",
+          "material": true,
+          "ref": "asm-integ.webhook_signatures"
+        }
+      ],
+      "valid_until": "2026-07-01T00:00:00Z"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blockers": [],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.incomplete.context_expired",
+          "readiness.incomplete.expired_supporting_evidence",
+          "readiness.incomplete.unassessed_critical_high",
+          "readiness.incomplete.unknown_context_dimensions",
+          "readiness.incomplete.unknown_risk"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "aligned",
+        "explanation": "The vibecheck_v1 checklist verdict and the readiness state for this scope agree. The verdict is one judgement for the whole application; readiness is scoped to this environment and intended use.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-public_release.sensitive_or_high_impact",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "sensitive_or_high_impact"
+      },
+      "state": "incomplete",
+      "unknowns": [
+        {
+          "description": "Contextual risk for vibecheck.control.authz.object_level is unknown in this scope. Unknown is never low and never permission to proceed.",
+          "material": true,
+          "ref": "rsk-authz.object_level-public_release.sensitive_or_high_impact-event_triggered-r1"
+        },
+        {
+          "description": "Contextual risk for vibecheck.control.privacy.no_pii_leakage is unknown in this scope. Unknown is never low and never permission to proceed.",
+          "material": true,
+          "ref": "rsk-privacy.no_pii_leakage-public_release.sensitive_or_high_impact-event_triggered-r1"
+        },
+        {
+          "description": "The application context is past its valid_until and counts as unconfirmed until it is reconfirmed.",
+          "material": true,
+          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+        },
+        {
+          "description": "Context dimensions that feed risk derivation are unknown or conflicting: data_sensitivity, financial_operations. Any risk that needed them came out unknown.",
+          "dimensions": [
+            "data_sensitivity",
+            "financial_operations"
+          ],
+          "material": true,
+          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+        },
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.anon_data_access",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.budget_caps",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "40 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true
+        },
+        {
+          "description": "Pass on vibecheck.control.integ.webhook_signatures rests only on evidence that has expired; it needs re-verification before it can support this scope (rule R15).",
+          "material": true,
+          "ref": "asm-integ.webhook_signatures"
+        }
+      ],
+      "valid_until": "2026-07-01T00:00:00Z"
+    }
+  ],
+  "revision": 1,
+  "risks": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "authentication = invite_only_accounts is inferred from supabase auth settings export, not confirmed by the owner.",
+        "network_exposure = unlisted_public_url is inferred from deployment configuration in the repository, not confirmed by the owner.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Context confirmation state is 'expired': these inputs have not been confirmed by a human with authority over the application."
+      ],
+      "confidence": "low",
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "exposure.base.environment.private_test"
+        ],
+        "unknown_inputs": [
+          "impact:data_sensitivity (unknown)",
+          "impact:financial_operations (conflicting)"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-object_level-01"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: unlisted_public_url (On the public internet but not advertised or indexed. Unlisted is not access control), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "Object-level authorization: users cannot reach records they don't own (IDOR). Data at stake: not established (unknown). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: security.",
+        "blast_radius": "Audience reached: known_group (Up to roughly 200 known users, e.g. one organisation or an invited cohort). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: not established (conflicting).",
+        "compensating_controls": [],
+        "exposure": "plausible",
+        "impact": "unknown",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "unknown",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-07-01T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "authentication = invite_only_accounts is inferred from supabase auth settings export, not confirmed by the owner.",
+        "network_exposure = unlisted_public_url is inferred from deployment configuration in the repository, not confirmed by the owner.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Context confirmation state is 'expired': these inputs have not been confirmed by a human with authority over the application."
+      ],
+      "confidence": "low",
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "exposure.base.environment.public_release"
+        ],
+        "unknown_inputs": [
+          "impact:data_sensitivity (unknown)",
+          "impact:financial_operations (conflicting)"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-object_level-01"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "Object-level authorization: users cannot reach records they don't own (IDOR). Data at stake: not established (unknown). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: security.",
+        "blast_radius": "Audience reached: known_group (Up to roughly 200 known users, e.g. one organisation or an invited cohort). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: not established (conflicting).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "unknown",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "unknown",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-07-01T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.object_level-public_release.sensitive_or_high_impact-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "sensitive_or_high_impact"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "authentication = invite_only_accounts is inferred from supabase auth settings export, not confirmed by the owner.",
+        "network_exposure = unlisted_public_url is inferred from deployment configuration in the repository, not confirmed by the owner.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Context confirmation state is 'expired': these inputs have not been confirmed by a human with authority over the application."
+      ],
+      "confidence": "low",
+      "control_refs": [
+        "vibecheck.control.privacy.no_pii_leakage"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.High",
+          "exposure.base.environment.private_test"
+        ],
+        "unknown_inputs": [
+          "impact:data_sensitivity (unknown)"
+        ]
+      },
+      "domain": "privacy",
+      "evidence_refs": [
+        "ev-no_pii_leakage-02"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: unlisted_public_url (On the public internet but not advertised or indexed. Unlisted is not access control), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed. Data at stake: not established (unknown). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: privacy.",
+        "blast_radius": "Audience reached: known_group (Up to roughly 200 known users, e.g. one organisation or an invited cohort). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: not established (conflicting).",
+        "compensating_controls": [],
+        "exposure": "plausible",
+        "impact": "unknown",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "unknown",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-07-01T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-privacy.no_pii_leakage-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "authentication = invite_only_accounts is inferred from supabase auth settings export, not confirmed by the owner.",
+        "network_exposure = unlisted_public_url is inferred from deployment configuration in the repository, not confirmed by the owner.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Context confirmation state is 'expired': these inputs have not been confirmed by a human with authority over the application."
+      ],
+      "confidence": "low",
+      "control_refs": [
+        "vibecheck.control.privacy.no_pii_leakage"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.High",
+          "exposure.base.environment.public_release"
+        ],
+        "unknown_inputs": [
+          "impact:data_sensitivity (unknown)"
+        ]
+      },
+      "domain": "privacy",
+      "evidence_refs": [
+        "ev-no_pii_leakage-02"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed. Data at stake: not established (unknown). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: privacy.",
+        "blast_radius": "Audience reached: known_group (Up to roughly 200 known users, e.g. one organisation or an invited cohort). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: not established (conflicting).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "unknown",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "unknown",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-07-01T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-privacy.no_pii_leakage-public_release.sensitive_or_high_impact-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "sensitive_or_high_impact"
+      }
+    }
+  ],
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.1.0"
+}

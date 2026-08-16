@@ -1,0 +1,80 @@
+{
+  "case_id": "developer-only-prototype",
+  "title": "Developer-only prototype with two failed Critical controls",
+  "pins": [
+    "A constrained environment lowers contextual risk without touching the failed status: both Critical controls stay failed and the checklist verdict stays BLOCK.",
+    "The same two failures are critical for the public scope the owner also targets, so that scope is blocked and appears under blocked_transitions on the developer-only readiness.",
+    "The scoped state (no_known_blocker for developer_only + prototype_demo) and the legacy verdict (BLOCK) differ, and the difference is explained on the readiness object rather than hidden."
+  ],
+  "now": "2026-08-16T12:00:00Z",
+  "assessment_id": "va-golden-developer-only-prototype",
+  "context_id": "ctx-golden-developer-only-prototype",
+  "reviewer": "reviewer:vibecheck",
+  "application": {
+    "name": "Recipe Sorter",
+    "description": "A weekend Lovable prototype that sorts recipes; runs on the builder's laptop against seeded fixtures.",
+    "platform": "lovable+supabase"
+  },
+  "target_scopes": [
+    { "environment": "developer_only", "intended_use": "prototype_demo" },
+    { "environment": "public_release", "intended_use": "public_product" }
+  ],
+  "current_scope": { "environment": "developer_only", "intended_use": "prototype_demo" },
+  "data_summary": "Seeded fixture recipes only. No accounts, no personal data, no payments.",
+  "context_valid_until": "2026-11-16T00:00:00Z",
+  "confirmation": {
+    "state": "human_reviewed",
+    "confirmed_by": "founder:kai",
+    "confirmed_at": "2026-08-16T09:00:00Z",
+    "source_fingerprint": "sha256:1a3f0b7c9d2e4f6081a3c5e7092b4d6f8a0c2e4f60718293a4b5c6d7e8f90123"
+  },
+  "profile": {
+    "lifecycle": { "state": "confirmed", "value": "building", "source": "founder:kai" },
+    "audience_scale": { "state": "confirmed", "value": "none_yet", "source": "founder:kai" },
+    "network_exposure": { "state": "confirmed", "value": "local_only", "source": "founder:kai" },
+    "authentication": { "state": "confirmed", "value": "none", "source": "founder:kai" },
+    "tenancy": { "state": "confirmed", "value": "single_user", "source": "founder:kai" },
+    "data_sensitivity": { "state": "confirmed", "value": "synthetic_or_none", "source": "founder:kai" },
+    "financial_operations": { "state": "confirmed", "value": "none", "source": "founder:kai" },
+    "privileged_operations": { "state": "confirmed", "value": "none", "source": "founder:kai" },
+    "business_criticality": { "state": "confirmed", "value": "experiment", "source": "founder:kai" }
+  },
+  "findings": [
+    {
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "fail",
+      "rationale": "Every table is readable with the anon key: no row-level security policy exists in the migrations, and the reviewer reproduced an anon read against the local stack.",
+      "evidence": {
+        "provider": "vibecheck.sh static scanner",
+        "operation": "static_pattern_scan",
+        "strength": "indicative",
+        "scope": "Current working tree only, ruleset rls.missing. A regex heuristic has both false positives and false negatives; it is material for a human decision, never a confirmed finding.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.sql_parameterized",
+      "status": "fail",
+      "rationale": "The search endpoint concatenates the query string straight into SQL.",
+      "evidence": {
+        "provider": "vibecheck.sh static scanner",
+        "operation": "static_pattern_scan",
+        "strength": "indicative",
+        "scope": "Current working tree only, ruleset sql.concat. Matches api/search.js line 22.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    }
+  ],
+  "baseline": {
+    "status": "pass",
+    "rationale": "Reviewed in the walkthrough of 16 August 2026 with the builder present; nothing contradicting was found in the working tree.",
+    "screening_status": "answered",
+    "screening_rationale": "Screening question answered during the walkthrough: the prototype does not fall into the EU AI Act category this row screens for.",
+    "evidence": {
+      "operation": "reviewer_walkthrough",
+      "strength": "indicative",
+      "scope": "One reviewer walkthrough of the working tree and the Supabase project settings on 16 August 2026. Covers what could be seen in that session and nothing beyond it.",
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  }
+}
