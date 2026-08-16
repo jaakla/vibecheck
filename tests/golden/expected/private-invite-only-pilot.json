@@ -1165,11 +1165,13 @@
         "blast_radius": "Audience reached: named_handful (Up to roughly 20 named individuals who can each be contacted directly). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
         "compensating_controls": [
           {
+            "compensating_control_id": "cc-access-proxy",
             "description": "The API hostname sits behind an identity-aware proxy that only lets the twelve named testers' verified identities through; requests without a session never reach the database API. (enforced by Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari)",
             "evidence_refs": [
               "ev-access-proxy-config"
             ],
-            "exposure_reduction_applied": true
+            "exposure_reduction_applied": true,
+            "valid_until": "2026-09-15T00:00:00Z"
           }
         ],
         "exposure": "unlikely",

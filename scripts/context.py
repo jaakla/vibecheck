@@ -392,8 +392,15 @@ def is_expired(context, now=None):
 
 def confirmation_state(context, now=None):
     """Effective confirmation state. An expired context is not confirmed any
-    more, whatever it said when it was written."""
-    state = ((context.get("confirmation") or {}).get("state")) or "draft"
+    more, whatever it said when it was written. A human review also cannot
+    count before its recorded confirmation time."""
+    confirmation = context.get("confirmation") or {}
+    state = confirmation.get("state") or "draft"
+    now_dt = instant(now)
+    if state == "human_reviewed":
+        confirmed_at = parse_instant(confirmation.get("confirmed_at"))
+        if confirmed_at is None or confirmed_at > now_dt:
+            return "not_yet_confirmed"
     if state != "draft" and is_expired(context, now):
         return "expired"
     return state
@@ -563,4 +570,8 @@ def validate_context(context):
             confirmation.get("confirmed_by") and confirmation.get("confirmed_at")):
         problems.append("context.confirmation is human_reviewed but does not "
                         "record who confirmed it and when")
+    elif (confirmation.get("state") == "human_reviewed"
+          and parse_instant(confirmation.get("confirmed_at")) is None):
+        problems.append("context.confirmation.confirmed_at is not a parseable "
+                        "timezone-aware timestamp")
     return problems

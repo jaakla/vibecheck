@@ -380,7 +380,12 @@ class TestContextRevisions(unittest.TestCase):
             ctx.from_precheck("MAYBE")
 
     def test_expiry_is_independent_of_the_source_fingerprint(self):
-        context = make_context(valid_until="2026-07-01T00:00:00Z")
+        context = make_context(
+            valid_until="2026-07-01T00:00:00Z",
+            confirmation={"state": "human_reviewed",
+                          "confirmed_by": "founder:test",
+                          "confirmed_at": "2026-05-01T00:00:00Z",
+                          "source_fingerprint": "sha256:abc"})
         self.assertTrue(ctx.is_expired(context, NOW))
         self.assertEqual("expired", ctx.confirmation_state(context, NOW))
         self.assertEqual("human_reviewed",
@@ -512,6 +517,17 @@ class TestRiskDerivation(unittest.TestCase):
         risk = only_risk(make_envelope(context, {ANON: "fail"}), ANON, "private_test")
         self.assertEqual("medium", risk["confidence"])
 
+    def test_future_context_confirmation_does_not_raise_confidence(self):
+        context = make_context(confirmation={
+            "state": "human_reviewed", "confirmed_by": "founder:test",
+            "confirmed_at": "2026-08-17T12:00:00Z",
+        })
+        risk = only_risk(make_envelope(context, {ANON: "fail"}),
+                         ANON, "private_test")
+        self.assertEqual("medium", risk["confidence"])
+        self.assertEqual("not_yet_confirmed",
+                         ctx.confirmation_state(context, NOW))
+
     def test_derived_risk_never_carries_a_status_or_severity(self):
         envelope = make_envelope(statuses={ANON: "fail"})
         for risk in risk_mod.derive_risks(envelope, NOW):
@@ -533,7 +549,7 @@ class TestCompensatingControls(unittest.TestCase):
         measure.update(overrides)
         return measure
 
-    def evidence(self, valid_until="2026-09-15T00:00:00Z"):
+    def evidence(self, valid_until="2026-09-15T00:00:00Z", observed=NOW):
         return [{
             "evidence_id": "ev-proxy",
             "provider": {"name": "reviewer"},
@@ -545,7 +561,7 @@ class TestCompensatingControls(unittest.TestCase):
                       "statement": "The control requirement is met"},
             "direction": "supports",
             "strength": "decisive",
-            "observed_at": NOW,
+            "observed_at": observed,
             "valid_until": valid_until,
         }]
 
@@ -585,6 +601,35 @@ class TestCompensatingControls(unittest.TestCase):
                               evidence=self.evidence("2026-07-01T00:00:00Z"))
         self.assertEqual("plausible", risk["inputs"]["exposure"])
         self.assertEqual([], risk["inputs"]["compensating_controls"])
+
+    def test_evidence_observed_after_derivation_time_does_not_count(self):
+        # support that has not been observed yet cannot already be lowering
+        # anything: the same reading the assessment rules apply to a pass
+        risk = self.risk_with([self.measure()],
+                              evidence=self.evidence(observed="2026-10-01T00:00:00Z"))
+        self.assertEqual("plausible", risk["inputs"]["exposure"])
+        self.assertEqual([], risk["inputs"]["compensating_controls"])
+
+    def test_measure_expiry_moves_the_reassessment_deadline(self):
+        envelope = make_envelope(
+            make_context(compensating_controls=[
+                self.measure(valid_until="2026-08-20T00:00:00Z")]),
+            {ANON: "fail"}, evidence=self.evidence())
+        risk = only_risk(envelope, ANON, "private_test")
+        self.assertEqual("2026-08-20T00:00:00Z", risk["reassess_by"])
+
+    def test_lapsed_measure_support_makes_the_risk_stale(self):
+        envelope = risk_mod.apply_risks(make_envelope(
+            make_context(compensating_controls=[self.measure()]),
+            {ANON: "fail"},
+            evidence=self.evidence("2026-09-01T00:00:00Z")), NOW)
+        risk = [r for r in envelope["risks"]
+                if r["scope"]["environment"] == "private_test"][0]
+        self.assertTrue(risk["inputs"]["compensating_controls"][0]
+                        ["exposure_reduction_applied"])
+        after = "2026-09-10T00:00:00Z"
+        self.assertTrue(risk_mod.is_stale(risk, envelope, after))
+        self.assertEqual("unknown", risk_mod.effective_level(risk, envelope, after))
 
     def test_measure_outside_its_declared_scope_does_nothing(self):
         measure = self.measure(applies_to={
@@ -751,9 +796,22 @@ class TestReadinessDerivation(unittest.TestCase):
         self.assertIn("readiness.incomplete.context_review_bypassed",
                       readiness["derivation"]["rules_applied"])
 
+    def test_future_human_review_does_not_open_the_gate(self):
+        envelope = self.full_review(context=make_context(confirmation={
+            "state": "human_reviewed", "confirmed_by": "founder:test",
+            "confirmed_at": "2026-08-17T12:00:00Z",
+        }))
+        readiness = self.state_for(envelope)
+        self.assertEqual("incomplete", readiness["state"])
+        self.assertIn("readiness.incomplete.context_not_yet_confirmed",
+                      readiness["derivation"]["rules_applied"])
+
     def test_expired_context_forces_reassessment(self):
         envelope = self.full_review(context=make_context(
-            valid_until="2026-07-01T00:00:00Z"))
+            valid_until="2026-07-01T00:00:00Z",
+            confirmation={"state": "human_reviewed",
+                          "confirmed_by": "founder:test",
+                          "confirmed_at": "2026-05-01T00:00:00Z"}))
         self.assertEqual("no_known_blocker",
                          self.state_for(envelope, now="2026-06-01T00:00:00Z")["state"])
         later = self.state_for(envelope)
@@ -798,6 +856,19 @@ class TestReadinessDerivation(unittest.TestCase):
         self.assertTrue(any("can never be accepted" in b["reason"]
                             for b in readiness["blockers"]))
 
+    def test_expired_risk_acceptance_is_incomplete_not_conditional(self):
+        envelope = self.full_review({BACKUPS: "risk_accepted"})
+        accepted = [a for a in envelope["assessments"]
+                    if a["control_id"] == BACKUPS][0]
+        accepted["acceptance"]["review_by"] = "2026-08-01T00:00:00Z"
+        readiness = self.state_for(envelope)
+        self.assertEqual("incomplete", readiness["state"])
+        self.assertIn("readiness.incomplete.expired_risk_acceptance",
+                      readiness["derivation"]["rules_applied"])
+        self.assertFalse(any("accepted.data.tested_backups" in
+                             c.get("condition_id", "")
+                             for c in readiness.get("conditions") or []))
+
     def test_unknown_risk_is_material_and_never_low(self):
         envelope = self.full_review({ANON: "fail"},
                                     context=make_context({"data_sensitivity": None}))
@@ -839,6 +910,56 @@ class TestReadinessDerivation(unittest.TestCase):
         self.assertTrue(condition["enforced_by"].strip())
         self.assertIn("reassess_trigger", condition)
         self.assertEqual("2026-09-15T00:00:00Z", condition["expires_at"])
+
+    def test_lapsed_measure_is_no_longer_an_enforceable_condition(self):
+        measure = {
+            "compensating_control_id": "cc-proxy",
+            "description": "Identity-aware proxy in front of the API.",
+            "enforced_by": "Cloudflare Access policy, owned by founder:test",
+            "evidence_refs": ["ev-proxy"],
+            "applies_to": {"domains": ["security"]},
+            # the measure lapses before its evidence does
+            "valid_until": "2026-08-01T00:00:00Z",
+            "readiness_condition": True,
+        }
+        evidence = [{
+            "evidence_id": "ev-proxy",
+            "provider": {"name": "reviewer"},
+            "subject": {"kind": "config", "locator": "access-policy"},
+            "environment": "private_test",
+            "operation": "config_export_review",
+            "scope": "the exported policy",
+            "claim": {"control_ids": [ANON],
+                      "statement": "The control requirement is met"},
+            "direction": "supports",
+            "strength": "decisive",
+            "observed_at": NOW,
+            "valid_until": "2026-12-01T00:00:00Z",
+        }]
+        readiness = self.state_for(self.full_review(
+            context=make_context(compensating_controls=[measure]),
+            evidence=evidence))
+        self.assertEqual("no_known_blocker", readiness["state"])
+        self.assertNotIn("conditions", readiness)
+
+    def test_renewed_context_moves_the_reassessment_deadline(self):
+        envelope = readiness_mod.derive_into(
+            make_envelope(make_context(valid_until="2026-08-20T00:00:00Z"),
+                          {ANON: "fail"}), NOW)
+        before = [r for r in risk_mod.current_risks(envelope)
+                  if r["scope"]["environment"] == "private_test"][0]
+        self.assertEqual("2026-08-20T00:00:00Z", before["reassess_by"])
+        renewed = ctx.revise(envelope["context"],
+                             valid_until="2027-06-01T00:00:00Z",
+                             confirmed_by="founder:test", now=NOW)
+        updated = readiness_mod.derive_into(
+            ctx.revise_envelope_context(envelope, renewed), NOW)
+        after = [r for r in risk_mod.current_risks(updated)
+                 if r["scope"]["environment"] == "private_test"][0]
+        self.assertNotEqual(before["reassess_by"], after["reassess_by"])
+        self.assertEqual(before["risk_id"], after["supersedes"])
+        self.assertFalse(risk_mod.is_stale(after, updated, "2026-09-01T00:00:00Z"))
+        self.assertEqual([], canonical.validate_envelope(updated))
 
     def test_blocked_beats_incomplete_beats_conditional(self):
         # a draft context alone is incomplete; add a blocking failure and the
@@ -1192,6 +1313,20 @@ class TestSemanticGuards(unittest.TestCase):
             self.hand_authored_risk(inputs=inputs_with_measure, level="moderate"),
             "2026-12-01T00:00:00Z"))
         self.assertEqual([], fresh)
+
+    def test_expired_downgrade_evidence_makes_stored_risk_stale(self):
+        downgrade = {"from_level": "high",
+                     "rationale": "the proxy in front of the API is enforced",
+                     "evidence_refs": ["ev-support"],
+                     "approved_by": "reviewer:test"}
+        risk = self.hand_authored_risk(level="moderate", downgrade=downgrade)
+        envelope = self.envelope_with_risk(
+            risk, "2026-12-01T00:00:00Z")
+        self.assertEqual([], canonical.validate_envelope(envelope))
+        self.assertTrue(risk_mod.is_stale(
+            risk, envelope, "2027-01-01T00:00:00Z"))
+        self.assertEqual("unknown", risk_mod.effective_level(
+            risk, envelope, "2027-01-01T00:00:00Z"))
 
 
 if __name__ == "__main__":

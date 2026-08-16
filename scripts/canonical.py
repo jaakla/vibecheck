@@ -412,6 +412,8 @@ def _current_supporting_refs(env, refs, at):
     """Referenced evidence that supports its claim and is still valid at `at`."""
     evidence = {e.get("evidence_id"): e for e in env.get("evidence") or []}
     instant = _parse_instant(at)
+    if instant is None:
+        return []
     current = []
     for ref in refs or []:
         item = evidence.get(ref)
@@ -419,11 +421,11 @@ def _current_supporting_refs(env, refs, at):
             continue
         observed = _parse_instant(item.get("observed_at"))
         valid_until = _parse_instant(item.get("valid_until"))
-        if instant is not None:
-            if observed is not None and observed > instant:
-                continue
-            if valid_until is not None and valid_until < instant:
-                continue
+        if observed is None or observed > instant:
+            continue
+        if "valid_until" in item and (
+                valid_until is None or valid_until < instant):
+            continue
         current.append(ref)
     return current
 

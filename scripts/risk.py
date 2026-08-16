@@ -226,15 +226,26 @@ def _evidence_index(envelope):
 
 
 def current_supporting_evidence(envelope, evidence_refs, now):
-    """Supporting evidence records that are still valid at `now` (rule R15)."""
+    """Supporting evidence records that hold at `now` (rule R15).
+
+    Current means observed already and not yet expired. Evidence dated after
+    the derivation instant has not happened yet from this derivation's point of
+    view, and support that has not happened cannot lower anything — the same
+    reading the assessment rules apply to a `pass` (rule R3).
+    """
     evidence = _evidence_index(envelope)
+    now_dt = ctx.instant(now)
     fresh = []
     for ref in evidence_refs or []:
         item = evidence.get(ref)
         if item is None or item.get("direction") != "supports":
             continue
+        observed = ctx.parse_instant(item.get("observed_at"))
+        if observed is None or observed > now_dt:
+            continue
         valid_until = ctx.parse_instant(item.get("valid_until"))
-        if valid_until is not None and valid_until < now:
+        if "valid_until" in item and (
+                valid_until is None or valid_until < now_dt):
             continue
         fresh.append(ref)
     return fresh
@@ -257,7 +268,8 @@ def _applicable_measures(envelope, control_id, domain, scope, now):
         if scopes and not any(ctx.same_scope(scope, s) for s in scopes):
             continue
         valid_until = ctx.parse_instant(measure.get("valid_until"))
-        if valid_until is not None and valid_until < now:
+        if "valid_until" in measure and (
+                valid_until is None or valid_until < now):
             continue
         fresh = current_supporting_evidence(envelope, measure.get("evidence_refs"), now)
         if not fresh:
@@ -361,7 +373,7 @@ def _confidence(context, contributing, now):
         return "low"
     if inferred:
         return "medium"
-    if (context.get("confirmation") or {}).get("state") != "human_reviewed":
+    if ctx.confirmation_state(context, now) != "human_reviewed":
         # facts may each look solid, but nobody with authority has confirmed
         # the picture they add up to
         return policy["draft_context_cap"]
@@ -430,11 +442,38 @@ def risk_id(control_id, scope, horizon_kind, revision):
                                  _scope_slug(scope), horizon_kind, revision)
 
 
-def _reassess_by(envelope, context, evidence_refs, now):
-    """Earliest expiry among the context and the evidence this risk rests on."""
+def _applied_compensating_controls(risk):
+    return [measure for measure in
+            ((risk.get("inputs") or {}).get("compensating_controls") or [])
+            if measure.get("exposure_reduction_applied")]
+
+
+def _freshness_evidence_refs(risk):
+    """Every evidence record whose validity can change this stored level."""
+    references = list(risk.get("evidence_refs") or [])
+    for measure in _applied_compensating_controls(risk):
+        references.extend(measure.get("evidence_refs") or [])
+    references.extend((risk.get("downgrade") or {}).get("evidence_refs") or [])
+    seen = set()
+    return [ref for ref in references
+            if not (ref in seen or seen.add(ref))]
+
+
+def _reassess_by(envelope, context, risk):
+    """Earliest expiry among everything this risk's level rests on.
+
+    That includes the compensating controls that actually lowered the exposure:
+    when the measure or its supporting evidence lapses, the level this risk
+    records stops being the level the inputs would produce, so the deadline has
+    to move with the earliest of them.
+    """
     evidence = _evidence_index(envelope)
     instants = []
-    for ref in evidence_refs or []:
+    for measure in _applied_compensating_controls(risk):
+        measure_expiry = ctx.parse_instant(measure.get("valid_until"))
+        if measure_expiry is not None:
+            instants.append(measure_expiry)
+    for ref in _freshness_evidence_refs(risk):
         instant = ctx.parse_instant((evidence.get(ref) or {}).get("valid_until"))
         if instant is not None:
             instants.append(instant)
@@ -496,12 +535,16 @@ def derive_risk(envelope, assessment, scope, now=None):
                 exposure_rules.append("exposure.compensating_control.%s"
                                       % measure["compensating_control_id"])
                 reduced = True
-        compensating.append({
+        applied = {
+            "compensating_control_id": measure["compensating_control_id"],
             "description": "%s (enforced by %s)" % (measure["description"],
                                                     measure["enforced_by"]),
             "evidence_refs": fresh_refs,
             "exposure_reduction_applied": reduced,
-        })
+        }
+        if measure.get("valid_until"):
+            applied["valid_until"] = measure["valid_until"]
+        compensating.append(applied)
         applied_measures.append((measure, reduced))
 
     contributing = sorted(set(_relevant_dimensions(impact_policy, domain))
@@ -549,7 +592,7 @@ def derive_risk(envelope, assessment, scope, now=None):
                       + ["exposure:%s" % u for u in exposure_unknown])
     if unknown_inputs:
         risk["derivation"]["unknown_inputs"] = unknown_inputs
-    reassess_by = _reassess_by(envelope, context, evidence_refs, now_dt)
+    reassess_by = _reassess_by(envelope, context, risk)
     if reassess_by:
         risk["reassess_by"] = reassess_by
     triggers = [{"kind": "context_change"}]
@@ -583,11 +626,15 @@ def derive_risks(envelope, now=None):
 
 
 #: Fields compared when deciding whether a re-derivation actually changed
-#: anything. assessed_at is excluded on purpose: re-running the derivation at a
-#: later clock time is not a change of substance.
+#: anything. `assessed_at` is excluded on purpose: re-running the derivation at
+#: a later clock time is not a change of substance. `reassess_by` is included,
+#: because a renewed context or refreshed evidence moves the deadline and the
+#: stored head would otherwise keep going stale on the old one. The context
+#: revision is deliberately not part of substance: a revision that changes
+#: nothing this risk reads should not churn its history.
 _SUBSTANCE = ("control_refs", "domain", "scope", "horizon", "level",
               "inputs", "confidence", "assumptions", "evidence_refs",
-              "reassess_triggers")
+              "reassess_by", "reassess_triggers")
 
 
 def _substance(risk):
@@ -645,15 +692,35 @@ def apply_risks(envelope, now=None):
 
 def is_stale(risk, envelope, now=None):
     """True when a risk is past its own reassess_by, or rests on evidence that
-    has expired (rule R15). Stale risks count as unknown for readiness."""
+    has expired (rule R15). Stale risks count as unknown for readiness.
+
+    The evidence a risk rests on is not only the assessment's: a compensating
+    control that lowered the exposure is holding the level down, so its support
+    expiring makes the recorded level stale too, even when the assessment
+    evidence is still good.
+    """
     now_dt = ctx.instant(now)
     reassess_by = ctx.parse_instant(risk.get("reassess_by"))
     if reassess_by is not None and reassess_by < now_dt:
         return True
     evidence = _evidence_index(envelope)
-    for ref in risk.get("evidence_refs") or []:
-        valid_until = ctx.parse_instant((evidence.get(ref) or {}).get("valid_until"))
-        if valid_until is not None and valid_until < now_dt:
+    assessed_at = ctx.parse_instant(risk.get("assessed_at"))
+    for ref in _freshness_evidence_refs(risk):
+        item = evidence.get(ref)
+        if item is None:
+            return True
+        observed_at = ctx.parse_instant(item.get("observed_at"))
+        if (observed_at is None or assessed_at is None
+                or observed_at > assessed_at):
+            return True
+        valid_until = ctx.parse_instant(item.get("valid_until"))
+        if "valid_until" in item and (
+                valid_until is None or valid_until < now_dt):
+            return True
+    for measure in _applied_compensating_controls(risk):
+        valid_until = ctx.parse_instant(measure.get("valid_until"))
+        if "valid_until" in measure and (
+                valid_until is None or valid_until < now_dt):
             return True
     return False
 

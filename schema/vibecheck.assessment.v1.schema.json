@@ -500,9 +500,11 @@
                 "type": "object",
                 "required": ["description", "evidence_refs", "exposure_reduction_applied"],
                 "properties": {
+                  "compensating_control_id": { "type": "string", "pattern": "^cc-[A-Za-z0-9._:-]+$", "description": "The context measure this came from, so the risk's freshness can be traced back to the measure's own expiry." },
                   "description": { "type": "string" },
                   "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^ev-[A-Za-z0-9._:-]+$" } },
-                  "exposure_reduction_applied": { "type": "boolean" }
+                  "exposure_reduction_applied": { "type": "boolean" },
+                  "valid_until": { "$ref": "#/$defs/timestamp" }
                 }
               }
             }

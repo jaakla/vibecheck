@@ -305,7 +305,12 @@ def _conditions(envelope, scope, now):
         scopes = (measure.get("applies_to") or {}).get("scopes")
         if scopes and not any(ctx.same_scope(scope, s) for s in scopes):
             continue
-        if not risk_mod.current_supporting_evidence(envelope, measure.get("evidence_refs"), now):
+        expiry = ctx.parse_instant(measure.get("valid_until"))
+        if "valid_until" in measure and (
+                expiry is None or expiry < now):
+            continue  # a lapsed measure is not an enforceable condition
+        if not risk_mod.current_supporting_evidence(
+                envelope, measure.get("evidence_refs"), now):
             continue
         condition = {
             "condition_id": "cond-%s-%s" % (
@@ -325,6 +330,9 @@ def _conditions(envelope, scope, now):
         if assessment.get("status") != "risk_accepted":
             continue
         acceptance = assessment.get("acceptance") or {}
+        review_by = ctx.parse_instant(acceptance.get("review_by"))
+        if review_by is None or review_by < now:
+            continue
         conditions.append({
             "condition_id": "cond-%s-accepted.%s" % (
                 _scope_slug(scope),
@@ -417,6 +425,23 @@ def _assess_scope(envelope, scope, now):
             })
             rules.append("readiness.blocked.critical_risk_accepted")
 
+        if assessment.get("status") == "risk_accepted":
+            acceptance = assessment.get("acceptance") or {}
+            review_by = ctx.parse_instant(acceptance.get("review_by"))
+            if review_by is None or review_by < now:
+                unknowns.append({
+                    "ref": assessment.get("assessment_id"),
+                    "description": "Risk acceptance for %s has no current "
+                                   "review deadline: review_by %r is missing, "
+                                   "invalid or past. The acceptance must be "
+                                   "reviewed again before it can constrain "
+                                   "operation in this scope."
+                                   % (assessment.get("control_id"),
+                                      acceptance.get("review_by")),
+                    "material": True,
+                })
+                rules.append("readiness.incomplete.expired_risk_acceptance")
+
     confirmation = ctx.confirmation_state(context, now)
     if confirmation != "human_reviewed":
         unknowns.append({
@@ -430,6 +455,9 @@ def _assess_scope(envelope, scope, now):
                                    "unverified, and that gap stays visible.",
                 "expired": "The application context is past its valid_until "
                            "and counts as unconfirmed until it is reconfirmed.",
+                "not_yet_confirmed": "The application context records a human "
+                                     "confirmation later than this assessment "
+                                     "time. It does not count as reviewed yet.",
             }.get(confirmation,
                   "The application context confirmation state is %r." % confirmation),
             "material": True,
