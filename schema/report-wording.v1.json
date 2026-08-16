@@ -1,0 +1,688 @@
+{
+  "schema": "vibecheck.report_wording",
+  "schema_version": "1.0.0",
+  "languages": ["en", "et"],
+  "description": "Founder and reviewer report vocabulary in English and Estonian (gh issue #5, epic #1). Wording is data so that a translation can never change what a control means: the report renders the same scenarios, the same disclosures and the same control identities in either language and either profile, and only the words differ (RFC 0001 section 9). This file also carries the Estonian wording for the context dimensions and their values, which the context model deliberately left to the founder report (RFC deferred question 11). Control wording itself is not duplicated here — it comes from schema/mappings/vibecheck_v1.json, so plain-language and technical phrasings keep a single source.",
+
+  "disclaimer_keys": ["disclaimer_not_certification", "disclaimer_scope", "disclaimer_unknown"],
+  "framework_verdict_note": "labels.framework_verdicts renders the workbook's own verdict strings; scripts/build_workbook.py stays their source and tests/test_report.py pins both languages against it. The Estonian here keeps its diacritics, which the spreadsheet strings drop: the test compares them with diacritics folded, so wording and workbook cannot drift apart in substance.",
+  "disclaimer_note": "The strings named here are the only place the report is allowed to mention security certification or shipping at all, and they mention it to deny it. tests/test_report.py strips exactly these strings and then fails if any remaining rendered text claims an application is secure, certified or ready to ship.",
+
+  "text": {
+    "title_founder": {
+      "en": "Vibecheck review: what can go wrong, and what to do next",
+      "et": "Vibechecki ülevaatus: mis võib valesti minna ja mida edasi teha"
+    },
+    "title_reviewer": {
+      "en": "Vibecheck assessment: scoped readiness, contextual risk and evidence",
+      "et": "Vibechecki hinnang: valmisolek konkreetses ulatuses, kontekstirisk ja tõendid"
+    },
+    "disclaimer_not_certification": {
+      "en": "Vibecheck reports known blockers for a stated environment and intended use, on the evidence recorded here. It is not a certification, it does not state that an application is secure, and it never says an application is ready to ship.",
+      "et": "Vibecheck kirjeldab teadaolevaid takistusi konkreetses keskkonnas ja kasutusotstarbes, tuginedes siin kirja pandud tõenditele. See ei ole sertifikaat, see ei väida, et rakendus oleks turvaline, ega ütle kunagi, et rakendus on avaldamiseks valmis."
+    },
+    "disclaimer_scope": {
+      "en": "Everything below is scoped: a finding about one environment and intended use says nothing about a wider one, and an unreviewed control is not a passing one.",
+      "et": "Kõik alljärgnev kehtib kindlas ulatuses: ühe keskkonna ja kasutusotstarbe kohta tehtud järeldus ei ütle midagi laiema kohta ning üle vaatamata kontroll ei ole korras kontroll."
+    },
+    "disclaimer_unknown": {
+      "en": "Unknown never means low, and it never means permission to proceed. It means the evidence needed to answer is missing.",
+      "et": "Teadmata ei tähenda kunagi madalat ega luba edasi minna. See tähendab, et vastamiseks vajalikud tõendid puuduvad."
+    },
+    "h_context": {"en": "What was assessed", "et": "Mida hinnati"},
+    "h_context_profile": {"en": "Recorded facts about the application", "et": "Rakenduse kohta kirja pandud faktid"},
+    "h_readiness": {"en": "Where this stands", "et": "Kus see praegu on"},
+    "h_scenarios": {"en": "What can go wrong", "et": "Mis võib valesti minna"},
+    "h_mandatory": {"en": "Blockers and escalations that may not be hidden", "et": "Takistused ja eskaleerimised, mida ei tohi peita"},
+    "h_actions": {"en": "What to do next", "et": "Mida edasi teha"},
+    "h_confidence": {"en": "Confidence and assumptions", "et": "Kindlus ja eeldused"},
+    "h_appendix": {"en": "Technical appendix", "et": "Tehniline lisa"},
+    "h_appendix_items": {"en": "A. The full reviewer checklist", "et": "A. Ülevaataja täielik kontrollnimekiri"},
+    "h_appendix_evidence": {"en": "B. Evidence", "et": "B. Tõendid"},
+    "h_appendix_risks": {"en": "C. Contextual risks", "et": "C. Kontekstiriskid"},
+    "h_appendix_scenarios": {"en": "D. Scenario traceability", "et": "D. Stsenaariumide jälgitavus"},
+    "h_appendix_actions": {"en": "E. Actions", "et": "E. Tegevused"},
+    "h_appendix_procedures": {"en": "F. Procedures", "et": "F. Protseduurid"},
+    "h_appendix_method": {"en": "G. Method and versions", "et": "G. Metoodika ja versioonid"},
+    "h_can_do_now": {"en": "Vibecheck can do now", "et": "Vibecheck saab kohe teha"},
+    "h_you_need_to_do": {"en": "You need to do", "et": "Sina pead tegema"},
+    "h_needs_developer_or_specialist": {"en": "Needs a developer or a specialist", "et": "Vajab arendajat või spetsialisti"},
+    "h_can_wait": {"en": "Can wait", "et": "Võib oodata"},
+    "h_unresolved_critical_high": {"en": "Unresolved Critical and High controls", "et": "Lahendamata kriitilised ja kõrge tähtsusega kontrollid"},
+    "h_readiness_blocking_unknowns": {"en": "Unknowns that block readiness", "et": "Teadmata asjad, mis blokeerivad valmisoleku"},
+    "h_incident_response": {"en": "Incident response", "et": "Intsidendile reageerimine"},
+    "h_specialist_escalations": {"en": "Specialist escalations", "et": "Eskaleerimised spetsialistile"},
+    "h_deadline_blocking": {"en": "Deadlines blocking the assessed use", "et": "Tähtajad, mis blokeerivad hinnatava kasutuse"},
+    "h_specialist_assessments": {"en": "Screening rows needing a specialist", "et": "Sõelumisread, mis vajavad spetsialisti"},
+    "f_application": {"en": "Application", "et": "Rakendus"},
+    "f_platform": {"en": "Platform", "et": "Platvorm"},
+    "f_description": {"en": "What it does", "et": "Mida see teeb"},
+    "f_current_scope": {"en": "Assessed environment and use", "et": "Hinnatud keskkond ja kasutus"},
+    "f_target_scopes": {"en": "Scopes under consideration", "et": "Vaadeldavad ulatused"},
+    "f_data_summary": {"en": "Data involved", "et": "Andmed, mida see puudutab"},
+    "f_context_revision": {"en": "Context revision", "et": "Konteksti versioon"},
+    "f_confirmation": {"en": "Context confirmation", "et": "Konteksti kinnitus"},
+    "f_context_valid_until": {"en": "Context valid until", "et": "Kontekst kehtib kuni"},
+    "f_context_fingerprint": {"en": "Context fingerprint", "et": "Konteksti sõrmejälg"},
+    "f_source_fingerprint": {"en": "Reviewed source fingerprint", "et": "Ülevaadatud lähtekoodi sõrmejälg"},
+    "f_assessed_at": {"en": "Derived at", "et": "Tuletatud"},
+    "f_dimension": {"en": "Question", "et": "Küsimus"},
+    "f_value": {"en": "Answer", "et": "Vastus"},
+    "f_field_state": {"en": "How we know", "et": "Kuidas teame"},
+    "f_source": {"en": "Source", "et": "Allikas"},
+    "f_state": {"en": "State", "et": "Seis"},
+    "f_blockers": {"en": "Blockers", "et": "Takistused"},
+    "f_unknowns": {"en": "Material unknowns", "et": "Olulised teadmata asjad"},
+    "f_conditions": {"en": "Conditions this scope runs under", "et": "Tingimused, mille all see ulatus toimib"},
+    "f_blocked_transitions": {"en": "Moving to a wider scope", "et": "Laiemasse ulatusse liikumine"},
+    "f_framework_verdict": {"en": "Checklist verdict", "et": "Kontrollnimekirja otsus"},
+    "f_valid_until": {"en": "Valid until", "et": "Kehtib kuni"},
+    "f_enforced_by": {"en": "Enforced by", "et": "Jõustab"},
+    "f_expires": {"en": "Expires", "et": "Aegub"},
+    "f_risk_today": {"en": "Risk today", "et": "Risk täna"},
+    "f_risk_later": {"en": "Risk later", "et": "Risk hiljem"},
+    "f_rests_on": {"en": "This rests on", "et": "See tugineb"},
+    "f_evidence": {"en": "Evidence", "et": "Tõendid"},
+    "f_conflicting_evidence": {"en": "Evidence that disagrees", "et": "Vastuolulised tõendid"},
+    "f_resolution": {"en": "Resolution", "et": "Lahendus"},
+    "f_next_steps": {"en": "Next steps", "et": "Järgmised sammud"},
+    "f_domains": {"en": "Domains", "et": "Valdkonnad"},
+    "f_confidence": {"en": "Confidence", "et": "Kindlus"},
+    "f_assumptions": {"en": "Assumptions", "et": "Eeldused"},
+    "f_outcome": {"en": "Required outcome", "et": "Nõutav tulemus"},
+    "f_reason": {"en": "Why", "et": "Miks"},
+    "f_owner": {"en": "Owner", "et": "Vastutaja"},
+    "f_deadline": {"en": "When", "et": "Millal"},
+    "f_success_evidence": {"en": "What closes it", "et": "Mis selle sulgeb"},
+    "f_blocking_scope": {"en": "Blocks", "et": "Blokeerib"},
+    "f_procedures": {"en": "Candidate procedures", "et": "Võimalikud protseduurid"},
+    "t_item": {"en": "#", "et": "#"},
+    "t_category": {"en": "Category", "et": "Kategooria"},
+    "t_control": {"en": "Control", "et": "Kontroll"},
+    "t_question": {"en": "Question", "et": "Küsimus"},
+    "t_control_id": {"en": "Control ID", "et": "Kontrolli ID"},
+    "t_severity": {"en": "Severity", "et": "Raskusaste"},
+    "t_status": {"en": "Status", "et": "Staatus"},
+    "t_assessment": {"en": "Assessment", "et": "Hinnang"},
+    "t_evidence": {"en": "Evidence", "et": "Tõendid"},
+    "t_provider": {"en": "Provider", "et": "Allikas"},
+    "t_subject": {"en": "Subject", "et": "Objekt"},
+    "t_direction": {"en": "Direction", "et": "Suund"},
+    "t_strength": {"en": "Strength", "et": "Tugevus"},
+    "t_observed_at": {"en": "Observed", "et": "Vaadeldud"},
+    "t_valid_until": {"en": "Valid until", "et": "Kehtib kuni"},
+    "t_scope_text": {"en": "What it covers, and what it does not", "et": "Mida katab ja mida mitte"},
+    "t_risk": {"en": "Risk", "et": "Risk"},
+    "t_domain": {"en": "Domain", "et": "Valdkond"},
+    "t_scope": {"en": "Scope", "et": "Ulatus"},
+    "t_horizon": {"en": "Horizon", "et": "Ajahorisont"},
+    "t_level": {"en": "Level", "et": "Tase"},
+    "t_impact": {"en": "Impact", "et": "Mõju"},
+    "t_exposure": {"en": "Exposure", "et": "Avatus"},
+    "t_scenario": {"en": "Scenario", "et": "Stsenaarium"},
+    "t_title": {"en": "Title", "et": "Pealkiri"},
+    "t_rank": {"en": "Rank", "et": "Järjekoht"},
+    "t_headline": {"en": "Headline", "et": "Esiplaanil"},
+    "t_action": {"en": "Action", "et": "Tegevus"},
+    "t_procedure": {"en": "Procedure", "et": "Protseduur"},
+    "t_executor": {"en": "Executor", "et": "Täitja"},
+    "t_mechanism": {"en": "Mechanism", "et": "Mehhanism"},
+    "t_consent": {"en": "Consent", "et": "Nõusolek"},
+    "t_effects": {"en": "Effects", "et": "Mõjud"},
+    "t_kind": {"en": "Kind", "et": "Liik"},
+    "t_urgency": {"en": "Urgency", "et": "Kiireloomulisus"},
+    "t_method": {"en": "Method", "et": "Metoodika"},
+    "t_version": {"en": "Version", "et": "Versioon"},
+    "v_none": {"en": "none", "et": "puudub"},
+    "v_not_recorded": {"en": "not recorded", "et": "kirja panemata"},
+    "v_not_reviewed": {"en": "not reviewed", "et": "üle vaatamata"},
+    "v_not_established": {"en": "not established", "et": "tuvastamata"},
+    "v_yes": {"en": "yes", "et": "jah"},
+    "v_no": {"en": "no", "et": "ei"},
+    "v_horizon_current": {"en": "today", "et": "täna"},
+    "v_horizon_event": {"en": "on a future move", "et": "tuleviku ülemineku korral"},
+    "note_nothing_here": {
+      "en": "Nothing in this category.",
+      "et": "Selles kategoorias pole midagi."
+    },
+    "note_headline_cap": {
+      "en": "The summary above shows the highest-ranked failure stories only. Everything left below the cap keeps its controls, assessments, evidence, risks, actions and procedures in the appendix, and anything that must not be hidden is repeated in full in the section below.",
+      "et": "Ülal on näidatud ainult kõrgeima järjekohaga stsenaariumid. Kõik, mis jäi allapoole piiri, säilitab oma kontrollid, hinnangud, tõendid, riskid, tegevused ja protseduurid lisas ning kõik, mida ei tohi peita, on täies mahus korratud järgmises osas."
+    },
+    "note_mandatory": {
+      "en": "These items are shown regardless of the headline limit. Each appears exactly once here or in a headline scenario above, and every one of them is traceable in the appendix.",
+      "et": "Need punktid näidatakse sõltumata esiplaani piirist. Iga punkt esineb täpselt ühe korra kas siin või mõnes ülalolevas stsenaariumis ning kõik on lisas jälgitavad."
+    },
+    "note_appendix": {
+      "en": "The appendix is the reviewer record: every checklist row, every evidence item, every derived risk, every scenario, every action and every procedure, whether or not it reached the summary above.",
+      "et": "Lisa on ülevaataja algne kirje: iga kontrollnimekirja rida, iga tõend, iga tuletatud risk, iga stsenaarium, iga tegevus ja iga protseduur, olenemata sellest, kas see jõudis ülalolevasse kokkuvõttesse."
+    },
+    "note_aggregation": {
+      "en": "Grouping findings into stories changes nothing about them: every control keeps its status, its severity and its accepted-risk record exactly as the reviewer left it.",
+      "et": "Leidude koondamine lugudeks ei muuda neis midagi: iga kontroll säilitab oma staatuse, raskusastme ja riski aktsepteerimise kirje täpselt sellisena, nagu ülevaataja selle jättis."
+    },
+    "note_blank_status": {
+      "en": "A blank status means the row was never reviewed. That is deliberately different from Not tested, which is a reviewer's recorded decision not to test it.",
+      "et": "Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult staatusest Testimata, mis on ülevaataja kirja pandud otsus seda mitte testida."
+    },
+    "note_no_scenarios": {
+      "en": "No unresolved control produced a contextual risk, so there is no failure story to tell. That is not the same as nothing being wrong: unreviewed rows and unknowns are listed below.",
+      "et": "Ükski lahendamata kontroll ei tekitanud kontekstiriski, seega puudub lugu, mida jutustada. See ei tähenda, et kõik oleks korras: üle vaatamata read ja teadmata asjad on loetletud allpool."
+    }
+  },
+
+  "templates": {
+    "generated": {
+      "en": "Envelope {assessment_id}, revision {revision}, derived {generated_at}.",
+      "et": "Ümbrik {assessment_id}, versioon {revision}, tuletatud {generated_at}."
+    },
+    "scope_pair": {
+      "en": "{environment} + {intended_use}",
+      "et": "{environment} + {intended_use}"
+    },
+    "confirmation": {
+      "en": "{state} ({detail})",
+      "et": "{state} ({detail})"
+    },
+    "scenario_stake": {
+      "en": "At stake: {data}. Reachable by: {audience}.",
+      "et": "Kaalul: {data}. Kättesaadav: {audience}."
+    },
+    "scenario_rests_on": {
+      "en": "Unmet checks: {controls}.",
+      "et": "Täitmata kontrollid: {controls}."
+    },
+    "scenario_current": {
+      "en": "Risk today, for {scope}: {level}.",
+      "et": "Risk täna, ulatuses {scope}: {level}."
+    },
+    "scenario_future": {
+      "en": "Risk if this moves to {scope}: {level}.",
+      "et": "Risk pärast üleminekut ulatusse {scope}: {level}."
+    },
+    "scenario_no_current": {
+      "en": "No risk is derived for the assessed scope today; the levels below are for the wider scopes under consideration.",
+      "et": "Hinnatava ulatuse kohta täna riski ei tuletatud; allolevad tasemed käivad laiemate vaadeldavate ulatuste kohta."
+    },
+    "transition": {
+      "en": "{scope}: {state}. {reason}",
+      "et": "{scope}: {state}. {reason}"
+    },
+    "covered_by_headline": {
+      "en": "Shown above as failure story {rank}: {title}.",
+      "et": "Näidatud ülal stsenaariumina {rank}: {title}."
+    },
+    "control_with_status": {
+      "en": "{control} ({status})",
+      "et": "{control} ({status})"
+    },
+    "scenario_heading": {
+      "en": "{rank}. {title}",
+      "et": "{rank}. {title}"
+    },
+    "verdict_line": {
+      "en": "{verdict} ({agreement}). {explanation}",
+      "et": "{verdict} ({agreement}). {explanation}"
+    },
+    "unknown_count": {
+      "en": "Material unknowns recorded for this scope: {count}.",
+      "et": "Selle ulatuse kohta kirja pandud olulisi teadmata asju: {count}."
+    },
+    "confidence_line": {
+      "en": "Confidence in the derived levels: {confidence}. {rationale}",
+      "et": "Kindlus tuletatud tasemetes: {confidence}. {rationale}"
+    },
+    "mandatory_counts": {
+      "en": "In this category: {total}. Told as a failure story above: {above}. Listed here: {here}. Cross-listed under another mandatory category: {elsewhere}.",
+      "et": "Selles kategoorias: {total}. Ülal stsenaariumina räägitud: {above}. Siin loetletud: {here}. Mõne muu kohustusliku kategooria all loetletud: {elsewhere}."
+    }
+  },
+
+  "labels": {
+    "levels": {
+      "critical": {"en": "critical", "et": "kriitiline"},
+      "high": {"en": "high", "et": "kõrge"},
+      "moderate": {"en": "moderate", "et": "keskmine"},
+      "low": {"en": "low", "et": "madal"},
+      "unknown": {"en": "unknown", "et": "teadmata"},
+      "none": {"en": "no derived level", "et": "tuletatud tase puudub"}
+    },
+    "domains": {
+      "security": {"en": "security", "et": "turve"},
+      "privacy": {"en": "privacy", "et": "privaatsus"},
+      "reliability": {"en": "reliability", "et": "töökindlus"},
+      "financial": {"en": "money", "et": "rahandus"},
+      "compliance": {"en": "compliance", "et": "vastavus"},
+      "product": {"en": "product", "et": "toode"}
+    },
+    "readiness_states": {
+      "incomplete": {"en": "assessment incomplete", "et": "hindamine pooleli"},
+      "blocked": {"en": "blocked", "et": "blokeeritud"},
+      "conditional": {"en": "conditional", "et": "tingimuslik"},
+      "no_known_blocker": {"en": "no known blocker", "et": "teadaolevat takistust pole"}
+    },
+    "readiness_sentences": {
+      "incomplete": {
+        "en": "Something needed to answer the question is missing, so this scope cannot be called clear. The missing pieces are listed below.",
+        "et": "Küsimusele vastamiseks on midagi puudu, seega ei saa seda ulatust lugeda selgeks. Puuduvad osad on loetletud allpool."
+      },
+      "blocked": {
+        "en": "There is a known blocker for this environment and intended use. It is listed below with what it rests on.",
+        "et": "Selle keskkonna ja kasutusotstarbe jaoks on teadaolev takistus. See on koos aluseks olevaga loetletud allpool."
+      },
+      "conditional": {
+        "en": "This scope works only while the listed conditions are actually enforced. When a condition lapses, the answer changes.",
+        "et": "See ulatus toimib ainult seni, kuni loetletud tingimusi tegelikult jõustatakse. Kui tingimus lakkab kehtimast, muutub ka vastus."
+      },
+      "no_known_blocker": {
+        "en": "No blocker is known for this scope on today's evidence. That is the strongest statement available here, and it says nothing about a wider scope.",
+        "et": "Tänaste tõendite põhjal ei ole selles ulatuses teadaolevat takistust. See on siin kõige tugevam võimalik väide ja see ei ütle midagi laiema ulatuse kohta."
+      }
+    },
+    "confidence": {
+      "high": {"en": "high", "et": "suur"},
+      "medium": {"en": "medium", "et": "keskmine"},
+      "low": {"en": "low", "et": "väike"}
+    },
+    "confidence_rationale": {
+      "high": {
+        "en": "Every context fact these levels depend on is confirmed by a human with authority over the application.",
+        "et": "Kõik kontekstifaktid, millest need tasemed sõltuvad, on kinnitanud inimene, kellel on rakenduse üle otsustusõigus."
+      },
+      "medium": {
+        "en": "Some context facts are inferred rather than confirmed, or the context as a whole is still a draft.",
+        "et": "Osa kontekstifaktidest on tuletatud, mitte kinnitatud, või on kontekst tervikuna alles mustand."
+      },
+      "low": {
+        "en": "Several context facts are inferred rather than confirmed, or the context has expired. Gather evidence before relying on these levels.",
+        "et": "Mitu kontekstifakti on tuletatud, mitte kinnitatud, või on kontekst aegunud. Enne nendele tasemetele tuginemist tuleks tõendeid koguda."
+      }
+    },
+    "field_states": {
+      "confirmed": {"en": "confirmed by the owner", "et": "omanik kinnitas"},
+      "inferred": {"en": "inferred, not confirmed", "et": "tuletatud, mitte kinnitatud"},
+      "conflicting": {"en": "sources disagree", "et": "allikad on vastuolus"},
+      "unknown": {"en": "not established", "et": "tuvastamata"}
+    },
+    "environments": {
+      "developer_only": {"en": "developer machine only", "et": "ainult arendaja masin"},
+      "private_test": {"en": "private test", "et": "privaatne test"},
+      "public_release": {"en": "public release", "et": "avalik väljalase"}
+    },
+    "intended_uses": {
+      "prototype_demo": {"en": "prototype or demo", "et": "prototüüp või demo"},
+      "internal_tool": {"en": "internal tool", "et": "sisemine tööriist"},
+      "invite_only_pilot": {"en": "invite-only pilot", "et": "kutsepõhine pilootkasutus"},
+      "public_product": {"en": "public product", "et": "avalik toode"},
+      "sensitive_or_high_impact": {"en": "sensitive or high-impact use", "et": "tundlik või suure mõjuga kasutus"}
+    },
+    "severities": {
+      "Critical": {"en": "Critical", "et": "Kriitiline"},
+      "High": {"en": "High", "et": "Kõrge"},
+      "Medium": {"en": "Medium", "et": "Keskmine"},
+      "Low": {"en": "Low", "et": "Madal"},
+      "Triage": {"en": "Screening", "et": "Sõelumine"}
+    },
+    "action_kinds": {
+      "remediate": {"en": "fix", "et": "parandus"},
+      "verify": {"en": "verify", "et": "kontrollimine"},
+      "escalate": {"en": "escalate", "et": "eskaleerimine"},
+      "incident_response": {"en": "incident response", "et": "intsidendile reageerimine"},
+      "decide": {"en": "decision", "et": "otsus"}
+    },
+    "action_states": {
+      "open": {"en": "open", "et": "avatud"},
+      "in_progress": {"en": "in progress", "et": "töös"},
+      "blocked": {"en": "blocked", "et": "blokeeritud"},
+      "done": {"en": "done", "et": "tehtud"},
+      "superseded": {"en": "superseded", "et": "asendatud"},
+      "rejected": {"en": "rejected", "et": "tagasi lükatud"}
+    },
+    "owner_roles": {
+      "founder": {"en": "the owner", "et": "omanik"},
+      "developer": {"en": "a developer", "et": "arendaja"},
+      "specialist": {"en": "a specialist", "et": "spetsialist"},
+      "platform": {"en": "the platform provider", "et": "platvormi pakkuja"},
+      "unassigned": {"en": "nobody yet", "et": "veel määramata"}
+    },
+    "executor_roles": {
+      "founder": {"en": "the owner", "et": "omanik"},
+      "developer": {"en": "a developer", "et": "arendaja"},
+      "specialist": {"en": "a specialist", "et": "spetsialist"},
+      "platform": {"en": "the platform provider", "et": "platvormi pakkuja"},
+      "vibecheck_agent": {"en": "Vibecheck", "et": "Vibecheck"}
+    },
+    "consent": {
+      "not_required": {"en": "not required", "et": "pole nõutav"},
+      "explicit_consent": {"en": "explicit consent", "et": "selgesõnaline nõusolek"},
+      "explicit_consent_per_run": {"en": "explicit consent for every run", "et": "selgesõnaline nõusolek igaks käivituseks"}
+    },
+    "urgencies": {
+      "immediate": {"en": "immediate", "et": "kohe"},
+      "next": {"en": "next", "et": "järgmisena"},
+      "planned": {"en": "planned", "et": "planeeritud"},
+      "backlog": {"en": "backlog", "et": "ootenimekirjas"},
+      "unknown": {"en": "not decided", "et": "otsustamata"}
+    },
+    "deadline_labels": {
+      "overdue": {"en": "Overdue", "et": "Tähtaeg möödas"},
+      "fix_now": {"en": "Fix now", "et": "Paranda kohe"},
+      "before_inviting_users": {"en": "Before inviting users", "et": "Enne kasutajate kutsumist"},
+      "before_public_launch": {"en": "Before public launch", "et": "Enne avalikku väljalaset"},
+      "before_sensitive_data": {"en": "Before sensitive or valuable data", "et": "Enne tundlike või väärtuslike andmete lisamist"},
+      "before_scaling": {"en": "Before scaling", "et": "Enne mahu kasvatamist"},
+      "before_event": {"en": "Before a named event", "et": "Enne nimetatud sündmust"},
+      "by_date": {"en": "By a fixed date", "et": "Kindlaks kuupäevaks"},
+      "backlog": {"en": "Backlog", "et": "Ootenimekiri"},
+      "unscheduled": {"en": "Not scheduled: decide when", "et": "Ajastamata: otsusta millal"}
+    },
+    "framework_verdicts": {
+      "v_notrev": {"en": "NOT REVIEWED", "et": "ÜLE VAATAMATA"},
+      "v_incomplete": {"en": "INCOMPLETE REVIEW", "et": "ÜLEVAATUS POOLELI"},
+      "v_block": {"en": "BLOCK", "et": "BLOKEERI"},
+      "v_block_high": {"en": "BLOCK - RISK ACCEPTANCE REQUIRED", "et": "BLOKEERI - NÕUAB RISKI AKTSEPTEERIMIST"},
+      "v_fix": {"en": "FIX BEFORE RELEASE", "et": "PARANDA ENNE AVALDAMIST"},
+      "v_rc": {"en": "REVIEW COMPLETE - NO OPEN FAIL/PARTIAL", "et": "ÜLEVAATUS VALMIS - PUUDULIKKE/OSALISI POLE"},
+      "f_notrev": {"en": "NOT REVIEWED", "et": "ÜLE VAATAMATA"},
+      "f_incomplete": {"en": "REVIEW INCOMPLETE", "et": "ÜLEVAATUS POOLELI"},
+      "f_donot": {"en": "DO NOT LAUNCH", "et": "ÄRA AVALDA"},
+      "f_fix": {"en": "FIX BEFORE LAUNCH", "et": "PARANDA ENNE AVALDAMIST"},
+      "f_ready": {"en": "REVIEW COMPLETE - NO OPEN FAILURES", "et": "ÜLEVAATUS VALMIS - PUUDULIKKE POLE"}
+    },
+    "evidence_directions": {
+      "supports": {"en": "supports", "et": "toetab"},
+      "refutes": {"en": "refutes", "et": "lükkab ümber"},
+      "neutral": {"en": "neutral", "et": "neutraalne"}
+    },
+    "evidence_strengths": {
+      "decisive": {"en": "decisive within its scope", "et": "otsustav oma ulatuses"},
+      "indicative": {"en": "indicative", "et": "viitav"}
+    },
+    "horizons": {
+      "current": {"en": "today", "et": "täna"},
+      "event_triggered": {"en": "on a future move", "et": "tuleviku ülemineku korral"}
+    },
+    "confirmation_states": {
+      "draft": {"en": "draft, not confirmed by a human", "et": "mustand, inimene ei ole kinnitanud"},
+      "human_reviewed": {"en": "reviewed and confirmed by a human", "et": "inimene on üle vaadanud ja kinnitanud"},
+      "review_bypassed": {"en": "human review was bypassed", "et": "inimese tehtud ülevaatus jäeti vahele"},
+      "expired": {"en": "expired, counts as unconfirmed", "et": "aegunud, arvestatakse kinnitamata kontekstina"},
+      "not_yet_confirmed": {"en": "confirmation is dated later than this assessment", "et": "kinnitus on hilisema kuupäevaga kui see hinnang"}
+    },
+    "mandatory_categories": {
+      "unresolved_critical_high_refs": {
+        "en": "A Critical or High control whose requirement is not met. Contextual risk can make it less urgent here; it does not make it met.",
+        "et": "Kriitiline või kõrge tähtsusega kontroll, mille nõue ei ole täidetud. Kontekstirisk võib selle siin vähem pakiliseks muuta, kuid ei muuda seda täidetuks."
+      },
+      "readiness_blocking_unknown_refs": {
+        "en": "Something that could hide a blocker is not established. Until it is, this scope cannot be called clear.",
+        "et": "Midagi, mis võib takistust varjata, ei ole tuvastatud. Kuni see nii on, ei saa seda ulatust lugeda selgeks."
+      },
+      "incident_response_action_refs": {
+        "en": "Something has already happened and the response is not finished.",
+        "et": "Midagi on juba juhtunud ja reageerimine ei ole lõpetatud."
+      },
+      "specialist_escalation_refs": {
+        "en": "This needs a specialist. Vibecheck is explicitly not one, and neither is a checklist.",
+        "et": "See vajab spetsialisti. Vibecheck ei ole spetsialist ja kontrollnimekiri ammugi mitte."
+      },
+      "deadline_blocking_action_refs": {
+        "en": "This work blocks the environment and intended use being assessed, or its deadline has already passed.",
+        "et": "See töö blokeerib hinnatava keskkonna ja kasutusotstarbe või on selle tähtaeg juba möödunud."
+      },
+      "specialist_assessment_refs": {
+        "en": "A screening row a reviewer marked as needing specialist judgement. It has no scheduled action yet.",
+        "et": "Sõelumisrida, mille ülevaataja märkis spetsialisti otsust vajavaks. Sellel ei ole veel planeeritud tegevust."
+      }
+    },
+    "dimensions": {
+      "lifecycle": {"en": "Where is the application in its life right now?", "et": "Kus on rakendus praegu oma elutsüklis?"},
+      "audience_scale": {"en": "Who can use it today, and how many of them are there?", "et": "Kes saab seda täna kasutada ja kui palju neid on?"},
+      "network_exposure": {"en": "From where can the running application be reached?", "et": "Kust on töötav rakendus kättesaadav?"},
+      "authentication": {"en": "What does someone need in order to get in?", "et": "Mida on kellelgi vaja, et sisse saada?"},
+      "tenancy": {"en": "Whose data lives next to whose?", "et": "Kelle andmed asuvad kelle kõrval?"},
+      "data_sensitivity": {"en": "What is the most sensitive data it holds or touches?", "et": "Millised on kõige tundlikumad andmed, mida see hoiab või puudutab?"},
+      "financial_operations": {"en": "Does the application move money?", "et": "Kas rakendus liigutab raha?"},
+      "privileged_operations": {"en": "What can it do beyond reading and writing its own data?", "et": "Mida saab see teha lisaks oma andmete lugemisele ja kirjutamisele?"},
+      "business_criticality": {"en": "What happens if it stops working or misbehaves?", "et": "Mis juhtub, kui see lakkab töötamast või käitub valesti?"}
+    },
+    "dimension_values": {
+      "lifecycle": {
+        "building": {"en": "under construction", "et": "ehitamisel"},
+        "internal_use": {"en": "used internally for real work", "et": "sisekasutuses päris tööks"},
+        "piloting": {"en": "piloted by a named group", "et": "nimelise rühma pilootkasutuses"},
+        "live": {"en": "live, used by other people", "et": "kasutuses, seda kasutavad teised inimesed"}
+      },
+      "audience_scale": {
+        "none_yet": {"en": "nobody but the builder", "et": "ainult ehitaja ise"},
+        "named_handful": {"en": "up to about 20 named people", "et": "kuni umbes 20 nimeliselt teadaolevat inimest"},
+        "known_group": {"en": "up to about 200 known users", "et": "kuni umbes 200 teadaolevat kasutajat"},
+        "open_small": {"en": "open to anyone, hundreds today", "et": "avatud kõigile, praegu sadu"},
+        "open_large": {"en": "open to anyone, thousands or growing", "et": "avatud kõigile, tuhandeid või kasvav hulk"}
+      },
+      "network_exposure": {
+        "local_only": {"en": "a developer machine only", "et": "ainult arendaja masin"},
+        "private_network": {"en": "a private or office network", "et": "privaat- või kontorivõrk"},
+        "unlisted_public_url": {"en": "the public internet at an unadvertised address", "et": "avalik internet reklaamimata aadressil"},
+        "public_internet": {"en": "the public internet, discoverable", "et": "avalik internet, leitav"}
+      },
+      "authentication": {
+        "none": {"en": "no login at all", "et": "sisselogimist ei ole"},
+        "shared_secret": {"en": "one shared password or link", "et": "üks ühine parool või link"},
+        "invite_only_accounts": {"en": "accounts created by invitation only", "et": "ainult kutse alusel loodud kontod"},
+        "open_signup": {"en": "anyone can sign up", "et": "igaüks saab end registreerida"}
+      },
+      "tenancy": {
+        "single_user": {"en": "one person's data only", "et": "ainult ühe inimese andmed"},
+        "single_tenant": {"en": "one organisation's data", "et": "ühe organisatsiooni andmed"},
+        "multi_tenant_shared_store": {"en": "many customers in the same tables", "et": "mitu klienti samades tabelites"},
+        "multi_tenant_isolated_store": {"en": "many customers, each with a separate store", "et": "mitu klienti, igaühel eraldi andmehoidla"}
+      },
+      "data_sensitivity": {
+        "synthetic_or_none": {"en": "test data or nothing worth protecting", "et": "testandmed või kaitset mittevajav sisu"},
+        "internal_non_personal": {"en": "real business data, no personal data", "et": "päris äriandmed, isikuandmeid ei ole"},
+        "personal_data": {"en": "personal data of identifiable people", "et": "tuvastatavate inimeste isikuandmed"},
+        "special_category_or_financial": {"en": "health, biometric, children's, credential or payment data", "et": "terviseandmed, biomeetria, laste andmed, sisselogimisandmed või makseandmed"}
+      },
+      "financial_operations": {
+        "none": {"en": "no money moves", "et": "raha ei liigu"},
+        "charges_or_payouts": {"en": "charges, payouts or metered spend", "et": "maksed, väljamaksed või mõõdetud kulu"},
+        "custody_of_user_funds": {"en": "holds other people's money", "et": "hoiab teiste inimeste raha"}
+      },
+      "privileged_operations": {
+        "none": {"en": "reads and writes its own data only", "et": "loeb ja kirjutab ainult oma andmeid"},
+        "internal_admin_actions": {"en": "has administrative operations", "et": "sisaldab haldustoiminguid"},
+        "external_side_effects": {"en": "acts in external systems: email, payments, third-party APIs", "et": "toimib välistes süsteemides: e-post, maksed, kolmandate osapoolte liidesed"},
+        "infrastructure_control": {"en": "can change infrastructure or deployments", "et": "saab muuta taristut või juurutusi"}
+      },
+      "business_criticality": {
+        "experiment": {"en": "nothing depends on it", "et": "sellest ei sõltu midagi"},
+        "supporting": {"en": "useful, but the work can go on without it", "et": "kasulik, kuid töö saab ka ilma jätkuda"},
+        "core_operation": {"en": "a core business process runs on it", "et": "sellel töötab põhiline äriprotsess"},
+        "sole_revenue_or_safety": {"en": "the only revenue channel, or people can be harmed", "et": "ainus tuluallikas või võivad inimesed kahju saada"}
+      }
+    },
+    "scenario_groups": {
+      "fragile_foundation": {
+        "title": {
+          "en": "The foundation makes every later change harder",
+          "et": "Vundament muudab iga hilisema muudatuse raskemaks"
+        },
+        "opener": {
+          "en": "Nothing breaks today, but the technology choices decide how expensive every later fix is and whether another developer can take this over at all.",
+          "et": "Täna ei lähe midagi katki, kuid tehnoloogiavalikud otsustavad, kui kalliks läheb iga hilisem parandus ja kas mõni teine arendaja saab selle üldse üle võtta."
+        }
+      },
+      "credential_exposure": {
+        "title": {
+          "en": "A key someone else can use",
+          "et": "Võti, mida saab kasutada ka keegi teine"
+        },
+        "opener": {
+          "en": "A credential that reached the browser bundle, the repository or a log is usable by whoever finds it, with everything it was issued for. No further defect is needed.",
+          "et": "Salajane võti, mis on jõudnud brauserisse, koodihoidlasse või logisse, on kasutatav igaühele, kes selle leiab, koos kõigi õigustega, milleks see väljastati. Muud viga selleks vaja ei ole."
+        }
+      },
+      "unauthorised_data_access": {
+        "title": {
+          "en": "Someone reaches data that is not theirs",
+          "et": "Keegi pääseb ligi andmetele, mis ei ole tema omad"
+        },
+        "opener": {
+          "en": "Server-side authorization is the only thing standing between one user's records and everybody else. Where it is not enforced, reading or changing someone else's data needs no exploit at all.",
+          "et": "Serveripoolne õiguste kontroll on ainus asi, mis eraldab ühe kasutaja kirjeid kõigist teistest. Seal, kus seda ei jõustata, ei ole teiste andmete lugemiseks või muutmiseks vaja mingit rünnakut."
+        }
+      },
+      "product_not_real": {
+        "title": {
+          "en": "It looks finished, but a flow does not really work",
+          "et": "Näeb valmis välja, kuid mõni toiming tegelikult ei tööta"
+        },
+        "opener": {
+          "en": "A generated application can look complete while a screen saves nothing, an email never arrives, or payments run in the wrong mode. The user finds out first; the owner finds out later.",
+          "et": "Genereeritud rakendus võib näida valmis, kuigi mõni vaade ei salvesta midagi, kiri ei jõua kohale või maksed käivad vales režiimis. Kasutaja saab sellest teada esimesena, omanik hiljem."
+        }
+      },
+      "runaway_cost_or_abuse": {
+        "title": {
+          "en": "The bill runs away, or someone else runs it up",
+          "et": "Arve kasvab kontrolli alt välja või ajab selle üles keegi teine"
+        },
+        "opener": {
+          "en": "Unbounded work on a metered provider turns a careless user, a loop or a bot into a bill. Without caps and limits, nobody notices until the invoice or the outage arrives.",
+          "et": "Piiramatu töö tasulise teenusepakkuja juures muudab hooletu kasutaja, lõputu tsükli või roboti arveks. Ilma ülempiiride ja teavitusteta ei märka keegi midagi enne arvet või katkestust."
+        }
+      },
+      "malicious_input": {
+        "title": {
+          "en": "Crafted input makes the application do something else",
+          "et": "Sihilikult koostatud sisend paneb rakenduse tegema midagi muud"
+        },
+        "opener": {
+          "en": "Input that is trusted where it should be validated is the oldest route into a database, a page other users see, or another system on the network.",
+          "et": "Sisend, mida usaldatakse seal, kus seda peaks kontrollima, on vanim tee andmebaasi, teiste kasutajate lehele või mõnda teise võrgus olevasse süsteemi."
+        }
+      },
+      "data_loss": {
+        "title": {
+          "en": "Data disappears and cannot be brought back",
+          "et": "Andmed kaovad ja neid ei saa tagasi"
+        },
+        "opener": {
+          "en": "Data that has never been restored from a backup is data the business only assumes it has. A destructive migration or a mistaken delete is where the assumption gets tested.",
+          "et": "Andmed, mida ei ole kunagi varukoopiast taastatud, on ettevõttel olemas ainult eeldatavalt. Hävitav migratsioon või kogemata kustutamine on koht, kus seda eeldust proovile pannakse."
+        }
+      },
+      "silent_failure": {
+        "title": {
+          "en": "It breaks and nobody finds out",
+          "et": "Midagi läheb katki ja keegi ei saa teada"
+        },
+        "opener": {
+          "en": "Without error tracking and alerting, a failure is discovered by the person it happened to, if and when they decide to complain about it.",
+          "et": "Ilma vigade jälgimise ja teavituseta saab tõrkest teada see, kellega see juhtus, ja ainult siis, kui ta viitsib kurta."
+        }
+      },
+      "unsafe_deployment": {
+        "title": {
+          "en": "The live deployment exposes more than the code does",
+          "et": "Töötav juurutus paljastab rohkem kui kood"
+        },
+        "opener": {
+          "en": "Debug modes, verbose errors, permissive origins and shared production credentials are configuration, not code. They are also what an outsider sees first.",
+          "et": "Silumisrežiim, paljusõnalised veateated, liiga lubavad päritolud ja jagatud tootmiskeskkonna juurdepääsuandmed on seadistus, mitte kood. Just neid näeb kõrvaline vaatleja esimesena."
+        }
+      },
+      "integration_failure": {
+        "title": {
+          "en": "A third-party integration is trusted more than it should be",
+          "et": "Kolmanda osapoole liidest usaldatakse rohkem, kui tohiks"
+        },
+        "opener": {
+          "en": "An inbound webhook is an unauthenticated entry point until its signature is verified, and a retried delivery is a duplicate order until the handler is made idempotent.",
+          "et": "Sissetulev veebihaak on autentimata sisenemispunkt seni, kuni selle allkirja ei kontrollita, ja korduv päring loob teise tellimuse seni, kuni käsitleja ei ole idempotentne."
+        }
+      },
+      "supply_chain": {
+        "title": {
+          "en": "Someone else's vulnerability becomes yours",
+          "et": "Kellegi teise haavatavus muutub sinu omaks"
+        },
+        "opener": {
+          "en": "Most of what ships was written by strangers. Not knowing which versions run, and not watching them, is inherited risk that nobody in this project chose.",
+          "et": "Enamiku koodist on kirjutanud võõrad. Teadmata, millised versioonid töötavad, ja neid jälgimata, on tegemist päritud riskiga, mida keegi siin projektis ei valinud."
+        }
+      },
+      "personal_data_misuse": {
+        "title": {
+          "en": "Personal data ends up where it must not be",
+          "et": "Isikuandmed satuvad sinna, kuhu ei tohi"
+        },
+        "opener": {
+          "en": "Personal data collected without a purpose, copied into logs, analytics or model prompts, or impossible to delete on request is a legal exposure that grows with every new user.",
+          "et": "Isikuandmeid kogutakse sageli ilma selge eesmärgita ja kopeeritakse logidesse, analüütikasse või mudeli päringutesse. Kui neid ei saa nõudmisel kustutada, kasvab õiguslik risk iga uue kasutajaga."
+        }
+      },
+      "regulatory_screening": {
+        "title": {
+          "en": "A legal obligation may apply and nobody has checked",
+          "et": "Mõni õiguslik kohustus võib kehtida ja keegi ei ole seda kontrollinud"
+        },
+        "opener": {
+          "en": "Screening questions decide whether a regulated regime applies at all. An unanswered screen is not a clean answer, and nothing here is legal advice.",
+          "et": "Sõelumisküsimused otsustavad, kas mõni reguleeritud režiim üldse kehtib. Vastamata sõelumine ei ole puhas vastus ja miski siin ei ole õigusnõu."
+        }
+      },
+      "wrong_results": {
+        "title": {
+          "en": "The application quietly produces wrong results",
+          "et": "Rakendus annab vaikselt valesid tulemusi"
+        },
+        "opener": {
+          "en": "Logic defects do not crash anything. They produce a number, a state or a permission that is quietly wrong, and everything downstream inherits it.",
+          "et": "Loogikavead ei pane midagi kokku jooksma. Need annavad arvu, oleku või õiguse, mis on vaikselt vale, ja kõik järgnev pärib selle vea."
+        }
+      },
+      "unverified_changes": {
+        "title": {
+          "en": "Every change is a gamble",
+          "et": "Iga muudatus on hasartmäng"
+        },
+        "opener": {
+          "en": "Without automated checks on the main transaction and on who may do what, nobody can tell whether today's change broke something that used to work.",
+          "et": "Ilma automaatsete kontrollideta põhitehingu ja õiguste üle ei tea keegi, kas tänane muudatus lõhkus midagi, mis varem töötas."
+        }
+      },
+      "breaks_under_load": {
+        "title": {
+          "en": "It becomes unusable when real people arrive",
+          "et": "See muutub kasutuskõlbmatuks, kui saabuvad päris kasutajad"
+        },
+        "opener": {
+          "en": "What is fast with a hundred rows can be unusable with a hundred thousand, and the first busy day is a bad moment to discover it.",
+          "et": "See, mis on saja reaga kiire, võib saja tuhandega olla kasutuskõlbmatu, ja esimene tihe päev on halb hetk selle avastamiseks."
+        }
+      },
+      "ai_manipulation": {
+        "title": {
+          "en": "The AI feature is talked into working against you",
+          "et": "Tehisaru pannakse sinu vastu töötama"
+        },
+        "opener": {
+          "en": "Text the model reads is untrusted input. Where model output reaches a tool, a shell or a database, whoever writes that text is steering the application.",
+          "et": "Tekst, mida mudel loeb, on mitteusaldusväärne sisend. Seal, kus mudeli väljund jõuab tööriista, käsureale või andmebaasi, juhib rakendust see, kes selle teksti kirjutas."
+        }
+      },
+      "dependency_on_one_person": {
+        "title": {
+          "en": "Everything depends on one person or one account",
+          "et": "Kõik sõltub ühest inimesest või ühest kontost"
+        },
+        "opener": {
+          "en": "An application only one person can deploy, whose accounts stand in a personal name, or whose data cannot be exported, is one absence away from being unmaintainable.",
+          "et": "Rakendus, mida oskab juurutada ainult üks inimene, mille kontod on eraisiku nimel või mille andmeid ei saa välja võtta, jääb ühe inimese puudumisel hooldajata."
+        }
+      }
+    }
+  }
+}

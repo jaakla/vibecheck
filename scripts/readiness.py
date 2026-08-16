@@ -28,6 +28,7 @@ readiness for every target scope and writes the updated envelope to stdout.
 """
 import argparse
 import copy
+import hashlib
 import json
 import os
 import sys
@@ -80,6 +81,38 @@ def _scope_slug(scope):
 
 def _covers(blocking_scope, scope):
     return any(ctx.same_scope(entry, scope) for entry in blocking_scope or [])
+
+
+def _control_slug(control_id):
+    return (control_id or "").split("vibecheck.control.")[-1]
+
+
+def unknown_id(scope, code):
+    """A stable id for one material unknown.
+
+    Blockers can point at the object that blocks (an action, a risk, an
+    assessment); several unknowns have no single object behind them — an
+    unconfirmed context, a set of unassessed controls — and would otherwise be
+    unaddressable. The founder report has to state every material unknown
+    exactly once and prove it did (rule R12), so each one gets an id derived
+    from its scope and what it is about, stable across re-derivations.
+    """
+    return "unk-%s-%s" % (_scope_slug(scope), code)
+
+
+def _ensure_unknown_ids(readiness):
+    """Give pre-1.2/hand-authored material unknowns a stable report identity."""
+    scope = readiness.get("scope") or {}
+    for unknown in readiness.get("unknowns") or []:
+        if not unknown.get("material") or unknown.get("unknown_id"):
+            continue
+        seed = canonical.dumps({
+            "ref": unknown.get("ref"),
+            "description": unknown.get("description"),
+            "material": True,
+        }).encode("utf-8")
+        unknown["unknown_id"] = unknown_id(
+            scope, "legacy.%s" % hashlib.sha256(seed).hexdigest()[:16])
 
 
 # ------------------------------------------------------------ legacy verdict
@@ -401,6 +434,10 @@ def _assess_scope(envelope, scope, now):
             rules.append("readiness.blocked.contextual_risk_%s" % level)
         elif level == "unknown":
             unknowns.append({
+                "unknown_id": unknown_id(
+                    scope, "risk.%s.%s"
+                    % ("-".join(sorted(_control_slug(c) for c in controls)),
+                       risk.get("horizon", {}).get("kind", "current"))),
                 "ref": risk["risk_id"],
                 "description": "Contextual risk for %s is unknown in this scope%s. "
                                "Unknown is never low and never permission to "
@@ -430,6 +467,9 @@ def _assess_scope(envelope, scope, now):
             review_by = ctx.parse_instant(acceptance.get("review_by"))
             if review_by is None or review_by < now:
                 unknowns.append({
+                    "unknown_id": unknown_id(
+                        scope, "acceptance.%s"
+                        % _control_slug(assessment.get("control_id"))),
                     "ref": assessment.get("assessment_id"),
                     "description": "Risk acceptance for %s has no current "
                                    "review deadline: review_by %r is missing, "
@@ -445,6 +485,7 @@ def _assess_scope(envelope, scope, now):
     confirmation = ctx.confirmation_state(context, now)
     if confirmation != "human_reviewed":
         unknowns.append({
+            "unknown_id": unknown_id(scope, "context.%s" % confirmation),
             "ref": context.get("context_id"),
             "description": {
                 "draft": "The application context has not been confirmed by a "
@@ -467,6 +508,7 @@ def _assess_scope(envelope, scope, now):
     missing = ctx.missing_dimensions(context)
     if missing:
         unknowns.append({
+            "unknown_id": unknown_id(scope, "context.dimensions"),
             "ref": context.get("context_id"),
             "description": "Context dimensions that feed risk derivation are "
                            "unknown or conflicting: %s. Any risk that needed "
@@ -478,6 +520,7 @@ def _assess_scope(envelope, scope, now):
 
     for note in ctx.consistency_notes(context):
         unknowns.append({
+            "unknown_id": unknown_id(scope, "context.%s" % note["code"]),
             "ref": context.get("context_id"),
             "description": note["message"],
             "material": True,
@@ -488,6 +531,7 @@ def _assess_scope(envelope, scope, now):
     unassessed = _unassessed_critical_high(envelope)
     if unassessed:
         unknowns.append({
+            "unknown_id": unknown_id(scope, "controls.unassessed_critical_high"),
             "description": "%d applicable Critical or High control(s) have no "
                            "current assessment. An unreviewed control is not a "
                            "passing one." % len(unassessed),
@@ -498,6 +542,9 @@ def _assess_scope(envelope, scope, now):
 
     for assessment in _expired_pass_controls(envelope, now):
         unknowns.append({
+            "unknown_id": unknown_id(
+                scope, "evidence.expired.%s"
+                % _control_slug(assessment.get("control_id"))),
             "ref": assessment["assessment_id"],
             "description": "Pass on %s rests only on evidence that has expired; "
                            "it needs re-verification before it can support this "
@@ -598,6 +645,8 @@ def apply_readiness(envelope, now=None):
     kept = [r for r in updated.get("readiness") or []
             if r.get("readiness_id") not in derived_ids]
     updated["readiness"] = kept + derived
+    for readiness in updated["readiness"]:
+        _ensure_unknown_ids(readiness)
     return updated
 
 

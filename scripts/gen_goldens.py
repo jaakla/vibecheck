@@ -124,6 +124,7 @@ def build_case(spec):
         "evidence": [],
         "assessments": [],
         "actions": list(copy.deepcopy(spec.get("actions") or [])),
+        "procedures": list(copy.deepcopy(spec.get("procedures") or [])),
     }
 
     for extra in spec.get("extra_evidence") or []:
@@ -158,6 +159,8 @@ def build_case(spec):
             assessment["basis"]["evidence_refs"].append(evidence_id)
         if finding.get("acceptance"):
             assessment["acceptance"] = dict(finding["acceptance"])
+        if finding.get("conflicts"):
+            assessment["conflicts"] = copy.deepcopy(finding["conflicts"])
         envelope["assessments"].append(assessment)
 
     baseline = spec.get("baseline")

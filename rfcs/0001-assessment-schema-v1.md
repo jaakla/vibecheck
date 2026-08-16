@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| Status | Draft for review |
+| Status | Accepted; implemented through Increment 3 |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
 | Context model | [`schema/vibecheck.context.v1.json`](../schema/vibecheck.context.v1.json) |
+| Report policy and wording | [`schema/report-derivation.v1.json`](../schema/report-derivation.v1.json) + [`schema/report-wording.v1.json`](../schema/report-wording.v1.json) |
 | Examples | [`schema/examples/`](../schema/examples/), [`tests/golden/`](../tests/golden/) |
-| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py) |
+| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
 Vibecheck assessments. It is the normative design dependency for every implementation
@@ -16,8 +17,10 @@ increment under epic #1.
 
 Implementation status: Increment 1 (#3) shipped the envelope, the stable control IDs and
 the legacy adapters. Increment 2 (#4) shipped the context profile, the contextual-risk
-derivation and environment-scoped readiness; §4.3 and §5.3 below were written with it and
-are normative for the shipped code (schema version 1.1.0, additive).
+derivation and environment-scoped readiness. Increment 3 (#5) shipped deterministic
+founder scenarios, completeness-safe mandatory placement, the full reviewer appendix, and
+founder/reviewer EN/ET rendering. Sections 4.3, 5.3, and 9 are normative for the shipped code
+(schema version 1.2.0, additive).
 
 ## 1. Invariants this design preserves
 
@@ -523,6 +526,12 @@ complete regardless of headline count (R12):
 A renderer may fold these below the headlines; it may never drop them. Increment 3
 implements the derivation; the semantic rule is: *every* envelope object matching a
 mandatory category must appear in the corresponding set, and validation fails otherwise.
+One object can match several sets — for example an immediate incident-response action owned
+by a specialist — but still receives exactly one visible disclosure placement. That
+placement records every matching category and either the headline scenario that visibly
+names it or its primary category in the mandatory section. Screening assessments marked
+`needs_specialist` are treated as specialist escalations until Increment 4 gives them an
+Action, so the absence of that later object cannot hide them now.
 Founder sections (`vibecheck_can_do_now`, `you_need_to_do`,
 `needs_developer_or_specialist`, `can_wait`) partition actions by owner and urgency —
 presentation again, derived, never stored truth.

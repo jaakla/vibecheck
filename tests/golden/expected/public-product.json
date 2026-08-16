@@ -257,6 +257,7 @@
       "valid_until": "2026-09-15T12:00:00Z"
     }
   ],
+  "procedures": [],
   "readiness": [
     {
       "assessed_at": "2026-08-16T12:00:00Z",
@@ -358,7 +359,8 @@
             "vibecheck.control.testing.core_flow_tests"
           ],
           "description": "41 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
-          "material": true
+          "material": true,
+          "unknown_id": "unk-public_release.public_product-controls.unassessed_critical_high"
         }
       ],
       "valid_until": "2026-09-15T12:00:00Z"
@@ -557,5 +559,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.1.0"
+  "schema_version": "1.2.0"
 }

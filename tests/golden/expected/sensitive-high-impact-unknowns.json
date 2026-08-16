@@ -228,6 +228,7 @@
       "valid_until": "2026-05-01T00:00:00Z"
     }
   ],
+  "procedures": [],
   "readiness": [
     {
       "assessed_at": "2026-08-16T12:00:00Z",
@@ -275,17 +276,20 @@
         {
           "description": "Contextual risk for vibecheck.control.authz.object_level is unknown in this scope. Unknown is never low and never permission to proceed.",
           "material": true,
-          "ref": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1"
+          "ref": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1",
+          "unknown_id": "unk-private_test.invite_only_pilot-risk.authz.object_level.current"
         },
         {
           "description": "Contextual risk for vibecheck.control.privacy.no_pii_leakage is unknown in this scope. Unknown is never low and never permission to proceed.",
           "material": true,
-          "ref": "rsk-privacy.no_pii_leakage-private_test.invite_only_pilot-current-r1"
+          "ref": "rsk-privacy.no_pii_leakage-private_test.invite_only_pilot-current-r1",
+          "unknown_id": "unk-private_test.invite_only_pilot-risk.privacy.no_pii_leakage.current"
         },
         {
           "description": "The application context is past its valid_until and counts as unconfirmed until it is reconfirmed.",
           "material": true,
-          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+          "ref": "ctx-golden-sensitive-high-impact-unknowns",
+          "unknown_id": "unk-private_test.invite_only_pilot-context.expired"
         },
         {
           "description": "Context dimensions that feed risk derivation are unknown or conflicting: data_sensitivity, financial_operations. Any risk that needed them came out unknown.",
@@ -294,7 +298,8 @@
             "financial_operations"
           ],
           "material": true,
-          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+          "ref": "ctx-golden-sensitive-high-impact-unknowns",
+          "unknown_id": "unk-private_test.invite_only_pilot-context.dimensions"
         },
         {
           "control_ids": [
@@ -340,12 +345,14 @@
             "vibecheck.control.testing.core_flow_tests"
           ],
           "description": "40 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
-          "material": true
+          "material": true,
+          "unknown_id": "unk-private_test.invite_only_pilot-controls.unassessed_critical_high"
         },
         {
           "description": "Pass on vibecheck.control.integ.webhook_signatures rests only on evidence that has expired; it needs re-verification before it can support this scope (rule R15).",
           "material": true,
-          "ref": "asm-integ.webhook_signatures"
+          "ref": "asm-integ.webhook_signatures",
+          "unknown_id": "unk-private_test.invite_only_pilot-evidence.expired.integ.webhook_signatures"
         }
       ],
       "valid_until": "2026-07-01T00:00:00Z"
@@ -385,17 +392,20 @@
         {
           "description": "Contextual risk for vibecheck.control.authz.object_level is unknown in this scope. Unknown is never low and never permission to proceed.",
           "material": true,
-          "ref": "rsk-authz.object_level-public_release.sensitive_or_high_impact-event_triggered-r1"
+          "ref": "rsk-authz.object_level-public_release.sensitive_or_high_impact-event_triggered-r1",
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-risk.authz.object_level.event_triggered"
         },
         {
           "description": "Contextual risk for vibecheck.control.privacy.no_pii_leakage is unknown in this scope. Unknown is never low and never permission to proceed.",
           "material": true,
-          "ref": "rsk-privacy.no_pii_leakage-public_release.sensitive_or_high_impact-event_triggered-r1"
+          "ref": "rsk-privacy.no_pii_leakage-public_release.sensitive_or_high_impact-event_triggered-r1",
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-risk.privacy.no_pii_leakage.event_triggered"
         },
         {
           "description": "The application context is past its valid_until and counts as unconfirmed until it is reconfirmed.",
           "material": true,
-          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+          "ref": "ctx-golden-sensitive-high-impact-unknowns",
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-context.expired"
         },
         {
           "description": "Context dimensions that feed risk derivation are unknown or conflicting: data_sensitivity, financial_operations. Any risk that needed them came out unknown.",
@@ -404,7 +414,8 @@
             "financial_operations"
           ],
           "material": true,
-          "ref": "ctx-golden-sensitive-high-impact-unknowns"
+          "ref": "ctx-golden-sensitive-high-impact-unknowns",
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-context.dimensions"
         },
         {
           "control_ids": [
@@ -450,12 +461,14 @@
             "vibecheck.control.testing.core_flow_tests"
           ],
           "description": "40 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
-          "material": true
+          "material": true,
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-controls.unassessed_critical_high"
         },
         {
           "description": "Pass on vibecheck.control.integ.webhook_signatures rests only on evidence that has expired; it needs re-verification before it can support this scope (rule R15).",
           "material": true,
-          "ref": "asm-integ.webhook_signatures"
+          "ref": "asm-integ.webhook_signatures",
+          "unknown_id": "unk-public_release.sensitive_or_high_impact-evidence.expired.integ.webhook_signatures"
         }
       ],
       "valid_until": "2026-07-01T00:00:00Z"
@@ -723,5 +736,5 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.1.0"
+  "schema_version": "1.2.0"
 }

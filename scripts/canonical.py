@@ -29,6 +29,9 @@ Semantic rules implemented here (numbering from RFC 0001 §10):
        supporting evidence record is current
   R8   unknown is never low: a material unknown keeps readiness at incomplete
        or worse, and a listed blocker means the state is blocked
+  R12  the report's mandatory disclosures are complete whatever the headline
+       cap says, each one is placed exactly once in a visible section, and no
+       mandatory item is filed as work that can wait
   R13  supersedes chains resolve and are acyclic; envelope revisions monotonic
 
 The application context is validated too (context.validate_context): profile
@@ -37,8 +40,8 @@ provenance state, undeclared x_ scope extensions are rejected, and a
 compensating control with no enforcing mechanism or no stated scope is refused.
 
 R2/R9/R10/R11/R14 are structural halves enforced by the JSON Schema itself;
-R12 needs the report derivation of Increment 3 and R15's freshness reading of
-risks lives in the readiness derivation (scripts/readiness.py), not here.
+R15's freshness reading of risks lives in the readiness derivation
+(scripts/readiness.py), not here.
 """
 import json
 import os
@@ -49,13 +52,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _redact
 import context as context_mod
 
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.2.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_PATH = os.path.join(REPO_ROOT, "schema", "vibecheck.assessment.v1.schema.json")
 REGISTRY_PATH = os.path.join(REPO_ROOT, "schema", "vibecheck.controls.v1.json")
 MATRIX_PATH = os.path.join(REPO_ROOT, "schema", "risk-matrix.v1.json")
+MAPPING_PATH = os.path.join(REPO_ROOT, "schema", "mappings", "vibecheck_v1.json")
 
 PREFIX_TO_SECTION = {
     "sig-": "signals", "ev-": "evidence", "asm-": "assessments",
@@ -106,6 +110,14 @@ def load_matrix():
     return _cache["matrix"]
 
 
+def load_framework_mapping():
+    """The generated vibecheck_v1 mapping: item numbers, categories, the four
+    wordings and the status map. Generated from items.py by gen_canonical.py."""
+    if "mapping" not in _cache:
+        _cache["mapping"] = _load_json(MAPPING_PATH)
+    return _cache["mapping"]
+
+
 # --------------------------------------------------------------- serialization
 
 def dumps(env):
@@ -149,6 +161,16 @@ def _major(version):
     try:
         return int(str(version).split(".")[0])
     except ValueError:
+        raise MigrationError("unparseable schema_version %r" % (version,))
+
+
+def _version_tuple(version):
+    try:
+        parts = str(version).split(".")
+        if len(parts) != 3:
+            raise ValueError
+        return tuple(int(part) for part in parts)
+    except (TypeError, ValueError):
         raise MigrationError("unparseable schema_version %r" % (version,))
 
 
@@ -511,6 +533,99 @@ def _check_readiness(env, problems):
                 % (where, len(material), state))
 
 
+def _check_report(env, problems):
+    """R12: the headline cap may summarize, never hide.
+
+    Each mandatory set is recomputed from the envelope and compared with what
+    the stored report claims, so a report that quietly drops an unresolved
+    Critical control, a readiness-blocking unknown, an incident, an escalation
+    or a blocking deadline fails validation instead of shipping. The placement
+    record is checked too: every mandatory ref is rendered exactly once, in a
+    headline scenario or in the mandatory section, and never as deferrable
+    work.
+    """
+    report = env.get("report")
+    if not isinstance(report, dict):
+        return
+    # deferred: report.py imports this module, so it cannot be imported at
+    # module load time. The derivation lives there because that is where the
+    # rules data is read; duplicating it here would let the two drift.
+    import report as report_mod
+
+    try:
+        modern = (_version_tuple(env.get("schema_version")) >= (1, 2, 0)
+                  or "disclosure_placement" in report)
+    except MigrationError:
+        modern = "disclosure_placement" in report
+
+    try:
+        expected = report_mod.mandatory_disclosures(
+            env, report.get("generated_at"))
+    except (TypeError, ValueError) as exc:
+        problems.append("R12: report disclosures cannot be checked: %s" % exc)
+        return
+    stored = report.get("mandatory_disclosures") or {}
+    for category in report_mod.MANDATORY_CATEGORIES:
+        expected_set = set(expected[category])
+        stored_set = set(stored.get(category) or [])
+        missing = sorted(expected_set - stored_set)
+        if missing:
+            problems.append(
+                "R12: report.mandatory_disclosures.%s omits %s; the headline "
+                "cap is a summary rule and may never drop a mandatory item"
+                % (category, ", ".join(missing)))
+        extra = sorted(stored_set - expected_set)
+        if extra and modern:
+            problems.append(
+                "R12: report.mandatory_disclosures.%s contains non-mandatory "
+                "or stale refs %s" % (category, ", ".join(extra)))
+
+    deferred = set((report.get("sections") or {}).get("can_wait") or [])
+    for ref in sorted(deferred & report_mod.mandatory_refs(stored)):
+        problems.append(
+            "R12: %s is a mandatory disclosure but is listed as work that can "
+            "wait" % ref)
+
+    scenario_ids = {s.get("scenario_id") for s in env.get("scenarios") or []}
+    for ref in report.get("headline_scenario_refs") or []:
+        if ref not in scenario_ids:
+            problems.append("R12: headline scenario %s does not exist" % ref)
+
+    if not modern:
+        # The 1.0 RFC example has the five mandatory sets but predates stored
+        # placement. Same-major additive compatibility keeps it readable.
+        return
+
+    for readiness in env.get("readiness") or []:
+        for unknown in readiness.get("unknowns") or []:
+            if unknown.get("material") and not unknown.get("unknown_id"):
+                problems.append(
+                    "R12: material readiness unknown in %s has no stable "
+                    "unknown_id and therefore cannot be placed exactly once"
+                    % readiness.get("readiness_id", "<unknown readiness>"))
+
+    if not report.get("generated_at"):
+        problems.append(
+            "R12: a schema 1.2 report requires generated_at so deadline and "
+            "freshness disclosures are reproducible")
+        return
+    try:
+        expected_report = report_mod.derive_report(
+            env, report.get("audience", "founder"), report.get("language", "en"),
+            report["generated_at"])
+    except (TypeError, ValueError) as exc:
+        problems.append("R12: report cannot be re-derived: %s" % exc)
+        return
+
+    for field in ("headline_scenario_refs", "scenario_ranking",
+                  "mandatory_disclosures", "disclosure_placement", "sections",
+                  "context_summary", "readiness_refs", "appendix", "derivation"):
+        if report.get(field) != expected_report.get(field):
+            problems.append(
+                "R12: report.%s does not match deterministic derivation at %s"
+                % (field, report["generated_at"]))
+
+
 def _schema_errors(env):
     try:
         from jsonschema import Draft202012Validator
@@ -542,4 +657,5 @@ def validate_envelope(env):
     _check_assessments(env, problems)
     _check_risks(env, problems)
     _check_readiness(env, problems)
+    _check_report(env, problems)
     return problems
