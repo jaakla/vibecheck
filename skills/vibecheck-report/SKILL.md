@@ -1,11 +1,11 @@
 ---
 name: vibecheck-report
 description: >
-  Turn vibecheck scan findings into a scored review — either a filled xlsx workbook or a
-  client-ready markdown report. Use after vibecheck-scan when the user says "fill the scorecard",
-  "generate the report", "give me the client version", "score this review", or wants the
-  89-item checklist populated with findings. Supports English and Estonian, and two workbook
-  profiles: reviewer (technical) and founder (plain-language client edition).
+  Turn a canonical Vibecheck assessment or scan findings into a scoped founder/reviewer
+  Markdown report or scored xlsx workbook. Use after vibecheck-scan when the user asks to
+  generate a report, explain what can go wrong, show blockers and next actions, fill the
+  scorecard, produce a client version, or populate the 89-item checklist. Supports English
+  and Estonian and preserves the complete technical reviewer appendix.
 ---
 
 # Vibecheck Report
@@ -63,7 +63,31 @@ information only; a checklist cannot prove an app safe or ready to ship.
 
 ## Output formats
 
-**Markdown report (default, client-friendly):** read the current `<repo_dir>/TECHNICAL_OVERVIEW.md`
+**Canonical Markdown report (default when a `vibecheck.assessment` envelope exists):** derive the
+whole report from the normalized envelope; do not hand-select or trim scenarios, blockers, unknowns,
+escalations, or actions.
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/report.py <envelope.json> \
+  --profile founder --lang en --out <report.md>
+```
+
+Use `--profile reviewer` for technical control wording and `--lang et` for Estonian. The command
+re-derives contextual risks, environment-scoped readiness, current/future failure scenarios,
+headline ranking, mandatory placement, action sections, and the 89-row appendix. If it reports any
+validation problem or exits nonzero, do not hand over the report: correct the normalized evidence,
+context, references, or action data and run it again. Never treat the five-headline limit as a data
+limit. Every unresolved Critical/High assessment, readiness-blocking unknown, incident response,
+specialist escalation, and blocking/overdue action must retain exactly one visible disclosure
+placement, even when one object belongs to several categories.
+
+The founder/reviewer profile and EN/ET language change wording only. They must not change control
+IDs, scenario selection, mandatory sets, action sections, or appendix traceability. The technical
+appendix always retains all 89 reviewer rows and every evidence, risk, scenario, action, and
+procedure reference.
+
+**Legacy Markdown report (only when no canonical envelope is available):** read the current
+`<repo_dir>/TECHNICAL_OVERVIEW.md`
 produced by `vibecheck-precheck`. Re-run the fingerprint helper before reporting; if it is stale,
 label the report incomplete and refresh/re-review the overview before relying on it. Put the verdict
 at top (copy the workbook's), state whether the overview was `HUMAN-REVIEWED` or
@@ -72,8 +96,9 @@ data/trust boundaries, identity/access, entry points, integrations, configuratio
 unknowns. Follow with findings by category in severity order — each with
 reproducible evidence (file:line where applicable; otherwise path/config/command result), one-sentence
 impact, and fix. Put unscored AI Act Triage separately. Then list Not-tested/MANUAL work,
-reconnaissance gaps, and "Needs specialist" escalations. Redact secrets and PII; never print raw
-secret-bearing or personal-data-bearing source lines.
+reconnaissance gaps, and "Needs specialist" escalations. State that this legacy path does not have
+the canonical report's completeness proof. Redact secrets and PII; never print raw secret-bearing
+or personal-data-bearing source lines.
 
 If the overview is missing, hand off to `vibecheck-precheck`; do not reconstruct an unreviewed
 overview inside the report. Preserve its review status and human corrections when quoting or

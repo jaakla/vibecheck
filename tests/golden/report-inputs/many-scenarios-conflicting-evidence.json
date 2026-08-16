@@ -1,0 +1,210 @@
+{
+  "case_id": "many-scenarios-conflicting-evidence",
+  "title": "Seven failure stories, one evidence conflict, and overlapping mandatory actions",
+  "now": "2026-08-16T12:00:00Z",
+  "assessment_id": "va-golden-many-scenarios",
+  "context_id": "ctx-golden-many-scenarios",
+  "reviewer": "reviewer:vibecheck",
+  "application": {
+    "name": "Northstar Pilot",
+    "description": "An invite-only order and support assistant intended to become a public product.",
+    "platform": "react+supabase+stripe+llm"
+  },
+  "target_scopes": [
+    { "environment": "private_test", "intended_use": "invite_only_pilot" },
+    { "environment": "public_release", "intended_use": "public_product" }
+  ],
+  "current_scope": { "environment": "private_test", "intended_use": "invite_only_pilot" },
+  "data_summary": "Names, email addresses, order history, support messages and hosted-checkout payment references for named pilot users.",
+  "context_valid_until": "2026-11-16T00:00:00Z",
+  "confirmation": {
+    "state": "human_reviewed",
+    "confirmed_by": "founder:liis",
+    "confirmed_at": "2026-08-16T09:00:00Z",
+    "source_fingerprint": "sha256:6f4e8a2c0d1b39587766554433221100ffeeddccbbaa99887766554433221100"
+  },
+  "profile": {
+    "lifecycle": { "state": "confirmed", "value": "piloting", "source": "founder:liis" },
+    "audience_scale": { "state": "confirmed", "value": "named_handful", "source": "founder:liis" },
+    "network_exposure": { "state": "confirmed", "value": "unlisted_public_url", "source": "founder:liis" },
+    "authentication": { "state": "confirmed", "value": "invite_only_accounts", "source": "founder:liis" },
+    "tenancy": { "state": "confirmed", "value": "multi_tenant_shared_store", "source": "founder:liis" },
+    "data_sensitivity": { "state": "confirmed", "value": "personal_data", "source": "founder:liis" },
+    "financial_operations": { "state": "confirmed", "value": "charges_or_payouts", "source": "founder:liis" },
+    "privileged_operations": { "state": "confirmed", "value": "external_side_effects", "source": "founder:liis" },
+    "business_criticality": { "state": "confirmed", "value": "supporting", "source": "founder:liis" }
+  },
+  "extra_evidence": [
+    {
+      "evidence_id": "ev-object-level-support",
+      "control_ids": ["vibecheck.control.authz.object_level"],
+      "provider": "developer walkthrough",
+      "subject_kind": "endpoint",
+      "subject_locator": "/api/orders/:id",
+      "environment": "private_test",
+      "operation": "code_review",
+      "scope": "The handler calls an ownership helper, but the live two-account test below contradicts the helper's expected behavior.",
+      "direction": "supports",
+      "strength": "indicative",
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  ],
+  "findings": [
+    {
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "fail",
+      "rationale": "A second pilot account retrieved the first account's order by changing the order id.",
+      "evidence": {
+        "provider": "authorized two-account API test",
+        "subject_kind": "endpoint",
+        "subject_locator": "/api/orders/:id",
+        "operation": "cross_account_read",
+        "strength": "decisive",
+        "scope": "One known private order in the pilot environment; no writes were attempted.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      },
+      "conflicts": [
+        {
+          "evidence_ref": "ev-object-level-support",
+          "resolution": "The code shape is only indicative; the scoped live cross-account result decides this assessment."
+        }
+      ]
+    },
+    {
+      "control_id": "vibecheck.control.secrets.no_repo_history_leaks",
+      "status": "fail",
+      "rationale": "A provider credential is committed in the current branch.",
+      "evidence": { "operation": "history_secret_scan", "strength": "indicative", "scope": "Current branch and reachable history; the secret value is redacted.", "valid_until": "2026-09-15T12:00:00Z" }
+    },
+    {
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "fail",
+      "rationale": "The metered model account has no monthly or per-user cap.",
+      "evidence": { "subject_kind": "config", "subject_locator": "provider:billing", "operation": "provider_settings_review", "strength": "decisive", "scope": "The production-bound provider account settings reviewed with the owner.", "valid_until": "2026-09-15T12:00:00Z" }
+    },
+    {
+      "control_id": "vibecheck.control.data.tested_backups",
+      "status": "fail",
+      "rationale": "No restore has ever been attempted from the database backups.",
+      "evidence": { "subject_kind": "document", "subject_locator": "operations/backups", "operation": "restore_evidence_review", "strength": "indicative", "scope": "Runbooks and provider activity available during the review.", "valid_until": "2026-09-15T12:00:00Z" }
+    },
+    {
+      "control_id": "vibecheck.control.obs.error_tracking",
+      "status": "fail",
+      "rationale": "Unhandled server errors are printed to a console nobody monitors.",
+      "evidence": { "operation": "static_pattern_scan", "strength": "indicative", "scope": "Current working tree only.", "valid_until": "2026-09-15T12:00:00Z" }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.data_minimisation",
+      "status": "fail",
+      "rationale": "Support prompts copy full order records although only the order state is needed.",
+      "evidence": { "subject_kind": "document", "subject_locator": "support-assistant prompt", "operation": "data_flow_review", "strength": "indicative", "scope": "The server prompt builder and one redacted trace.", "valid_until": "2026-09-15T12:00:00Z" }
+    },
+    {
+      "control_id": "vibecheck.control.llm.untrusted_content_isolation",
+      "status": "fail",
+      "rationale": "Customer messages and operator instructions are concatenated into one prompt without a trust boundary.",
+      "evidence": { "subject_kind": "file", "subject_locator": "api/support-agent", "operation": "prompt_path_review", "strength": "indicative", "scope": "Current support-agent request path only.", "valid_until": "2026-09-15T12:00:00Z" }
+    }
+  ],
+  "actions": [
+    {
+      "action_id": "act-contain-cross-account-incident",
+      "kind": "incident_response",
+      "outcome": "Contain the cross-account order exposure and determine which records were accessed.",
+      "reason": "The authorized test demonstrated access across account boundaries.",
+      "urgency": "immediate",
+      "deadline": { "kind": "immediate", "rationale": "The exposure exists in the running pilot." },
+      "blocking_scope": [{ "environment": "public_release", "intended_use": "public_product" }],
+      "owner": { "role": "specialist" },
+      "state": "open",
+      "control_refs": ["vibecheck.control.authz.object_level"],
+      "procedure_refs": ["prc-contain-cross-account-incident"],
+      "success_evidence": "Access is denied in a repeated two-account test, affected access is reviewed, and the control is reassessed."
+    },
+    {
+      "action_id": "act-verify-error-paths",
+      "kind": "verify",
+      "outcome": "Collect a bounded error-path inventory for the developer to instrument.",
+      "reason": "The current scan shows no monitored error path.",
+      "urgency": "next",
+      "deadline": { "kind": "before_environment", "value": "public_release", "rationale": "Failures must be observable before public use." },
+      "blocking_scope": [{ "environment": "public_release", "intended_use": "public_product" }],
+      "owner": { "role": "developer" },
+      "state": "open",
+      "control_refs": ["vibecheck.control.obs.error_tracking"],
+      "procedure_refs": ["prc-inventory-error-paths"],
+      "success_evidence": "The inventory names every reviewed server error path and its current handling."
+    },
+    {
+      "action_id": "act-decide-support-data",
+      "kind": "decide",
+      "outcome": "Decide and document which order fields the support assistant is allowed to receive.",
+      "reason": "The owner must define the minimum necessary data before the code can enforce it.",
+      "urgency": "next",
+      "deadline": { "kind": "before_environment", "value": "public_release", "rationale": "The data contract must precede public use." },
+      "blocking_scope": [{ "environment": "public_release", "intended_use": "public_product" }],
+      "owner": { "role": "founder" },
+      "state": "open",
+      "control_refs": ["vibecheck.control.privacy.data_minimisation"],
+      "success_evidence": "A reviewed field allowlist and retention statement are recorded."
+    },
+    {
+      "action_id": "act-refactor-test-helper",
+      "kind": "remediate",
+      "outcome": "Refactor the test-data helper when the next test suite cleanup is scheduled.",
+      "reason": "The helper is awkward but does not block any assessed scope.",
+      "urgency": "backlog",
+      "deadline": { "kind": "none", "rationale": "No current environment or intended use depends on it." },
+      "blocking_scope": [],
+      "owner": { "role": "developer" },
+      "state": "open",
+      "success_evidence": "The helper has focused tests and no duplicated setup."
+    }
+  ],
+  "procedures": [
+    {
+      "procedure_id": "prc-contain-cross-account-incident",
+      "title": "Disable the affected order endpoint and deploy an authorization fix",
+      "executor_role": "developer",
+      "mechanism": "code_change_and_deployment",
+      "prerequisites": ["Incident owner named", "Affected endpoint confirmed"],
+      "required_inputs": ["Deployment access", "Two authorized test accounts"],
+      "effects": { "targets": ["/api/orders/:id"], "write": true, "destructive": false, "deployment": true, "data": false, "external_accounts": false, "reversibility": "reversible" },
+      "authorization": { "consent": "explicit_consent", "scope": "The affected endpoint and its deployment only." },
+      "method": { "tool": "project deployment workflow" },
+      "cost": { "monetary": "none" },
+      "data_egress": { "occurs": false },
+      "failure_behavior": { "on_failure": "Keep the endpoint disabled.", "rollback": "Redeploy the last known version with the endpoint disabled." },
+      "success_evidence": "A repeated two-account test denies cross-account reads."
+    },
+    {
+      "procedure_id": "prc-inventory-error-paths",
+      "title": "Scan and review server error paths",
+      "executor_role": "vibecheck_agent",
+      "mechanism": "read_only_source_review",
+      "prerequisites": ["Current source tree available"],
+      "required_inputs": [],
+      "effects": { "targets": ["current source tree"], "write": false, "destructive": false, "deployment": false, "data": false, "external_accounts": false, "reversibility": "reversible" },
+      "authorization": { "consent": "not_required" },
+      "method": { "tool": "vibecheck static review" },
+      "cost": { "monetary": "none" },
+      "data_egress": { "occurs": false },
+      "failure_behavior": { "on_failure": "Report the coverage gap.", "rollback": "No changes were made." },
+      "success_evidence": "A bounded path-and-handler inventory with review notes."
+    }
+  ],
+  "baseline": {
+    "status": "pass",
+    "rationale": "The remaining Critical and High controls were reviewed with the owner and no contrary evidence was found.",
+    "screening_status": "answered",
+    "screening_rationale": "The owner answered the screening question; no specialist escalation was identified for this pilot.",
+    "evidence": {
+      "environment": "private_test",
+      "operation": "reviewer_walkthrough",
+      "strength": "indicative",
+      "scope": "The current working tree and project settings visible during the 16 August review.",
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/jaakla/vibecheck/main/schema/vibecheck.assessment.v1.schema.json",
   "title": "Vibecheck assessment envelope v1",
-  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation only; semantic rules R1-R15 in the RFC apply on top. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added, additively: the per-field application-context profile and its compensating controls, the current scope, derivation records on risks and readiness, blocked transitions, and the legacy framework verdict alongside scoped readiness (RFC section 4.3, gh issue #4).",
+  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation only; semantic rules R1-R15 in the RFC apply on top. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added the context/risk/readiness derivation (gh issue #4). Schema version 1.2.0 additively adds deterministic risk scenarios, completeness-safe report placement, full appendix traceability, and EN/ET founder/reviewer presentation metadata (gh issue #5).",
   "type": "object",
   "required": ["schema", "schema_version", "assessment_id", "revision", "created_at", "context"],
   "properties": {
@@ -162,14 +162,14 @@
 
     "derivation_record": {
       "type": "object",
-      "description": "How a derived object was computed, so the same normalized inputs can be shown to produce the same output. Present on machine-derived risks and readiness; absent on hand-authored ones.",
+      "description": "How a derived object was computed, so the same normalized inputs can be shown to produce the same output. Present on machine-derived risks, readiness, scenarios and reports; absent on hand-authored ones.",
       "required": ["policy", "context_revision"],
       "properties": {
         "policy": {
           "type": "object",
           "required": ["name", "version"],
           "properties": {
-            "name": { "enum": ["vibecheck.risk_derivation", "vibecheck.readiness"] },
+            "name": { "enum": ["vibecheck.risk_derivation", "vibecheck.readiness", "vibecheck.report_derivation", "vibecheck.report"] },
             "version": { "$ref": "#/$defs/semver" }
           }
         },
@@ -538,15 +538,53 @@
 
     "risk_scenario": {
       "type": "object",
-      "description": "Founder-facing failure narrative grounded in one or more contextual risks.",
+      "description": "Founder-facing failure narrative grounded in one or more contextual risks. A scenario is a way of reading assessments, never a re-assessment of them: it may not carry a control status, an intrinsic severity or an acceptance record (rules R12, R14), and the levels it reports come from the risks it references.",
       "required": ["scenario_id", "title", "narrative", "domains", "risk_refs"],
       "properties": {
         "scenario_id": { "type": "string", "pattern": "^scn-[A-Za-z0-9._:-]+$" },
-        "title": { "type": "string" },
-        "narrative": { "type": "string" },
+        "title": { "type": "string", "description": "Default-language (en) title; wording carries every supported language." },
+        "narrative": { "type": "string", "description": "Default-language (en) narrative; wording carries every supported language." },
+        "group_id": { "type": "string", "description": "Which failure story this scenario tells, per schema/report-derivation.v1.json." },
         "domains": { "type": "array", "minItems": 1, "items": { "enum": ["security", "privacy", "reliability", "financial", "compliance", "product"] } },
         "risk_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^rsk-[A-Za-z0-9._:-]+$" } },
-        "control_refs": { "type": "array", "items": { "$ref": "#/$defs/control_id" } }
+        "control_refs": { "type": "array", "items": { "$ref": "#/$defs/control_id" } },
+        "assessment_refs": { "type": "array", "items": { "type": "string", "pattern": "^asm-[A-Za-z0-9._:-]+$" } },
+        "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^ev-[A-Za-z0-9._:-]+$" } },
+        "action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
+        "procedure_refs": { "type": "array", "description": "Procedures reachable through the linked actions, retained for direct appendix traceability.", "items": { "type": "string", "pattern": "^prc-[A-Za-z0-9._:-]+$" } },
+        "wording": {
+          "type": "object",
+          "description": "Per-language title and narrative. Translation is presentation: it never changes which controls, risks or evidence the scenario references.",
+          "properties": {
+            "title": { "type": "object", "additionalProperties": { "type": "string" } },
+            "narrative": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "risk_by_scope": {
+          "type": "array",
+          "description": "The scenario's level per environment + intended use and horizon, so 'fine today, critical at launch' stays two readings instead of one average.",
+          "items": {
+            "type": "object",
+            "required": ["scope", "horizon", "level", "risk_refs"],
+            "properties": {
+              "scope": { "$ref": "#/$defs/scope_pair" },
+              "horizon": { "type": "object" },
+              "level": { "enum": ["low", "moderate", "high", "critical", "unknown"] },
+              "risk_refs": { "type": "array", "items": { "type": "string", "pattern": "^rsk-[A-Za-z0-9._:-]+$" } }
+            }
+          }
+        },
+        "current_level": { "enum": ["low", "moderate", "high", "critical", "unknown", "none"] },
+        "future_level": { "enum": ["low", "moderate", "high", "critical", "unknown", "none"] },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "assessed_at": { "$ref": "#/$defs/timestamp" },
+        "derivation": { "$ref": "#/$defs/derivation_record" },
+        "status": false,
+        "control_status": false,
+        "intrinsic_severity": false,
+        "severity": false,
+        "acceptance": false
       }
     },
 
@@ -852,6 +890,7 @@
             "type": "object",
             "required": ["description", "material"],
             "properties": {
+              "unknown_id": { "type": "string", "pattern": "^unk-[A-Za-z0-9._:-]+$", "description": "Stable id for this unknown, so the report can state it exactly once and prove it did (rule R12). Derived from the scope and what the unknown is about; several unknowns have no single object behind them and would otherwise be unaddressable." },
               "ref": { "type": "string" },
               "description": { "type": "string" },
               "material": { "type": "boolean", "description": "true when this unknown could hide a blocker; any material unknown keeps state at incomplete or worse." }
@@ -920,15 +959,30 @@
 
     "report": {
       "type": "object",
-      "description": "Presentation contract. The 3-5 headline cap is a summary rule only: every mandatory disclosure set must be complete regardless (rule R12).",
+      "description": "Presentation contract. The 3-5 headline cap is a summary rule only: every mandatory disclosure set must be complete regardless (rule R12). audience and language name the default rendering; the sets, the ranking and the control identities they reference are the same in every profile and language.",
       "required": ["audience", "headline_scenario_refs", "mandatory_disclosures"],
       "properties": {
         "audience": { "enum": ["founder", "reviewer"] },
         "language": { "enum": ["en", "et"] },
+        "generated_at": { "$ref": "#/$defs/timestamp" },
         "headline_scenario_refs": {
           "type": "array",
           "maxItems": 5,
           "items": { "type": "string", "pattern": "^scn-[A-Za-z0-9._:-]+$" }
+        },
+        "scenario_ranking": {
+          "type": "array",
+          "description": "Every scenario in reading order with the inputs that put it there, headline or not. A scenario below the cap keeps its rank, its refs and its appendix entry.",
+          "items": {
+            "type": "object",
+            "required": ["scenario_ref", "rank", "headline"],
+            "properties": {
+              "scenario_ref": { "type": "string", "pattern": "^scn-[A-Za-z0-9._:-]+$" },
+              "rank": { "type": "integer", "minimum": 1 },
+              "headline": { "type": "boolean" },
+              "inputs": { "type": "object" }
+            }
+          }
         },
         "mandatory_disclosures": {
           "type": "object",
@@ -938,7 +992,29 @@
             "readiness_blocking_unknown_refs": { "type": "array", "items": { "type": "string" } },
             "incident_response_action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
             "specialist_escalation_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
-            "deadline_blocking_action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } }
+            "deadline_blocking_action_refs": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
+            "specialist_assessment_refs": { "type": "array", "description": "Screening rows a reviewer marked as needing a specialist. They are escalations with no action object yet, and leaving them out until one exists would break the completeness invariant.", "items": { "type": "string", "pattern": "^asm-[A-Za-z0-9._:-]+$" } }
+          }
+        },
+        "disclosure_placement": {
+          "type": "array",
+          "description": "Where each mandatory ref is rendered: exactly one visible slot per ref, either the headline scenario that tells its story or the mandatory section. Stored so that 'it was shown' is checkable rather than claimed.",
+          "items": {
+            "type": "object",
+            "required": ["ref", "category", "categories", "rendered_in"],
+            "properties": {
+              "ref": { "type": "string" },
+              "category": { "type": "string", "description": "Primary category under which this ref is visibly listed when it is not covered by a headline." },
+              "categories": { "type": "array", "minItems": 1, "uniqueItems": true, "description": "Every mandatory set this ref belongs to. A single action can be an incident, a specialist escalation and a deadline blocker while retaining exactly one visible placement.", "items": { "type": "string" } },
+              "rendered_in": { "enum": ["headline", "mandatory_section"] },
+              "scenario_ref": { "type": "string", "pattern": "^scn-[A-Za-z0-9._:-]+$" }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "rendered_in": { "const": "headline" } }, "required": ["rendered_in"] },
+                "then": { "required": ["ref", "category", "categories", "rendered_in", "scenario_ref"] }
+              }
+            ]
           }
         },
         "sections": {
@@ -949,7 +1025,39 @@
             "needs_developer_or_specialist": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } },
             "can_wait": { "type": "array", "items": { "type": "string", "pattern": "^act-[A-Za-z0-9._:-]+$" } }
           }
-        }
+        },
+        "context_summary": {
+          "type": "object",
+          "description": "The confirmed intended-use context the whole report is scoped to, with its revision and freshness.",
+          "properties": {
+            "context_id": { "type": "string" },
+            "revision": { "type": "integer", "minimum": 1 },
+            "confirmation_state": { "type": "string" },
+            "current_scope": { "$ref": "#/$defs/scope_pair" },
+            "target_scopes": { "type": "array", "items": { "$ref": "#/$defs/scope_pair" } },
+            "unestablished_dimensions": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "readiness_refs": { "type": "array", "items": { "type": "string", "pattern": "^rdy-[A-Za-z0-9._:-]+$" } },
+        "appendix": {
+          "type": "object",
+          "description": "The reviewer record kept behind the founder summary: the full framework view plus every assessment, evidence item, risk, scenario and action, whether or not it reached the headlines.",
+          "properties": {
+            "framework": { "type": "string" },
+            "framework_version": { "type": "string" },
+            "item_count": { "type": "integer", "minimum": 1 },
+            "assessment_refs": { "type": "array", "items": { "type": "string" } },
+            "evidence_refs": { "type": "array", "items": { "type": "string" } },
+            "risk_refs": { "type": "array", "items": { "type": "string" } },
+            "scenario_refs": { "type": "array", "items": { "type": "string" } },
+            "action_refs": { "type": "array", "items": { "type": "string" } },
+            "procedure_refs": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "derivation": { "$ref": "#/$defs/derivation_record" },
+        "secure": false,
+        "certified": false,
+        "ready_to_ship": false
       }
     },
 

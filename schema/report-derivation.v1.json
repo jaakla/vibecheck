@@ -1,0 +1,315 @@
+{
+  "schema": "vibecheck.report_derivation",
+  "schema_version": "1.0.0",
+  "description": "How derived contextual risks become founder-facing risk scenarios, how those scenarios are ranked and capped, and what may never be hidden behind the cap (gh issue #5, epic #1; RFC 0001 sections 5 and 9). Rules live here as data so that the same normalized inputs always produce the same scenarios, the same order and the same disclosures, and so that the reasoning can be reviewed without reading Python. Nothing in this file may change a control status, an intrinsic severity or an accepted-risk record: aggregation is presentation over assessments, never a re-assessment of them (rules R12, R14).",
+
+  "scenario_grouping": {
+    "rule": "Every control belongs to exactly one scenario group. A group is a failure story a non-technical owner can act on, not a checklist category: the group is chosen by the control's namespace, unless group_by_control names a different story for that specific control. A scenario exists for a group only when at least one control in it has an unresolved assessment with a derived contextual risk.",
+    "totality": "The namespace table below covers every namespace in the control registry; scripts/gen_canonical.py and tests/test_report.py fail if a registry control cannot be grouped, so a new control can never fall silently out of the founder report.",
+    "domains_note": "primary_domain documents the story's usual risk domain. The domains actually recorded on a scenario are the domains of its member risks, which come from schema/risk-derivation.v1.json — a group can therefore legitimately carry more than one domain."
+  },
+
+  "scenario_groups": [
+    {
+      "group_id": "fragile_foundation",
+      "namespaces": ["arch"],
+      "primary_domain": "reliability",
+      "rationale": "Architecture failures rarely break anything today; they make every later fix slower and more expensive, and they decide whether anyone else can take the application over."
+    },
+    {
+      "group_id": "credential_exposure",
+      "namespaces": ["secrets"],
+      "primary_domain": "security",
+      "rationale": "A key that reached a browser bundle, a repository or a log is a key someone else can use, with the permissions it was issued for and without any further defect being needed."
+    },
+    {
+      "group_id": "unauthorised_data_access",
+      "namespaces": ["authz"],
+      "primary_domain": "security",
+      "rationale": "Server-side authorization is the only thing separating one user's records from another's. Where it is missing, reaching the data needs no exploit at all."
+    },
+    {
+      "group_id": "product_not_real",
+      "namespaces": ["product"],
+      "primary_domain": "product",
+      "rationale": "A generated application can look complete while a flow saves nothing, sends nothing or charges in the wrong mode. The user finds out; the owner finds out later."
+    },
+    {
+      "group_id": "runaway_cost_or_abuse",
+      "namespaces": ["cost"],
+      "primary_domain": "financial",
+      "rationale": "Unbounded work on a metered provider turns any careless user, loop or bot into a bill, and turns an outage into an expensive one."
+    },
+    {
+      "group_id": "malicious_input",
+      "namespaces": ["input"],
+      "primary_domain": "security",
+      "rationale": "Input that is trusted where it should be validated is the oldest way into a database, a template engine or another system's network."
+    },
+    {
+      "group_id": "data_loss",
+      "namespaces": ["data"],
+      "primary_domain": "reliability",
+      "rationale": "Data that cannot be restored is data the business does not really have. Untested backups and unreviewed destructive migrations are the two ways it disappears."
+    },
+    {
+      "group_id": "silent_failure",
+      "namespaces": ["obs"],
+      "primary_domain": "reliability",
+      "rationale": "Without error tracking and alerting, a failure is discovered by whoever it happened to, whenever they choose to complain."
+    },
+    {
+      "group_id": "unsafe_deployment",
+      "namespaces": ["deploy"],
+      "primary_domain": "security",
+      "rationale": "The deployment can expose far more than the source does: debug modes, permissive origins, shared production credentials, unprotected changes."
+    },
+    {
+      "group_id": "integration_failure",
+      "namespaces": ["integ"],
+      "primary_domain": "security",
+      "rationale": "An inbound webhook or an OAuth callback is an unauthenticated entry point until it is verified, and a retried delivery is a duplicate order until it is made idempotent."
+    },
+    {
+      "group_id": "supply_chain",
+      "namespaces": ["deps"],
+      "primary_domain": "security",
+      "rationale": "Most of the shipped code was written by strangers. Not knowing which versions run, and not watching them, is inherited risk nobody chose."
+    },
+    {
+      "group_id": "personal_data_misuse",
+      "namespaces": ["privacy"],
+      "primary_domain": "privacy",
+      "rationale": "Personal data collected without a purpose, copied into logs, prompts or analytics, or impossible to delete on request is a legal exposure that grows with every user."
+    },
+    {
+      "group_id": "regulatory_screening",
+      "namespaces": ["aiact"],
+      "primary_domain": "compliance",
+      "rationale": "Screening questions decide whether a regulated regime applies at all. An unanswered screen is not a clean answer, and this tool never gives a legal one."
+    },
+    {
+      "group_id": "wrong_results",
+      "namespaces": ["logic"],
+      "primary_domain": "product",
+      "rationale": "Logic defects do not crash. They produce a number, a state or a permission that is quietly wrong, and the wrongness spreads through everything downstream."
+    },
+    {
+      "group_id": "unverified_changes",
+      "namespaces": ["testing"],
+      "primary_domain": "product",
+      "rationale": "Without automated checks on the main transaction and on authorization, every change is a gamble on whether it broke something that used to work."
+    },
+    {
+      "group_id": "breaks_under_load",
+      "namespaces": ["perf"],
+      "primary_domain": "product",
+      "rationale": "What is fast with a hundred rows can be unusable with a hundred thousand, and the first real day of traffic is a bad time to discover it."
+    },
+    {
+      "group_id": "ai_manipulation",
+      "namespaces": ["llm"],
+      "primary_domain": "security",
+      "rationale": "Text the model reads is untrusted input. Where model output reaches a tool, a shell or a database, whoever writes that text is steering the application."
+    },
+    {
+      "group_id": "dependency_on_one_person",
+      "namespaces": ["continuity"],
+      "primary_domain": "reliability",
+      "rationale": "An application that only one person can deploy, whose accounts are in a personal name, or whose data cannot be exported, is one absence away from being unmaintainable."
+    }
+  ],
+
+  "group_by_control": {
+    "vibecheck.control.arch.proven_auth_provider": "unauthorised_data_access",
+    "vibecheck.control.privacy.password_hashing": "credential_exposure",
+    "vibecheck.control.obs.no_leaked_internals": "unsafe_deployment",
+    "vibecheck.control.data.deletion_semantics": "personal_data_misuse",
+    "vibecheck.control.deps.license_compatibility": "regulatory_screening"
+  },
+  "group_by_control_notes": "Overrides exist where the founder-facing failure story is not the one the namespace suggests. Hand-rolled authentication fails as unauthorised access, not as an architecture preference; plaintext passwords are a credential exposure; leaked stack traces are what a deployment shows the world; deletion semantics are a data-subject promise; a licence conflict is a legal exposure, not a vulnerability. The control identity never moves with the story (rule R14): only the narrative it is told in does.",
+
+  "unresolved_statuses": ["fail", "partial", "risk_accepted"],
+  "unresolved_statuses_note": "Statuses that leave a control requirement unmet. risk_accepted is included deliberately: an acceptance records a decision about a gap, it does not close the gap, and hiding accepted gaps from the founder summary would make the decision invisible to the person who has to live with it. not_tested and an absent assessment are not unresolved — they are unknowns, and they surface through readiness instead.",
+
+  "ranking": {
+    "rule": "Scenarios are ordered by a fixed key: worst current-horizon level, then worst event-triggered level, then the intrinsic severity of the worst unresolved control in the scenario, then how many controls are unresolved, then the domain order below, then the scenario id. Every component is read from data already in the envelope, so the same envelope always produces the same order.",
+    "level_rank": {
+      "critical": 5,
+      "high": 4,
+      "unknown": 3,
+      "moderate": 2,
+      "low": 1,
+      "none": 0
+    },
+    "unknown_rank_rationale": "Unknown is never sorted as low (rule R8). It cannot be sorted as if it had been measured either, so it ranks below the two levels that are known to block (critical, high) and above every measured level that does not (moderate, low). An unknown that could hide a blocker never depends on this ordering to stay visible: it is a mandatory disclosure in its own right.",
+    "severity_rank": {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Triage": 0},
+    "severity_rank_note": "Read from the control registry at ranking time. Ranking never writes severity anywhere (rule R14).",
+    "domain_order": ["security", "privacy", "financial", "compliance", "reliability", "product"],
+    "domain_order_rationale": "A tie-break only, applied after level, severity and count have failed to separate two scenarios. It reflects how irreversible the typical harm is, not how important the domains are.",
+    "keys": [
+      "current_level",
+      "future_level",
+      "max_unresolved_severity",
+      "unresolved_control_count",
+      "domain_order",
+      "scenario_id"
+    ],
+    "headline_min": 3,
+    "headline_max": 5,
+    "headline_levels": ["critical", "high", "unknown"],
+    "headline_rule": "The report shows the top ranked scenarios produced by this deterministic aggregation policy only: at least headline_min when that many exist, at most headline_max, and enough to include every derived scenario at a headline level when that number is between the two. Older or hand-authored scenario objects remain traceable in the appendix but cannot displace or duplicate a normalized headline. The cap is a reading aid. It never removes anything from mandatory_disclosures, and a scenario left below the cap keeps every one of its controls, assessments, risks, evidence records, actions and procedures in the appendix (rule R12)."
+  },
+
+  "mandatory_disclosures": {
+    "rule": "R12: these sets are complete regardless of the headline cap. A renderer may fold them below the headline scenarios; it may never drop one. Validation recomputes each set from the envelope and fails when a matching object is missing from it (scripts/canonical.py).",
+    "open_action_states": ["open", "in_progress", "blocked"],
+    "unresolved_critical_high_refs": {
+      "source": "assessments",
+      "severities": ["Critical", "High"],
+      "statuses": ["fail", "partial", "risk_accepted"],
+      "description": "Current assessments that leave a Critical or High control unmet, including accepted ones."
+    },
+    "readiness_blocking_unknown_refs": {
+      "source": "readiness.unknowns",
+      "material_only": true,
+      "description": "Every material unknown on every readiness object, by its stable unknown_id. Material means it could hide a blocker, which is exactly why the summary may not omit it."
+    },
+    "incident_response_action_refs": {
+      "source": "actions",
+      "kinds": ["incident_response"],
+      "description": "Open incident-response actions. Something has already happened; a summary that hides it is worse than no summary."
+    },
+    "specialist_escalation_refs": {
+      "source": "actions",
+      "kinds": ["escalate"],
+      "owner_roles": ["specialist"],
+      "description": "Open actions that escalate to a specialist, or that a specialist owns. Vibecheck is explicitly not the specialist."
+    },
+    "deadline_blocking_action_refs": {
+      "source": "actions",
+      "blocking_scope_covers_target": true,
+      "deadline_kinds": ["immediate"],
+      "overdue_deadline_kinds": ["calendar_date"],
+      "description": "Open actions whose blocking scope covers an assessed environment and intended use, whose deadline is immediate, or whose calendar deadline has passed."
+    },
+    "specialist_assessment_refs": {
+      "source": "assessments",
+      "statuses": ["needs_specialist"],
+      "description": "Screening rows a reviewer marked as needing a specialist. These are escalations that have no action object yet — Increment 4 gives them one — and leaving them out until then would break the completeness invariant."
+    }
+  },
+
+  "placement": {
+    "rule": "Every distinct mandatory ref is rendered exactly once in the visible disclosure part of the report: inside a headline scenario when that scenario traces to it, otherwise in the mandatory blockers and escalations section. A ref may belong to several mandatory sets (for example one immediate incident owned by a specialist); its placement therefore records every category but still has one primary visible slot. Both placements are traceable, and the appendix lists every object regardless.",
+    "targets": ["headline", "mandatory_section"],
+    "note": "Actions additionally appear in the four what-to-do-next sections. That is a different question — what should happen next, rather than what may not be hidden — and it never replaces the disclosure placement."
+  },
+
+  "sections": {
+    "rule": "The four founder sections partition the open actions by who can act, with one exception first: an action nobody is waiting for is listed as able to wait. A mandatory action never qualifies, whatever its urgency says.",
+    "open_states": ["open", "in_progress", "blocked"],
+    "order": ["can_wait", "vibecheck_can_do_now", "you_need_to_do", "needs_developer_or_specialist"],
+    "can_wait": {
+      "urgencies": ["backlog"],
+      "deadline_kinds": ["none", "unknown"],
+      "requires_empty_blocking_scope": true,
+      "excludes_mandatory": true,
+      "description": "Backlog urgency, no deadline that blocks anything, no blocking scope, and not a mandatory disclosure. Everything else is scheduled work, not deferred work."
+    },
+    "vibecheck_can_do_now": {
+      "executor_roles": ["vibecheck_agent"],
+      "description": "Actions with at least one candidate procedure this tool can execute itself. The procedure still carries its own consent requirements (rule R11); appearing here is not permission to run it."
+    },
+    "you_need_to_do": {
+      "owner_roles": ["founder"],
+      "description": "Actions the owner can complete without a developer: a decision, an account change, a provider setting, a written answer."
+    },
+    "needs_developer_or_specialist": {
+      "owner_roles": ["developer", "specialist", "platform", "unassigned"],
+      "description": "Actions that need someone who writes or operates the code, or a specialist. An unowned action lands here rather than on the founder: deciding it is safe to skip is exactly the judgement they do not have."
+    }
+  },
+
+  "deadline_labels": {
+    "rule": "Founder labels are derived display text (RFC 0001 section 7.2), never stored. The first matching rule wins; every rule reads only urgency, deadline kind, deadline value and whether a calendar deadline has passed.",
+    "rules": [
+      {
+        "label_id": "overdue",
+        "mode": "all",
+        "deadline_kinds": ["calendar_date"],
+        "overdue": true
+      },
+      {
+        "label_id": "fix_now",
+        "mode": "any",
+        "urgencies": ["immediate"],
+        "deadline_kinds": ["immediate"]
+      },
+      {
+        "label_id": "before_inviting_users",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["private_test", "invite_only_pilot"]
+      },
+      {
+        "label_id": "before_public_launch",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["public_release", "public_product"]
+      },
+      {
+        "label_id": "before_sensitive_data",
+        "mode": "all",
+        "deadline_kinds": ["before_environment", "before_intended_use"],
+        "deadline_values": ["sensitive_or_high_impact"]
+      },
+      {
+        "label_id": "before_scaling",
+        "mode": "all",
+        "deadline_kinds": ["before_event"],
+        "value_tokens": ["scale", "scaling", "growth", "traffic", "volume"]
+      },
+      {
+        "label_id": "before_event",
+        "mode": "all",
+        "deadline_kinds": ["before_event"]
+      },
+      {
+        "label_id": "by_date",
+        "mode": "all",
+        "deadline_kinds": ["calendar_date"]
+      },
+      {
+        "label_id": "backlog",
+        "mode": "all",
+        "urgencies": ["backlog"],
+        "deadline_kinds": ["none", "unknown"]
+      },
+      {
+        "label_id": "unscheduled",
+        "mode": "all"
+      }
+    ]
+  },
+
+  "framework_verdict_profiles": {
+    "rule": "The workbook computes one verdict for the whole application on the rows a reviewer filled in. The report quotes it beside the scoped readiness state instead of replacing it, in the wording of the profile being rendered. The founder ladder has no High-severity rung, so a reviewer BLOCK - RISK ACCEPTANCE REQUIRED reads as FIX BEFORE LAUNCH there; the underlying assessments are identical.",
+    "reviewer": {
+      "not_reviewed": "v_notrev",
+      "incomplete": "v_incomplete",
+      "block": "v_block",
+      "block_high": "v_block_high",
+      "fix": "v_fix",
+      "complete": "v_rc"
+    },
+    "founder": {
+      "not_reviewed": "f_notrev",
+      "incomplete": "f_incomplete",
+      "block": "f_donot",
+      "block_high": "f_fix",
+      "fix": "f_fix",
+      "complete": "f_ready"
+    }
+  }
+}
