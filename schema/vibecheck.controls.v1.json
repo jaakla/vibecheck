@@ -11,7 +11,7 @@
       "weight": 3,
       "title": {
         "en": "Stack choices are mainstream and maintainable: widely-used language, framework and database with documentation, community and hireable developers",
-        "et": "Tehnoloogiavalikud on peavoolu ja hooldatavad: laialt kasutatud keel, raamistik ja andmebaas, millel on dokumentatsioon, kogukond ja palgatavaid arendajaid"
+        "et": "Tehnoloogiavalikud on levinud ja hooldatavad: laialt kasutatud keel, raamistik ja andmebaas, millel on dokumentatsioon, kogukond ja palgatavad arendajad"
       }
     },
     {
@@ -22,7 +22,7 @@
       "weight": 3,
       "title": {
         "en": "Primary data store fits the workload and hosting model: managed persistent DB for multi-user data; no SQLite/JSON-file/localStorage as system of record on serverless or ephemeral hosting",
-        "et": "Peamine andmehoidla sobib koormuse ja majutusmudeliga: hallatud pusiv andmebaas mitmekasutaja-andmetele; mitte SQLite/JSON-fail/localStorage pohihoidlana serverless- voi ajutisel majutusel"
+        "et": "Peamine andmehoidla sobib koormuse ja majutusmudeliga: hallatud püsiv andmebaas mitmekasutaja andmetele; mitte SQLite/JSON-fail/localStorage põhihoidlana serverless- või ajutisel majutusel"
       }
     },
     {
@@ -33,7 +33,7 @@
       "weight": 3,
       "title": {
         "en": "Authentication is a proven provider or library (Supabase Auth, Firebase, Auth0, NextAuth, Clerk, etc.); no hand-rolled password hashing, session tokens or JWT schemes",
-        "et": "Autentimine on toestatud teenus voi teek (Supabase Auth, Firebase, Auth0, NextAuth, Clerk jne); mitte isetehtud parooliraside, sessioonitokenid ega JWT-skeemid"
+        "et": "Autentimine on tõestatud teenus või teek (Supabase Auth, Firebase, Auth0, NextAuth, Clerk jne); mitte isetehtud parooliräside, sessioonitokenid ega JWT-skeemid"
       }
     },
     {
@@ -44,7 +44,7 @@
       "weight": 2,
       "title": {
         "en": "Complexity is proportional to the problem: no premature microservices/queues/orchestration for an MVP; no single god-module holding all logic",
-        "et": "Keerukus on proportsionaalne probleemiga: MVP jaoks pole enneaegseid mikroteenuseid/jarjekordi/orkestratsiooni; pole uhtainsat koike-hoidvat hiidmoodulit"
+        "et": "Keerukus on proportsionaalne probleemiga: MVP jaoks pole enneaegseid mikroteenuseid/järjekordi/orkestratsiooni; pole ühtainsat kõikehoidvat hiidmoodulit"
       }
     },
     {
@@ -55,7 +55,7 @@
       "weight": 2,
       "title": {
         "en": "One consistent pattern per concern: a single data-access layer, one state-management approach, one styling system - no parallel duplicated stacks accreted across sessions",
-        "et": "Uks jarjekindel muster iga mure kohta: uks andmeligipaasukiht, uks olekuhalduse viis, uks stiilisusteem - mitte sessioonide jooksul kuhjunud paralleelsed topeltlahendused"
+        "et": "Üks järjekindel muster iga teema kohta: üks andmeligipääsukiht, üks olekuhalduse viis, üks stiilisüsteem – mitte sessioonide jooksul kuhjunud paralleelsed topeltlahendused"
       }
     },
     {
@@ -66,7 +66,7 @@
       "weight": 2,
       "title": {
         "en": "Hosting matches runtime needs: long-running jobs, websockets, cron and background work are supported by the platform's execution model (timeouts, persistent processes)",
-        "et": "Majutus vastab kaitusvajadustele: pikad tood, websocketid, cron ja taustatood on platvormi kaitusmudeliga toetatud (ajapiirid, pusivad protsessid)"
+        "et": "Majutus vastab käitusvajadustele: pikad tööd, websocketid, cron ja taustatööd on platvormi käitusmudeliga toetatud (ajapiirid, püsivad protsessid)"
       }
     },
     {
@@ -77,7 +77,7 @@
       "weight": 5,
       "title": {
         "en": "No secret-like literals in frontend source",
-        "et": "Eesotsa koodis pole saladuse-laadseid vaartusi"
+        "et": "Eesotsa koodis pole saladuselaadseid väärtusi"
       }
     },
     {
@@ -88,7 +88,7 @@
       "weight": 5,
       "title": {
         "en": "No provider key prefixes shipped to client (sk-, AKIA, service_role, etc.)",
-        "et": "Kliendini ei jou teenusevotme-eesliiteid (sk-, AKIA, service_role jne)"
+        "et": "Kliendini ei jõua teenusevõtme-eesliiteid (sk-, AKIA, service_role jne)"
       }
     },
     {
@@ -99,7 +99,7 @@
       "weight": 5,
       "title": {
         "en": "No secrets in current tree, git history, or public build bundle (.env excluded from VCS)",
-        "et": "Saladusi pole tookoopias, giti ajaloos ega avalikus ehituspaketis (.env pole versioonihalduses)"
+        "et": "Saladusi pole töökoopias, giti ajaloos ega avalikus ehituspaketis (.env pole versioonihalduses)"
       }
     },
     {
@@ -110,7 +110,7 @@
       "weight": 3,
       "title": {
         "en": "Secrets injected securely at runtime; not in code/images/logs; access restricted; rotation supported",
-        "et": "Saladused sustitakse turvaliselt kaitusajal; pole koodis/tommistes/logides; ligipaas piiratud; rotatsioon toetatud"
+        "et": "Saladused süstitakse turvaliselt käitusajal; pole koodis/tõmmistes/logides; ligipääs piiratud; rotatsioon toetatud"
       }
     },
     {
@@ -121,7 +121,7 @@
       "weight": 5,
       "title": {
         "en": "Any exposed active credential treated as an incident: rotated, sessions revoked, logs inspected, removed from history",
-        "et": "Iga lekkinud aktiivset mandaati kasitletakse intsidendina: roteeritud, sessioonid tuhistatud, logid ule vaadatud, ajaloost eemaldatud"
+        "et": "Iga lekkinud aktiivset mandaati käsitletakse intsidendina: roteeritud, sessioonid tühistatud, logid üle vaadatud, ajaloost eemaldatud"
       }
     },
     {
@@ -132,7 +132,7 @@
       "weight": 5,
       "title": {
         "en": "Authorization enforced server-side, default-deny",
-        "et": "Volitamine joustatud serveripoolel, vaikimisi keelav"
+        "et": "Volitamine jõustatud serveripoolel, vaikimisi keelav"
       }
     },
     {
@@ -165,7 +165,7 @@
       "weight": 5,
       "title": {
         "en": "Tenant isolation: no cross-tenant data access",
-        "et": "Rentniku isolatsioon: pole rentnikevahelist andmeligipaasu"
+        "et": "Üürnikuisolatsioon: pole üürnikevahelist andmeligipääsu"
       }
     },
     {
@@ -176,7 +176,7 @@
       "weight": 5,
       "title": {
         "en": "Privileged/admin actions enforced server-side (Critical where admin functions are meaningful)",
-        "et": "Privilegeeritud/admin-toimingud joustatud serveripoolel (kriitiline kui admin-funktsioonid on olulised)"
+        "et": "Privilegeeritud/admin-toimingud jõustatud serveripoolel (kriitiline kui admin-funktsioonid on olulised)"
       }
     },
     {
@@ -187,7 +187,7 @@
       "weight": 3,
       "title": {
         "en": "Data truly persists (verified in the datastore)",
-        "et": "Andmed pusivad tegelikult (kontrollitud andmehoidlas)"
+        "et": "Andmed püsivad tegelikult (kontrollitud andmehoidlas)"
       }
     },
     {
@@ -198,7 +198,7 @@
       "weight": 3,
       "title": {
         "en": "Behaviour matches the documented product claim; mocks/fixtures/fallbacks not presented as live output",
-        "et": "Kaitumine vastab dokumenteeritud tootelubadusele; mokid/fikstuurid/varulahendused pole esitatud paris valjundina"
+        "et": "Kaitumine vastab dokumenteeritud tootelubadusele; mokid/fikstuurid/varulahendused pole esitatud päris valjundina"
       }
     },
     {
@@ -209,7 +209,7 @@
       "weight": 2,
       "title": {
         "en": "Emails/notifications actually deliver under production conditions",
-        "et": "E-kirjad/teavitused pariselt kohale jouavad tootmistingimustes"
+        "et": "E-kirjad/teavitused päriselt kohale jouavad tootmistingimustes"
       }
     },
     {
@@ -220,7 +220,7 @@
       "weight": 3,
       "title": {
         "en": "Payment account, keys, webhooks AND mode match the intended deployment environment",
-        "et": "Maksekonto, votmed, webhookid JA reziim vastavad kavandatud juurutuskeskkonnale"
+        "et": "Maksekonto, võtmed, webhookid JA reziim vastavad kavandatud juurutuskeskkonnale"
       }
     },
     {
@@ -231,7 +231,7 @@
       "weight": 2,
       "title": {
         "en": "File uploads land in real storage and are retrievable",
-        "et": "Failide uleslaadimised jouavad paris salvestusse ja on kattesaadavad"
+        "et": "Failide uleslaadimised jouavad päris salvestusse ja on kattesaadavad"
       }
     },
     {
@@ -242,7 +242,7 @@
       "weight": 2,
       "title": {
         "en": "Search/filters query the backend, not a truncated client array",
-        "et": "Otsing/filtrid parivad backendist, mitte karbitud kliendimassiivist"
+        "et": "Otsing/filtrid pärivad backendist, mitte karbitud kliendimassiivist"
       }
     },
     {
@@ -275,7 +275,7 @@
       "weight": 3,
       "title": {
         "en": "No unbounded loops / recursive agent steps; max-steps enforced",
-        "et": "Pole piiramatuid tsukleid / rekursiivseid agendisamme; max-sammud joustatud"
+        "et": "Pole piiramatuid tsukleid / rekursiivseid agendisamme; max-sammud jõustatud"
       }
     },
     {
@@ -374,7 +374,7 @@
       "weight": 3,
       "title": {
         "en": "Backups configured, encrypted, access-controlled - and a restore has actually been tested (RPO/RTO known)",
-        "et": "Varukoopiad seadistatud, krupteeritud, ligipaasupiiratud - ja taaste on pariselt testitud (RPO/RTO teada)"
+        "et": "Varukoopiad seadistatud, krüpteeritud, ligipääsupiiratud – ja taaste on päriselt testitud (RPO/RTO teada)"
       }
     },
     {
@@ -440,7 +440,7 @@
       "weight": 2,
       "title": {
         "en": "Security & key business events logged; background jobs/webhooks observable (High for billing/payment/workflow apps)",
-        "et": "Turva- ja peamised aritsundmused logitud; taustatood/webhookid jalgitavad"
+        "et": "Turva- ja peamised aritsundmused logitud; taustatööd/webhookid jalgitavad"
       }
     },
     {
@@ -462,7 +462,7 @@
       "weight": 3,
       "title": {
         "en": "Debug off in prod; verbose error pages disabled; no source maps/debug endpoints in public build",
-        "et": "Debug prodis valjas; paljusonalised vealehed keelatud; avalikus ehituspaketis pole debug-endpointe"
+        "et": "Debug prodis väljas; paljusonalised vealehed keelatud; avalikus ehituspaketis pole debug-endpointe"
       }
     },
     {
@@ -506,7 +506,7 @@
       "weight": 2,
       "title": {
         "en": "Production change control: branch protection, reviewed changes, rollback procedure, reproducible artefacts",
-        "et": "Tootmise muudatuskontroll: haruskaitse, ule vaadatud muudatused, tagasipoordumine, korratavad artefaktid"
+        "et": "Tootmise muudatuskontroll: haruskaitse, üle vaadatud muudatused, tagasipoordumine, korratavad artefaktid"
       }
     },
     {
@@ -561,7 +561,7 @@
       "weight": 2,
       "title": {
         "en": "Runtime+build deps inventoried and continuously scanned; exploitable findings triaged, fixed or formally accepted",
-        "et": "Kaitus- ja ehitussoltuvused inventeeritud ja skannitud; arakasutatavad leiud triazeeritud, parandatud voi aktsepteeritud"
+        "et": "Käitus- ja ehitussõltuvused inventeeritud ja skannitud; ärakasutatavad leiud triaažeeritud, parandatud või aktsepteeritud"
       }
     },
     {
@@ -572,7 +572,7 @@
       "weight": 1,
       "title": {
         "en": "Dependency risk signals reviewed (compromise, ownership transfer, unreviewed install scripts, unjustified new deps)",
-        "et": "Soltuvusriski signaalid ule vaadatud"
+        "et": "Sõltuvusriski signaalid üle vaadatud"
       }
     },
     {
@@ -627,7 +627,7 @@
       "weight": 3,
       "title": {
         "en": "PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed",
-        "et": "PII ei leki logidesse, analuutikasse ega LLM-promptidesse; teenusepakkuja satted ule vaadatud"
+        "et": "PII ei leki logidesse, analuutikasse ega LLM-promptidesse; teenusepakkuja satted üle vaadatud"
       }
     },
     {
@@ -649,7 +649,7 @@
       "weight": 2,
       "title": {
         "en": "Data-subject rights operable: notice, lawful basis, access, deletion (incl. backups/third parties), retention, breach handling",
-        "et": "Andmesubjekti oigused toimivad: teade, oiguslik alus, ligipaas, kustutamine, sailitus, rikkekasitlus"
+        "et": "Andmesubjekti õigused toimivad: teade, oiguslik alus, ligipääs, kustutamine, sailitus, rikkekasitlus"
       }
     },
     {
@@ -660,7 +660,7 @@
       "weight": 0,
       "title": {
         "en": "High-risk domain screen (Annex III / product safety): important decisions about people",
-        "et": "Korge riski valdkonna soel (Annex III / tooteohutus): olulised otsused inimeste kohta"
+        "et": "Kõrge riski valdkonna soel (Annex III / tooteohutus): olulised otsused inimeste kohta"
       }
     },
     {
@@ -748,7 +748,7 @@
       "weight": 2,
       "title": {
         "en": "Permission changes mid-session take effect; irreversible actions are auditable",
-        "et": "Oiguste muutused keset sessiooni joustuvad; poordumatud toimingud on auditeeritavad"
+        "et": "Õiguste muutused keset sessiooni joustuvad; poordumatud toimingud on auditeeritavad"
       }
     },
     {
@@ -803,7 +803,7 @@
       "weight": 2,
       "title": {
         "en": "Server-side pagination limits; max export/report size; query timeouts",
-        "et": "Serveripoolsed lehekulje-piirid; max eksport/raport; paringu ajapiirid"
+        "et": "Serveripoolsed lehekulje-piirid; max eksport/raport; päringu ajapiirid"
       }
     },
     {
@@ -847,7 +847,7 @@
       "weight": 5,
       "title": {
         "en": "LLM output never reaches an exec/eval/shell/SQL sink without validation/schema",
-        "et": "LLM valjund ei jou exec/eval/shell/SQL-sihtmarki ilma valideerimise/skeemita"
+        "et": "LLM väljund ei jou exec/eval/shell/SQL-sihtmarki ilma valideerimise/skeemita"
       }
     },
     {
@@ -858,7 +858,7 @@
       "weight": 3,
       "title": {
         "en": "Untrusted content is separated and identified as data; it cannot modify trusted instructions/permissions/policy",
-        "et": "Ebausaldusvaarne sisu on eraldatud ja margitud andmena; ei saa muuta usaldatud juhiseid/oigusi"
+        "et": "Ebausaldusvaarne sisu on eraldatud ja margitud andmena; ei saa muuta usaldatud juhiseid/õigusi"
       }
     },
     {
@@ -869,7 +869,7 @@
       "weight": 3,
       "title": {
         "en": "Tool-call authorisation based on the authenticated user, not model output; tools allowlisted; args validated; high-impact actions need human confirmation",
-        "et": "Tooriistakutse volitus tugineb autenditud kasutajale, mitte mudeli valjundile; suure mojuga toimingud nouavad inimkinnitust"
+        "et": "Tööriistakutse volitus tugineb autenditud kasutajale, mitte mudeli väljundile; suure mõjuga toimingud nõuavad inimkinnitust"
       }
     },
     {
@@ -880,7 +880,7 @@
       "weight": 2,
       "title": {
         "en": "Untrusted external/RAG content treated as data; retrieval ACLs propagated; RAG-source poisoning considered",
-        "et": "Ebausaldusvaarne valine/RAG-sisu kasitletud andmena; paringu ACL-id levivad"
+        "et": "Ebausaldusvaarne valine/RAG-sisu kasitletud andmena; päringu ACL-id levivad"
       }
     },
     {
@@ -891,7 +891,7 @@
       "weight": 2,
       "title": {
         "en": "LLM output rendered as text or sanitized; sensitive-output filtering; memory isolated between users/tenants",
-        "et": "LLM valjund renderdatud tekstina voi puhastatud; malu isoleeritud kasutajate vahel"
+        "et": "LLM väljund renderdatud tekstina või puhastatud; malu isoleeritud kasutajate vahel"
       }
     },
     {
@@ -968,7 +968,7 @@
       "weight": 1,
       "title": {
         "en": "Cross-device: main flow tested on a real phone and in at least two common browsers",
-        "et": "Seadmeulene: peamine voog testitud paris telefonis ja vahemalt kahes levinud brauseris"
+        "et": "Seadmeulene: peamine voog testitud päris telefonis ja vahemalt kahes levinud brauseris"
       }
     },
     {
