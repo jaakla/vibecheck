@@ -31,17 +31,17 @@
         {
           "control_id": "vibecheck.control.authz.object_level",
           "item_number": 13,
-          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipaasukontroll" },
+          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipääsukontroll" },
           "severity": "Critical",
           "weight": 5,
           "kind": "control",
           "wording": {
             "tech_en": "Object-level authorization: users cannot reach records they don't own (IDOR)",
-            "tech_et": "Objektitaseme volitamine: kasutaja ei paase ligi voorastele kirjetele (IDOR)",
+            "tech_et": "Objektitaseme volitamine: kasutaja ei pääse ligi teiste kasutajate kirjetele (IDOR)",
             "plain_en": "Have you tested with two separate accounts that User A cannot view, edit or delete User B's data?",
-            "plain_et": "Kas oled kahe eraldi kontoga testinud, et kasutaja A ei nae, muuda ega kustuta kasutaja B andmeid?",
+            "plain_et": "Kas oled kahe eraldi kontoga kontrollinud, et kasutaja A ei saa kasutaja B andmeid vaadata, muuta ega kustutada?",
             "test_en": "Create two accounts. As A, change the ID number in a URL (e.g. /order/123 -> /order/124) and see if B's data appears. It must not.",
-            "test_et": "Loo kaks kontot. A-na muuda URL-is ID-numbrit (nt /order/123 -> /order/124) ja vaata, kas B andmed ilmuvad. Ei tohi."
+            "test_et": "Loo kaks kontot. Logi sisse kasutajana A, muuda URL-is olevat ID-d (nt /order/123 -> /order/124) ja kontrolli, kas kuvatakse kasutaja B andmed. Neid ei tohi kuvada."
           },
           "verification": { "codes": ["MAN", "E2E"], "tools": "Two accounts + URL ID swap; Playwright" },
           "scanner_checks": [
@@ -53,17 +53,17 @@
         {
           "control_id": "vibecheck.control.authz.anon_data_access",
           "item_number": 14,
-          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipaasukontroll" },
+          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipääsukontroll" },
           "severity": "Critical",
           "weight": 5,
           "kind": "control",
           "wording": {
             "tech_en": "No data readable/writable by an unauthenticated/anon caller unless intended public",
-            "tech_et": "Ukski andmestik pole autentimata/anon-kutsujale loetav/kirjutatav, v.a teadlikult avalik",
+            "tech_et": "Autentimata ehk anonüümsel kasutajal ei tohi olla andmete lugemis- ega kirjutamisõigust, välja arvatud juhul, kui andmed on mõeldud avalikuks.",
             "plain_en": "Can a logged-out stranger reach private data through the app's data connection?",
-            "plain_et": "Kas valja logitud vooras paaseb rakenduse andmeuhenduse kaudu privaatandmeteni?",
+            "plain_et": "Kas kasutaja, kes pole sisse loginud, pääseb rakenduse andmeliidese kaudu ligi privaatsetele andmetele?",
             "test_en": "For Supabase/Firebase apps: ask the builder to confirm the public 'anon' key cannot read private tables. Test an API call while logged out.",
-            "test_et": "Supabase/Firebase appidel: palu kinnitada, et avalik 'anon' voti ei loe privaatseid tabeleid. Testi API-kutset valja logituna."
+            "test_et": "Supabase'i/Firebase'i rakenduse puhul palu arendajal kinnitada, et avaliku anon-võtmega ei saa privaatseid tabeleid lugeda. Testi API-päringut ilma sisse logimata."
           },
           "verification": { "codes": ["AUTO", "MAN"], "tools": "vibecheck supabase probe, curl with anon key" },
           "scanner_checks": [
