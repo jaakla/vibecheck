@@ -117,11 +117,15 @@ There is deliberately no "READY TO SHIP" rung: a checklist cannot prove an app s
 python3 -m unittest discover -s tests -v   # scanner behaviour + consistency tests
 python3 scripts/gen_map.py                 # regenerate references/checklist-map.md
 python3 scripts/gen_map.py --check         # verify without modifying files
+python3 scripts/gen_canonical.py           # regenerate the control registry + vibecheck_v1 mapping
+python3 scripts/gen_canonical.py --check   # verify without modifying files
 ```
 
 `scripts/items.py` is the single source of truth: the 89-item bank in four wordings, the verification metadata, and `SCANNER_CHECKS` (which checklist items each scanner check covers, and at which tier). `references/checklist-map.md` is generated from it, and `tests/test_coverage_map.py` fails if the scanner, the item bank, the generated map, or the counts quoted in this README drift apart.
 
 `rfcs/0001-assessment-schema-v1.md` is the design contract for the next-generation assessment model (stable control IDs, evidence, contextual risk, actions/procedures, environment-scoped readiness). Its JSON Schemas and validated examples live in `schema/`; `tests/test_rfc_schema.py` pins the schema invariants and the lossless `vibecheck_v1` mapping against `items.py`.
+
+Increment 1 of that model is implemented: `scripts/controls.py` holds the hand-reviewed stable control-ID table (generated artifacts: `schema/vibecheck.controls.v1.json` and the full 89-entry mapping `schema/mappings/vibecheck_v1.json`), `scripts/canonical.py` validates, serializes and migrates `vibecheck.assessment` envelopes, and `scripts/adapters.py` imports scanner JSONL and Supabase probe JSON into canonical envelopes (and exports back, byte-compatibly, for the current report and workbook paths). `tests/test_canonical.py` covers all of it; `items.py` stays the authoring source until cutover.
 
 `tests/fixtures/` holds miniature repos for warning signals, quiet signals, and prose false-positive cases. They contain fake credential shapes by design, so scanning this repository itself reports warnings inside `tests/fixtures/`.
 

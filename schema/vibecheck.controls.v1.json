@@ -1,0 +1,986 @@
+{
+  "registry": "vibecheck.controls",
+  "version": "1.0.0",
+  "description": "Stable semantic control IDs for Vibecheck (RFC 0001 §3.3). IDs are never reused and never renamed; a control that stops making sense is deprecated with status=deprecated and superseded_by. Intrinsic severity lives here and in framework mappings only — no assessment or risk object may override it (rule R14). Generated from scripts/items.py by scripts/gen_canonical.py; do not edit by hand.",
+  "controls": [
+    {
+      "control_id": "vibecheck.control.arch.mainstream_stack",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Stack choices are mainstream and maintainable: widely-used language, framework and database with documentation, community and hireable developers",
+        "et": "Tehnoloogiavalikud on peavoolu ja hooldatavad: laialt kasutatud keel, raamistik ja andmebaas, millel on dokumentatsioon, kogukond ja palgatavaid arendajaid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.datastore_fit",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Primary data store fits the workload and hosting model: managed persistent DB for multi-user data; no SQLite/JSON-file/localStorage as system of record on serverless or ephemeral hosting",
+        "et": "Peamine andmehoidla sobib koormuse ja majutusmudeliga: hallatud pusiv andmebaas mitmekasutaja-andmetele; mitte SQLite/JSON-fail/localStorage pohihoidlana serverless- voi ajutisel majutusel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.proven_auth_provider",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Authentication is a proven provider or library (Supabase Auth, Firebase, Auth0, NextAuth, Clerk, etc.); no hand-rolled password hashing, session tokens or JWT schemes",
+        "et": "Autentimine on toestatud teenus voi teek (Supabase Auth, Firebase, Auth0, NextAuth, Clerk jne); mitte isetehtud parooliraside, sessioonitokenid ega JWT-skeemid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.proportional_complexity",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Complexity is proportional to the problem: no premature microservices/queues/orchestration for an MVP; no single god-module holding all logic",
+        "et": "Keerukus on proportsionaalne probleemiga: MVP jaoks pole enneaegseid mikroteenuseid/jarjekordi/orkestratsiooni; pole uhtainsat koike-hoidvat hiidmoodulit"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.consistent_patterns",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "One consistent pattern per concern: a single data-access layer, one state-management approach, one styling system - no parallel duplicated stacks accreted across sessions",
+        "et": "Uks jarjekindel muster iga mure kohta: uks andmeligipaasukiht, uks olekuhalduse viis, uks stiilisusteem - mitte sessioonide jooksul kuhjunud paralleelsed topeltlahendused"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.hosting_runtime_fit",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Hosting matches runtime needs: long-running jobs, websockets, cron and background work are supported by the platform's execution model (timeouts, persistent processes)",
+        "et": "Majutus vastab kaitusvajadustele: pikad tood, websocketid, cron ja taustatood on platvormi kaitusmudeliga toetatud (ajapiirid, pusivad protsessid)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.secrets.no_frontend_literals",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "No secret-like literals in frontend source",
+        "et": "Eesotsa koodis pole saladuse-laadseid vaartusi"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.secrets.no_client_provider_keys",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "No provider key prefixes shipped to client (sk-, AKIA, service_role, etc.)",
+        "et": "Kliendini ei jou teenusevotme-eesliiteid (sk-, AKIA, service_role jne)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.secrets.no_repo_history_leaks",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "No secrets in current tree, git history, or public build bundle (.env excluded from VCS)",
+        "et": "Saladusi pole tookoopias, giti ajaloos ega avalikus ehituspaketis (.env pole versioonihalduses)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.secrets.secure_runtime_injection",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Secrets injected securely at runtime; not in code/images/logs; access restricted; rotation supported",
+        "et": "Saladused sustitakse turvaliselt kaitusajal; pole koodis/tommistes/logides; ligipaas piiratud; rotatsioon toetatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.secrets.leak_incident_response",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Any exposed active credential treated as an incident: rotated, sessions revoked, logs inspected, removed from history",
+        "et": "Iga lekkinud aktiivset mandaati kasitletakse intsidendina: roteeritud, sessioonid tuhistatud, logid ule vaadatud, ajaloost eemaldatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.server_side_default_deny",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Authorization enforced server-side, default-deny",
+        "et": "Volitamine joustatud serveripoolel, vaikimisi keelav"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Object-level authorization: users cannot reach records they don't own (IDOR)",
+        "et": "Objektitaseme volitamine: kasutaja ei pääse ligi teiste kasutajate kirjetele (IDOR)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "No data readable/writable by an unauthenticated/anon caller unless intended public",
+        "et": "Autentimata ehk anonüümsel kasutajal ei tohi olla andmete lugemis- ega kirjutamisõigust, välja arvatud juhul, kui andmed on mõeldud avalikuks."
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.tenant_isolation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Tenant isolation: no cross-tenant data access",
+        "et": "Rentniku isolatsioon: pole rentnikevahelist andmeligipaasu"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.admin_actions_server_side",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Privileged/admin actions enforced server-side (Critical where admin functions are meaningful)",
+        "et": "Privilegeeritud/admin-toimingud joustatud serveripoolel (kriitiline kui admin-funktsioonid on olulised)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.data_persistence",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Data truly persists (verified in the datastore)",
+        "et": "Andmed pusivad tegelikult (kontrollitud andmehoidlas)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.no_mocked_output",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Behaviour matches the documented product claim; mocks/fixtures/fallbacks not presented as live output",
+        "et": "Kaitumine vastab dokumenteeritud tootelubadusele; mokid/fikstuurid/varulahendused pole esitatud paris valjundina"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.email_delivery",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Emails/notifications actually deliver under production conditions",
+        "et": "E-kirjad/teavitused pariselt kohale jouavad tootmistingimustes"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.payment_mode_match",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Payment account, keys, webhooks AND mode match the intended deployment environment",
+        "et": "Maksekonto, votmed, webhookid JA reziim vastavad kavandatud juurutuskeskkonnale"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.upload_storage",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "File uploads land in real storage and are retrievable",
+        "et": "Failide uleslaadimised jouavad paris salvestusse ja on kattesaadavad"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.product.backend_search",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Search/filters query the backend, not a truncated client array",
+        "et": "Otsing/filtrid parivad backendist, mitte karbitud kliendimassiivist"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.usage_quotas",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Quotas, per-user budgets, per-operation maximums, timeouts and concurrency caps on paid/LLM work",
+        "et": "Kvoodid, kasutajaeelarved, operatsioonipiirid, ajapiirid ja samaegsuse laed tasulisel/LLM-tool"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Hard budget caps + billing alerts on every paid provider",
+        "et": "Ranged eelarvelaed + arveldusteated igal tasulisel teenusepakkujal"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.bounded_agent_loops",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "No unbounded loops / recursive agent steps; max-steps enforced",
+        "et": "Pole piiramatuid tsukleid / rekursiivseid agendisamme; max-sammud joustatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.expensive_endpoints_auth",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Expensive endpoints require auth; unauthenticated search/query bounded",
+        "et": "Kallid endpointid nouavad autentimist; autentimata otsing/paring piiratud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.cost.abuse_limits",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Request-body/upload size limits; email/SMS abuse limits; webhook replay protection",
+        "et": "Paringu-/uleslaadimismahu piirid; e-posti/SMS kuritarvituspiirid; webhook-korduse kaitse"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.server_side_validation",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Server-side validation on all inputs",
+        "et": "Serveripoolne valideerimine koigil sisenditel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.sql_parameterized",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "All DB queries use parameter binding / safe query API; raw fragments & dynamic identifiers allowlisted",
+        "et": "Koik paringud kasutavad parameetriseotust / turvalist API-t; toorfragmendid ja dunaamilised identifikaatorid lubatute nimekirjas"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.output_encoding",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Output encoded per context (HTML/attr/JS/URL); HTML sanitized only when intentionally allowed; dangerous URL schemes blocked",
+        "et": "Valjund kodeeritud konteksti jargi; HTML puhastatakse ainult teadlikul lubamisel; ohtlikud URL-skeemid blokeeritud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.upload_validation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "File uploads: content/MIME/magic-byte validation, path-traversal safe, isolated storage, randomised names",
+        "et": "Uleslaadimised: sisu/MIME/magic-byte kontroll, path-traversal-kindel, isoleeritud salvestus, juhuslikud nimed"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.input.other_injection_classes",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Other injection classes considered where relevant: command, SSRF, template, path traversal, open redirect, deserialisation",
+        "et": "Muud injektsiooniklassid arvestatud vajadusel: kask, SSRF, mall, path traversal, avatud umbersuunamine, deserialiseerimine"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.data.versioned_migrations",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Schema changes via committed migrations; DB constraints, not only app validation",
+        "et": "Skeemimuudatused labi commititud migratsioonide; andmebaasi piirangud, mitte ainult appi valideerimine"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.data.tested_backups",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Backups configured, encrypted, access-controlled - and a restore has actually been tested (RPO/RTO known)",
+        "et": "Varukoopiad seadistatud, krupteeritud, ligipaasupiiratud - ja taaste on pariselt testitud (RPO/RTO teada)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.data.safe_prod_migrations",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "No silent destructive migrations on prod; rollback/forward-recovery plan exists",
+        "et": "Prodis pole vaikseid havitavaid migratsioone; tagasi-/edasitaaste plaan olemas"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.data.deletion_semantics",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Deletion semantics designed: recoverable where the business needs it, irreversible within the promised window where privacy/security requires erasure",
+        "et": "Kustutussemantika kavandatud: taastatav kus ari vajab, poordumatu kus privaatsus/turve nouab kustutamist"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.no_swallowed_errors",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "No swallowed errors; fail-closed on security-relevant paths",
+        "et": "Pole allaneelatud vigu; turvaotsustel fail-closed"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.error_tracking",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Error tracking on client AND server; structured logs with correlation IDs; secrets/PII redacted",
+        "et": "Veajalgimine kliendil JA serveril; struktureeritud logid; saladused/PII redigeeritud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.no_leaked_internals",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "No stack traces / internal errors leaked to users",
+        "et": "Kasutajale ei leki stack trace'e / sisemisi vigu"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.event_logging",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Security & key business events logged; background jobs/webhooks observable (High for billing/payment/workflow apps)",
+        "et": "Turva- ja peamised aritsundmused logitud; taustatood/webhookid jalgitavad"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.health_alerting",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Health checks + alerting with an owner; monitoring tested, not merely wired up",
+        "et": "Tervisekontrollid + teavitused omanikuga; monitooring testitud, mitte ainult uhendatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deploy.debug_disabled",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Debug off in prod; verbose error pages disabled; no source maps/debug endpoints in public build",
+        "et": "Debug prodis valjas; paljusonalised vealehed keelatud; avalikus ehituspaketis pole debug-endpointe"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deploy.env_separation",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Prod vs dev/staging config & data separated; no prod secrets in preview builds",
+        "et": "Prod vs dev/staging konfiguratsioon ja andmed lahus; eelvaate-ehitustes pole prod-saladusi"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deploy.cors_restricted",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "CORS allows only intended origins/methods/headers; credentialed cross-origin narrowly restricted and tested",
+        "et": "CORS lubab ainult ettenahtud paritolud/meetodid/paised; mandaadiga risttaustale kitsalt piiratud ja testitud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deploy.transport_security",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Transport security: HTTPS + HSTS; security headers appropriate to the app (CSP, frame, nosniff, referrer, permissions)",
+        "et": "Transporditurve: HTTPS + HSTS; apile sobivad turvapaised"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deploy.change_control",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Production change control: branch protection, reviewed changes, rollback procedure, reproducible artefacts",
+        "et": "Tootmise muudatuskontroll: haruskaitse, ule vaadatud muudatused, tagasipoordumine, korratavad artefaktid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.integ.webhook_signatures",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Inbound webhooks verify signatures + timestamp; endpoint rejects unrelated event types",
+        "et": "Sissetulevad webhookid kontrollivad allkirja + ajatemplit; endpoint keeldub voorastest sundmustuupidest"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.integ.oauth_hardening",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "OAuth state/PKCE/nonce validated; redirect URIs locked; tokens stored encrypted",
+        "et": "OAuth state/PKCE/nonce valideeritud; redirect-URI-d lukustatud; tokenid krupteeritult hoitud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.integ.least_privilege_scopes",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Least-privilege scopes; secret lifecycle handled when an integration is disconnected",
+        "et": "Minimaalsed skoobid; saladuse elutsukkel kasitletud integratsiooni lahtiuhendamisel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.integ.idempotent_handlers",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Idempotency + retry/backoff + dead-letter handling on payment/order/webhook handlers",
+        "et": "Idempotentsus + kordus/backoff + dead-letter makse-/tellimus-/webhook-kasitlejatel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deps.vuln_scanning",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Runtime+build deps inventoried and continuously scanned; exploitable findings triaged, fixed or formally accepted",
+        "et": "Kaitus- ja ehitussoltuvused inventeeritud ja skannitud; arakasutatavad leiud triazeeritud, parandatud voi aktsepteeritud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deps.dependency_trust",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Dependency risk signals reviewed (compromise, ownership transfer, unreviewed install scripts, unjustified new deps)",
+        "et": "Soltuvusriski signaalid ule vaadatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deps.reproducible_builds",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Lockfile committed; build reproducible; CI actions/containers pinned",
+        "et": "Lockfile commititud; ehitus korratav; CI-tegevused/konteinerid kinnitatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deps.license_compatibility",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Licenses compatible with the intended business model",
+        "et": "Litsentsid sobivad kavandatud arimudeliga"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.data_minimisation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Data minimisation + data map: what PII, why (lawful basis), where it lives, transfers",
+        "et": "Andmete minimeerimine + andmekaart: mis PII, miks, kus asub, edastused"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.password_hashing",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "Passwords never stored plaintext; sensitive data encrypted; tokens hashed",
+        "et": "Paroole ei salvestata avatekstina; tundlik data krupteeritud; tokenid rasitud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.no_pii_leakage",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "PII not leaking into logs, analytics, or LLM prompts; provider retention/training settings reviewed",
+        "et": "PII ei leki logidesse, analuutikasse ega LLM-promptidesse; teenusepakkuja satted ule vaadatud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.data_residency",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "International transfer mechanism + subprocessors + residency acceptable (DB region AND LLM routing)",
+        "et": "Rahvusvahelise edastuse mehhanism + alltootlejad + asukoht vastuvoetav (andmebaasi regioon JA LLM-marsruut)"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.privacy.subject_rights",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Data-subject rights operable: notice, lawful basis, access, deletion (incl. backups/third parties), retention, breach handling",
+        "et": "Andmesubjekti oigused toimivad: teade, oiguslik alus, ligipaas, kustutamine, sailitus, rikkekasitlus"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.aiact.high_risk_screen",
+      "status": "active",
+      "kind": "screening",
+      "severity": "Triage",
+      "weight": 0,
+      "title": {
+        "en": "High-risk domain screen (Annex III / product safety): important decisions about people",
+        "et": "Korge riski valdkonna soel (Annex III / tooteohutus): olulised otsused inimeste kohta"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.aiact.transparency_screen",
+      "status": "active",
+      "kind": "screening",
+      "severity": "Triage",
+      "weight": 0,
+      "title": {
+        "en": "Transparency duties (Art. 50): synthetic/mistakable-for-human content",
+        "et": "Labipaistvuskohustused (Art. 50): sunteetiline/inimeseks-peetav sisu"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.aiact.prohibited_practice_screen",
+      "status": "active",
+      "kind": "screening",
+      "severity": "Triage",
+      "weight": 0,
+      "title": {
+        "en": "Prohibited-practice screen (Art. 5): scoring, manipulation, exploitation",
+        "et": "Keelatud praktika soel (Art. 5): skoorimine, manipuleerimine, arakasutamine"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.aiact.specialist_escalation",
+      "status": "active",
+      "kind": "screening",
+      "severity": "Triage",
+      "weight": 0,
+      "title": {
+        "en": "Escalation: specialist review where any answer is yes/uncertain; role (provider/deployer) & GPAI use documented",
+        "et": "Eskaleerimine: spetsialisti ulevaatus kus vastus on jah/ebakindel; roll ja GPAI-kasutus dokumenteeritud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.logic.invariant_enforcement",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Invariants + DB constraints enforce core rules; state-machine transitions validated",
+        "et": "Invariandid + andmebaasi piirangud joustavad pohireeglid; olekumasina uleminekud valideeritud"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.logic.concurrency_safety",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Concurrency safe: idempotency beyond payments, optimistic concurrency / stale-write handling, transactional boundaries",
+        "et": "Samaaegsuskindel: idempotentsus, optimistlik samaaegsus, tehingupiirid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.logic.money_math",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Money/tax/currency: integer/decimal math, rounding rules, locale handling",
+        "et": "Raha/maks/valuuta: taisarv/kumnend, umardusreeglid, lokaadi kasitlus"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.logic.time_handling",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Dates/time zones/DST handled explicitly",
+        "et": "Kuupaevad/ajavoondid/suveaeg kasitletud eksplitsiitselt"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.logic.permission_revocation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Permission changes mid-session take effect; irreversible actions are auditable",
+        "et": "Oiguste muutused keset sessiooni joustuvad; poordumatud toimingud on auditeeritavad"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.testing.core_flow_tests",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Automated checks for the primary business transaction and destructive actions",
+        "et": "Automaattestid pohilisele aritehingule ja havitavatele toimingutele"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.testing.authz_tests",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Automated checks for auth + authorization/tenant separation",
+        "et": "Automaattestid autentimisele + volitamisele/rentniku eraldusele"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.testing.payment_deploy_tests",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Automated checks for payment/webhook handling where present; deployment startup/health",
+        "et": "Automaattestid makse-/webhook-kasitlusele kui olemas; juurutuse kaivitus/tervis"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.testing.calculation_tests",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Deterministic/property-based tests for complex critical calculations",
+        "et": "Deterministlikud/omadus-pohised testid keerukatele kriitilistele arvutustele"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.perf.pagination_limits",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Server-side pagination limits; max export/report size; query timeouts",
+        "et": "Serveripoolsed lehekulje-piirid; max eksport/raport; paringu ajapiirid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.perf.query_performance",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Representative production queries have acceptable plans/latency; necessary indexes exist and are used",
+        "et": "Esinduslikel tootmisparingutel on vastuvoetav latents; vajalikud indeksid olemas ja kasutuses"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.perf.graceful_degradation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Connection/pool limits; cache correctness & invalidation; graceful degradation on provider limits",
+        "et": "Uhenduse/pooli piirid; puhvri korrektsus; sujuv taandumine teenusepakkuja piiridel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.perf.bundle_cold_start",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Frontend bundle size / cold-start within target",
+        "et": "Frontend-paketi suurus / kulmkaivitus sihtmargi piires"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.llm.no_output_to_exec",
+      "status": "active",
+      "kind": "control",
+      "severity": "Critical",
+      "weight": 5,
+      "title": {
+        "en": "LLM output never reaches an exec/eval/shell/SQL sink without validation/schema",
+        "et": "LLM valjund ei jou exec/eval/shell/SQL-sihtmarki ilma valideerimise/skeemita"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.llm.untrusted_content_isolation",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Untrusted content is separated and identified as data; it cannot modify trusted instructions/permissions/policy",
+        "et": "Ebausaldusvaarne sisu on eraldatud ja margitud andmena; ei saa muuta usaldatud juhiseid/oigusi"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.llm.tool_call_authorization",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Tool-call authorisation based on the authenticated user, not model output; tools allowlisted; args validated; high-impact actions need human confirmation",
+        "et": "Tooriistakutse volitus tugineb autenditud kasutajale, mitte mudeli valjundile; suure mojuga toimingud nouavad inimkinnitust"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.llm.rag_acl_propagation",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Untrusted external/RAG content treated as data; retrieval ACLs propagated; RAG-source poisoning considered",
+        "et": "Ebausaldusvaarne valine/RAG-sisu kasitletud andmena; paringu ACL-id levivad"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.llm.output_rendering",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "LLM output rendered as text or sanitized; sensitive-output filtering; memory isolated between users/tenants",
+        "et": "LLM valjund renderdatud tekstina voi puhastatud; malu isoleeritud kasutajate vahel"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.bus_factor",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Continuity: someone other than the original builder can access, deploy, restore and maintain the app",
+        "et": "Jarjepidevus: keegi peale algse ehitaja paaseb ligi, juurutab, taastab ja hooldab rakendust"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.account_ownership",
+      "status": "active",
+      "kind": "control",
+      "severity": "High",
+      "weight": 3,
+      "title": {
+        "en": "Account ownership: domain, hosting, DB, email, payment and AI-provider accounts owned by you/your company",
+        "et": "Kontode omand: domeen, majutus, DB, e-post, makse ja AI-teenused kuuluvad sulle/su ettevottele"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.data_export",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Data export: important business and user data can be exported in a usable format",
+        "et": "Andmete eksport: olulised ari- ja kasutajaandmed saab eksportida kasutatavas vormingus"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.failure_recovery",
+      "status": "active",
+      "kind": "control",
+      "severity": "Medium",
+      "weight": 2,
+      "title": {
+        "en": "Failure & recovery behaviour: on external/network failure the app shows a clear message and avoids losing/duplicating data",
+        "et": "Toorke- ja taastekaitumine: vea korral nadab selge teate ega kaota/dubleeri andmeid"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.support_path",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Support path: users have a working way to report a problem and someone receives it",
+        "et": "Toe tee: kasutajatel on toimiv viis probleemist teatada ja keegi saab selle katte"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.product_analytics",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Product analytics: you can tell whether the main journey succeeds / where users drop off, without unnecessary PII",
+        "et": "Tooteanaluutika: naed, kas peamine tee onnestub / kus kasutajad loobuvad, ilma liigse PII-ta"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.cross_device_testing",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Cross-device: main flow tested on a real phone and in at least two common browsers",
+        "et": "Seadmeulene: peamine voog testitud paris telefonis ja vahemalt kahes levinud brauseris"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.accessibility_basics",
+      "status": "active",
+      "kind": "control",
+      "severity": "Low",
+      "weight": 1,
+      "title": {
+        "en": "Basic accessibility: main flow usable with keyboard, readable text sizes and clear labels",
+        "et": "Pohiligipaasetavus: peamine voog kasutatav klaviatuuriga, loetava tekstiga ja selgete siltidega"
+      }
+    }
+  ]
+}
