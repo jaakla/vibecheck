@@ -1,0 +1,267 @@
+{
+  "schema": "vibecheck.risk_derivation",
+  "schema_version": "1.0.0",
+  "description": "Deterministic policy for turning an application context plus an intrinsic control severity into the two inputs of the risk matrix, per environment + intended-use scope (gh issue #4, epic #1). The matrix itself lives in schema/risk-matrix.v1.json and is unchanged: this file only decides which impact and which exposure go into it. Same normalized inputs always produce the same inputs, the same level, and the same recorded rule list. The policy never touches intrinsic control severity and never changes an assessment status (RFC 0001 rule R14); it only prioritises. Derived values are a defensible default, not a verdict: a reviewer may raise a level freely, and may lower it only through the downgrade record the matrix method requires.",
+  "matrix_method": { "name": "vibecheck.risk_matrix", "version": "1.0.0" },
+  "context_model": { "name": "vibecheck.context_model", "version": "1.0.0" },
+  "domains": ["security", "privacy", "reliability", "financial", "compliance", "product"],
+  "domains_wildcard": "*",
+  "statuses_with_derived_risk": ["fail", "partial", "risk_accepted"],
+  "status_notes": {
+    "partial": "A partial control is a control whose requirement is not met. It derives the same inputs as a fail and records an assumption naming the unresolved aspect; nothing here upgrades it toward pass.",
+    "risk_accepted": "An accepted risk is still a risk. The derivation runs unchanged and records the acceptance as an assumption, so the accepted exposure stays visible in every scope.",
+    "not_tested": "No risk object is derived. An untested applicable Critical or High control is a material unknown for readiness, which is stronger than a low risk, not weaker.",
+    "pass": "No risk object is derived for a met requirement. Freshness of the supporting evidence is checked by the assessment rules (R3, R15), not here."
+  },
+  "impact": {
+    "scale": ["minor", "moderate", "major", "severe"],
+    "base_by_severity": {
+      "Critical": "major",
+      "High": "moderate",
+      "Medium": "moderate",
+      "Low": "minor",
+      "Triage": "minor"
+    },
+    "ceiling_by_severity": {
+      "Critical": "severe",
+      "High": "severe",
+      "Medium": "moderate",
+      "Low": "minor",
+      "Triage": "minor"
+    },
+    "max_increase": 2,
+    "max_decrease": 2,
+    "cap_rationale": "Context shifts impact by at most two steps in either direction and never past the severity ceiling. Without the cap, a product with sensitive data and payments would push every Medium control to severe and intrinsic severity would stop meaning anything.",
+    "required_dimensions": [
+      "audience_scale",
+      "data_sensitivity",
+      "financial_operations",
+      "privileged_operations",
+      "business_criticality"
+    ],
+    "required_rationale": "If any listed dimension that could move this risk's domain is unknown or conflicting, impact is unknown and so is the level. A dimension whose every rule is scoped to other domains cannot change this result and therefore cannot hide anything here either, so it is not required for that domain.",
+    "adjustments": [
+      {
+        "rule_id": "impact.use.prototype_demo",
+        "when": { "scope_field": "intended_use", "value": "prototype_demo" },
+        "delta": -1,
+        "domains": "*",
+        "rationale": "A demonstration carries no dependent work; harm is bounded by the fact that nothing relies on the result."
+      },
+      {
+        "rule_id": "impact.use.public_product",
+        "when": { "scope_field": "intended_use", "value": "public_product" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "Strangers rely on the product and cannot be contacted individually when something goes wrong."
+      },
+      {
+        "rule_id": "impact.use.sensitive_or_high_impact",
+        "when": { "scope_field": "intended_use", "value": "sensitive_or_high_impact" },
+        "delta": 2,
+        "domains": "*",
+        "rationale": "Harm in this use class reaches people's health, money, safety or legal standing and is rarely reversible."
+      },
+      {
+        "rule_id": "impact.audience.none_yet",
+        "when": { "dimension": "audience_scale", "value": "none_yet" },
+        "delta": -1,
+        "domains": "*",
+        "rationale": "With no users, a failure harms nobody but the builder."
+      },
+      {
+        "rule_id": "impact.audience.named_handful",
+        "when": { "dimension": "audience_scale", "value": "named_handful" },
+        "delta": -1,
+        "domains": "*",
+        "rationale": "A handful of named people can be told, helped and remediated individually; the blast radius is bounded and known."
+      },
+      {
+        "rule_id": "impact.audience.open_large",
+        "when": { "dimension": "audience_scale", "value": "open_large" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "Thousands of unknown users mean unbounded blast radius and no individual remediation path."
+      },
+      {
+        "rule_id": "impact.data.synthetic_or_none",
+        "when": { "dimension": "data_sensitivity", "value": "synthetic_or_none" },
+        "delta": -1,
+        "domains": ["security", "privacy", "compliance"],
+        "rationale": "There is nothing to lose while the data is genuinely synthetic."
+      },
+      {
+        "rule_id": "impact.data.personal_data",
+        "when": { "dimension": "data_sensitivity", "value": "personal_data" },
+        "delta": 1,
+        "domains": ["security", "privacy", "compliance"],
+        "rationale": "Exposure of personal data is not undoable and carries notification duties."
+      },
+      {
+        "rule_id": "impact.data.special_category_or_financial",
+        "when": { "dimension": "data_sensitivity", "value": "special_category_or_financial" },
+        "delta": 2,
+        "domains": ["security", "privacy", "compliance"],
+        "rationale": "Special-category, credential and payment data cause irreversible harm to the people behind it and trigger regulatory consequences."
+      },
+      {
+        "rule_id": "impact.financial.charges_or_payouts",
+        "when": { "dimension": "financial_operations", "value": "charges_or_payouts" },
+        "delta": 1,
+        "domains": ["security", "financial", "product"],
+        "rationale": "A defect can move real money out before anyone notices."
+      },
+      {
+        "rule_id": "impact.financial.custody_of_user_funds",
+        "when": { "dimension": "financial_operations", "value": "custody_of_user_funds" },
+        "delta": 2,
+        "domains": ["security", "financial", "compliance", "product"],
+        "rationale": "Someone else's balance is at stake; loss is direct, quantified and usually unrecoverable."
+      },
+      {
+        "rule_id": "impact.privileged.external_side_effects",
+        "when": { "dimension": "privileged_operations", "value": "external_side_effects" },
+        "delta": 1,
+        "domains": ["security", "reliability", "financial"],
+        "rationale": "Messages sent and third-party calls made cannot be recalled, and metered calls cost money."
+      },
+      {
+        "rule_id": "impact.privileged.infrastructure_control",
+        "when": { "dimension": "privileged_operations", "value": "infrastructure_control" },
+        "delta": 2,
+        "domains": ["security", "reliability", "financial"],
+        "rationale": "Control over infrastructure turns a single defect into loss of the whole environment."
+      },
+      {
+        "rule_id": "impact.criticality.experiment",
+        "when": { "dimension": "business_criticality", "value": "experiment" },
+        "delta": -1,
+        "domains": "*",
+        "rationale": "Nothing depends on it; it can be switched off while it is fixed."
+      },
+      {
+        "rule_id": "impact.criticality.core_operation",
+        "when": { "dimension": "business_criticality", "value": "core_operation" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "A core process stops or corrupts when this fails."
+      },
+      {
+        "rule_id": "impact.criticality.sole_revenue_or_safety",
+        "when": { "dimension": "business_criticality", "value": "sole_revenue_or_safety" },
+        "delta": 2,
+        "domains": "*",
+        "rationale": "The only revenue channel, or a path where failure harms people, leaves no fallback."
+      }
+    ]
+  },
+  "exposure": {
+    "scale": ["rare", "unlikely", "plausible", "expected"],
+    "base_by_environment": {
+      "developer_only": "unlikely",
+      "private_test": "plausible",
+      "public_release": "expected"
+    },
+    "base_rationale": "where the application runs decides who can reach a weakness at all.",
+    "base_notes": "A private test deployment starts at plausible rather than unlikely because it is normally reachable by anyone who learns the address; being unlisted is not access control.",
+    "max_increase": 1,
+    "max_decrease": 2,
+    "cap_rationale": "Exposure may only be reduced by hard network facts, and by at most one evidenced compensating control on top. Raising is capped at one step because the environment base already carries the dominant signal.",
+    "required_dimensions": ["network_exposure", "authentication"],
+    "required_rationale": "Not knowing where the application is reachable from, or what it takes to get in, means not knowing how likely a weakness is to be exercised. Unknown exposure yields an unknown level, never a low one.",
+    "adjustments": [
+      {
+        "rule_id": "exposure.network.local_only",
+        "when": { "dimension": "network_exposure", "value": "local_only" },
+        "delta": -2,
+        "domains": "*",
+        "rationale": "Nothing is deployed: reaching the weakness requires access to the developer's machine."
+      },
+      {
+        "rule_id": "exposure.network.private_network",
+        "when": { "dimension": "network_exposure", "value": "private_network" },
+        "delta": -1,
+        "domains": "*",
+        "rationale": "A network boundary stands in front of the weakness, so reaching it needs a position inside that boundary."
+      },
+      {
+        "rule_id": "exposure.network.public_internet",
+        "when": { "dimension": "network_exposure", "value": "public_internet" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "Publicly discoverable deployments are enumerated by untargeted automation as a matter of routine."
+      },
+      {
+        "rule_id": "exposure.auth.none",
+        "when": { "dimension": "authentication", "value": "none" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "Whoever reaches the application is already inside it; no precondition remains."
+      },
+      {
+        "rule_id": "exposure.auth.open_signup",
+        "when": { "dimension": "authentication", "value": "open_signup" },
+        "delta": 1,
+        "domains": "*",
+        "rationale": "An attacker can always obtain a legitimate authenticated position by signing up."
+      }
+    ],
+    "compensating_control_reduction": 1,
+    "compensating_control_rule": "At most one step, once per risk, only from measures that apply to this control or domain, name an enforcing mechanism, and cite at least one supporting evidence record that is current at derivation time. Impact is never reduced."
+  },
+  "confidence": {
+    "rule": "Confidence describes how well the context is established, and never bends the matrix result. Low confidence is a reason to gather evidence, not to shade the level.",
+    "high": "Every dimension that fed this risk is confirmed, and a human has confirmed the context as a whole.",
+    "medium": "One or two contributing dimensions are inferred rather than confirmed, or the context as a whole is still a draft.",
+    "low": "Three or more contributing dimensions are inferred, or the context is past its valid_until.",
+    "inferred_threshold_for_low": 3,
+    "draft_context_cap": "medium",
+    "draft_context_rationale": "Individually solid facts still add up to an unconfirmed picture while nobody with authority over the application has reviewed it."
+  },
+  "horizon": {
+    "current": "The scope the application is actually in today (context.current_scope, or the first target scope when it is not stated).",
+    "event_triggered": "Every other target scope: the same control, the same status, assessed for the scope the owner intends to move into. The trigger names the transition, so 'fine today, critical at launch' is stored as two risks instead of one averaged one."
+  },
+  "scope_projection": {
+    "description": "A scope the application has not entered yet cannot be judged on today's audience, reachability and login: going public is precisely what changes them. For event-triggered horizons only, each listed dimension is also evaluated at the value the target scope implies, and the risk keeps whichever of the two readings is higher. Projections can therefore only raise a level, never lower one; each applied projection is recorded as a rule and as an assumption. A dimension that is unknown or conflicting in the captured context stays unknown: a projection is a floor for a future scope, not an answer to an open question.",
+    "by_environment": {
+      "private_test": { "network_exposure": "unlisted_public_url" },
+      "public_release": { "network_exposure": "public_internet" }
+    },
+    "by_intended_use": {
+      "internal_tool": { "audience_scale": "known_group" },
+      "invite_only_pilot": { "audience_scale": "named_handful", "authentication": "invite_only_accounts" },
+      "public_product": { "audience_scale": "open_small", "authentication": "open_signup" },
+      "sensitive_or_high_impact": { "audience_scale": "known_group" }
+    }
+  },
+  "domain_by_namespace": {
+    "arch": "reliability",
+    "secrets": "security",
+    "authz": "security",
+    "product": "product",
+    "cost": "financial",
+    "input": "security",
+    "data": "reliability",
+    "obs": "reliability",
+    "deploy": "security",
+    "integ": "security",
+    "deps": "security",
+    "privacy": "privacy",
+    "aiact": "compliance",
+    "logic": "product",
+    "testing": "product",
+    "perf": "product",
+    "llm": "security",
+    "continuity": "reliability"
+  },
+  "domain_by_control": {
+    "vibecheck.control.arch.proven_auth_provider": "security",
+    "vibecheck.control.data.deletion_semantics": "privacy",
+    "vibecheck.control.obs.no_leaked_internals": "security",
+    "vibecheck.control.deps.license_compatibility": "compliance",
+    "vibecheck.control.privacy.password_hashing": "security",
+    "vibecheck.control.logic.money_math": "financial"
+  },
+  "domain_by_control_notes": "One primary domain per control. The namespace map is the default; this table overrides it where the namespace and the harm class differ. A control with genuinely two domains gets two risk objects, one per domain, rather than an averaged one."
+}

@@ -5,14 +5,19 @@
 | Status | Draft for review |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
-| Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) |
-| Examples | [`schema/examples/`](../schema/examples/) |
-| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py) |
+| Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
+| Context model | [`schema/vibecheck.context.v1.json`](../schema/vibecheck.context.v1.json) |
+| Examples | [`schema/examples/`](../schema/examples/), [`tests/golden/`](../tests/golden/) |
+| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
 Vibecheck assessments. It is the normative design dependency for every implementation
-increment under epic #1. Nothing here changes runtime behavior yet; Increment 1 (#3)
-implements it.
+increment under epic #1.
+
+Implementation status: Increment 1 (#3) shipped the envelope, the stable control IDs and
+the legacy adapters. Increment 2 (#4) shipped the context profile, the contextual-risk
+derivation and environment-scoped readiness; §4.3 and §5.3 below were written with it and
+are normative for the shipped code (schema version 1.1.0, additive).
 
 ## 1. Invariants this design preserves
 
@@ -173,6 +178,46 @@ Derivation (deterministic; precedence `blocked` > `incomplete` > `conditional` >
 Blockers and material unknowns stay listed on the readiness object even when the state is
 already `blocked` — the reader sees everything, not just the verdict.
 
+Two further fields keep a scoped state from being read as more than it is:
+
+- `blocked_transitions` lists the more exposed target scopes with their own state, so a
+  narrow `conditional` or `no_known_blocker` never reads as permission to widen the scope.
+- `framework_verdict` keeps the `vibecheck_v1` checklist verdict beside the scoped state,
+  with a required `explanation` — the two answer different questions (whole application on
+  filled rows vs. one scope on evidence, risk and unknowns), and a difference between them
+  is written down rather than resolved in favour of either.
+
+`scripts/readiness.py` implements the derivation; the four states are exercised side by
+side in [`tests/golden/expected/`](../tests/golden/expected/).
+
+### 4.3 The application-context profile
+
+Readiness is only as good as the context it is scoped to, so the context is a separately
+versioned record, not a few report fields. Its dimensions and allowed values are data
+([`schema/vibecheck.context.v1.json`](../schema/vibecheck.context.v1.json)): lifecycle,
+audience/scale, network exposure, authentication, tenancy, data sensitivity, financial
+operations, privileged operations, business criticality, plus compensating controls.
+
+- **Per-field provenance.** Every field carries `state` ∈ `confirmed` / `inferred` /
+  `conflicting` / `unknown` with a source and, where the state demands it, a rationale or
+  the competing candidates. `unknown` may not carry a value (schema-enforced), and
+  `conflicting` is treated exactly like `unknown` by the derivation: neither may be
+  resolved silently toward the benign answer.
+- **Two independent clocks.** `context_fingerprint` digests the recorded facts;
+  `confirmation.source_fingerprint` digests the reviewed source tree. Revising the context
+  bumps the context revision and the envelope revision and leaves the source fingerprint
+  untouched — changing what an application is for never pretends the code moved. A change
+  nobody confirmed drops the confirmation back to `draft`, which keeps the human-review
+  gate intact through edits. Context expiry (`valid_until`) is likewise independent: past
+  it, the context counts as unconfirmed however it was confirmed before.
+- **Contradictions surface.** Captured facts are cross-checked against the *current* scope
+  only (an application described as live in a developer-only environment is a
+  contradiction; intending to launch publicly is a plan), and a contradiction keeps
+  readiness incomplete instead of being averaged away.
+- **Compensating controls** are context, not conclusions: each names what enforces it, the
+  controls or domains and scopes it applies to, and at least one supporting evidence
+  record. The schema structurally forbids `reduces_impact` on them.
+
 ## 5. Risk domains and the contextual-risk method
 
 Domains: `security`, `privacy`, `reliability`, `financial`, `compliance`, `product`.
@@ -256,6 +301,43 @@ at launch" is stored instead of averaged.
   `valid_until`, is stale and counts as unknown for readiness until reassessed.
 - **Confidence** (`high`/`medium`/`low`) and assumptions are recorded but do not bend the
   matrix; low confidence is a reason to gather evidence, not to shade the level.
+
+### 5.3 Choosing the inputs deterministically
+
+The rubrics above are how a human picks impact and exposure. So that two reviewers (and
+the tool) reach the same answer from the same context, the *default* inputs are computed
+from data in [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json):
+
+```
+impact   = base(intrinsic severity) + context adjustments, capped at ±2 and at the
+           severity's ceiling
+exposure = base(environment) + context adjustments, capped, then at most one evidenced
+           compensating control
+level    = matrix[impact][exposure]
+```
+
+Every rule carries an id and a rationale; each derived risk records the exact rule ids it
+applied, which dimensions were unknown, and the context revision it read. The properties
+that matter:
+
+- **Severity still means something.** The base and the ceiling come from the intrinsic
+  severity, so context can shift a Medium control by two steps but never make it severe.
+  Nothing writes severity back (rule R14).
+- **Domain-scoped rules.** A rule states which domains it moves. A dimension whose every
+  rule is scoped to other domains cannot change this risk, so not knowing it cannot hide
+  anything here either: it is not required for that domain. Every dimension that *can*
+  move an input and is not established makes that input unknown.
+- **Future scopes are projected, never guessed downward.** For an `event_triggered`
+  horizon the inputs are also read at the values the target scope implies (going public
+  means at least a public URL, open signup and a wider audience), and the higher of the two
+  readings wins. Projections can only raise a level, are recorded as rules and assumptions,
+  and never resolve an unknown dimension.
+- **Confidence follows the provenance**: all-confirmed and human-confirmed context gives
+  `high`, a draft context or one or two inferred dimensions gives `medium`, three or more
+  inferred or an expired context gives `low`. It never moves the level.
+
+The output is a defensible default, not a verdict: a reviewer may raise a level freely and
+may lower it only through the downgrade record of §5.2.
 
 ## 6. The assessment pipeline
 
@@ -459,7 +541,7 @@ validator (several already have structural halves in the schema and tests today)
 | R5 | Screening statuses only on screening controls; `risk_accepted` never on Critical, always with acceptance record. |
 | R6 | `level` = matrix(impact, exposure); unknown in → unknown out; downgrades need rationale + evidence + approver, max one step. |
 | R7 | Compensating controls: exposure −1 max, current supporting evidence required, impact untouched. |
-| R8 | Unknown is never low; material unknowns keep readiness ≤ incomplete. |
+| R8 | Unknown is never low; material unknowns keep readiness ≤ incomplete, and a listed blocker means `blocked` (validated since Increment 2). |
 | R9 | Readiness always scoped to an environment + intended-use pair (structural). |
 | R10 | `conditional` readiness requires machine-readable, enforced, expiring conditions (structural). |
 | R11 | Effectful procedures require explicit consent; attempts record exact authorization (structural half + rule). |
@@ -563,8 +645,12 @@ Increment-5 vertical slice through every object type, at envelope revision 2:
 |---|---|
 | `schema/vibecheck.assessment.v1.schema.json` | JSON Schema 2020-12 for the envelope and all object types |
 | `schema/risk-matrix.v1.json` | The deterministic risk method as data |
+| `schema/vibecheck.context.v1.json` | The context dimensions, values and field states as data |
+| `schema/risk-derivation.v1.json` | How context and severity choose the matrix inputs, as data |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
+| `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
+| `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
 
 Acceptance criteria → verification:
 
@@ -633,3 +719,15 @@ Acceptance criteria → verification:
 9. **A `partial`-evidence calculus** (aspect coverage accounting per control) — v1 records
    `aspect` free-text; a structured aspect registry may follow once increments 5–7 show
    which aspects recur.
+10. **Per-scope context profiles.** §5.3 projects the dimensions a transition necessarily
+    changes and takes the higher reading. Letting an owner state the expected audience,
+    exposure and authentication *for a future scope* directly would be more precise; it
+    also invites optimistic answers about a scope nobody has entered, so v1 keeps the
+    conservative projection and records it as an assumption.
+11. **Estonian wording for the context dimensions.** The model ships English labels only;
+    founder-facing EN/ET wording lands with the founder report (#5), alongside the rest of
+    the founder vocabulary.
+12. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
+    impact adjustment: `audience_scale` already accounts for how many parties a failure
+    reaches, and counting both double-counts blast radius. Revisit if pilots show
+    multi-tenant failures landing systematically harder than the audience band predicts.

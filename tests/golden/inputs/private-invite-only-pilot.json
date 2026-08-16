@@ -1,0 +1,117 @@
+{
+  "case_id": "private-invite-only-pilot",
+  "title": "Invite-only pilot held together by one evidenced compensating control",
+  "pins": [
+    "A compensating control lowers exposure by exactly one step, only for the scopes and domains it names, and only while its supporting evidence is current.",
+    "Because the pilot leans on that measure, its readiness is conditional and the measure appears as an enforceable condition with an expiry and a reassessment trigger.",
+    "The measure does not apply to the public scope, which stays blocked; the pilot readiness names that blocked transition."
+  ],
+  "now": "2026-08-16T12:00:00Z",
+  "assessment_id": "va-golden-private-invite-only-pilot",
+  "context_id": "ctx-golden-private-invite-only-pilot",
+  "reviewer": "reviewer:vibecheck",
+  "application": {
+    "name": "Acme Orders",
+    "description": "Order tracker used by twelve named testers from one customer while the team decides whether to launch it publicly.",
+    "platform": "lovable+supabase"
+  },
+  "target_scopes": [
+    { "environment": "private_test", "intended_use": "invite_only_pilot" },
+    { "environment": "public_release", "intended_use": "public_product" }
+  ],
+  "current_scope": { "environment": "private_test", "intended_use": "invite_only_pilot" },
+  "data_summary": "Names, emails, delivery addresses and order lines of the pilot testers' own customers. No card data (hosted checkout).",
+  "context_valid_until": "2026-11-16T00:00:00Z",
+  "confirmation": {
+    "state": "human_reviewed",
+    "confirmed_by": "founder:mari",
+    "confirmed_at": "2026-08-16T08:30:00Z",
+    "source_fingerprint": "sha256:2f7c1a44b0e9d3aa61c5f0b8e2d94c7a913e5b6f8d0a2c4e6b8d0f2a4c6e8b0d"
+  },
+  "profile": {
+    "lifecycle": { "state": "confirmed", "value": "piloting", "source": "founder:mari" },
+    "audience_scale": { "state": "confirmed", "value": "named_handful", "source": "founder:mari" },
+    "network_exposure": { "state": "confirmed", "value": "unlisted_public_url", "source": "founder:mari" },
+    "authentication": { "state": "confirmed", "value": "invite_only_accounts", "source": "founder:mari" },
+    "tenancy": { "state": "confirmed", "value": "multi_tenant_shared_store", "source": "founder:mari" },
+    "data_sensitivity": { "state": "confirmed", "value": "personal_data", "source": "founder:mari" },
+    "financial_operations": { "state": "confirmed", "value": "none", "source": "founder:mari" },
+    "privileged_operations": { "state": "confirmed", "value": "internal_admin_actions", "source": "founder:mari" },
+    "business_criticality": { "state": "confirmed", "value": "supporting", "source": "founder:mari" }
+  },
+  "compensating_controls": [
+    {
+      "compensating_control_id": "cc-access-proxy",
+      "description": "The API hostname sits behind an identity-aware proxy that only lets the twelve named testers' verified identities through; requests without a session never reach the database API.",
+      "enforced_by": "Cloudflare Access policy acme-orders-pilot (allowlist of twelve identities), owned by founder:mari",
+      "evidence_refs": ["ev-access-proxy-config"],
+      "applies_to": {
+        "domains": ["security", "privacy"],
+        "scopes": [{ "environment": "private_test", "intended_use": "invite_only_pilot" }]
+      },
+      "valid_until": "2026-09-15T00:00:00Z",
+      "readiness_condition": true,
+      "reassess_trigger": { "kind": "before_environment", "value": "public_release" }
+    }
+  ],
+  "extra_evidence": [
+    {
+      "evidence_id": "ev-access-proxy-config",
+      "control_ids": ["vibecheck.control.authz.anon_data_access"],
+      "provider": "reviewer, Cloudflare dashboard export",
+      "subject_kind": "config",
+      "subject_locator": "cloudflare:access-policy/acme-orders-pilot",
+      "environment": "private_test",
+      "operation": "config_export_review",
+      "scope": "The exported Access policy on 16 August 2026, plus one unauthenticated request from outside the allowlist that the proxy rejected. Covers the proxied hostname only; it says nothing about the Supabase project's own hostname.",
+      "direction": "supports",
+      "strength": "decisive",
+      "aspect": "reachability of the data API from outside the tester allowlist",
+      "valid_until": "2026-09-15T00:00:00Z"
+    }
+  ],
+  "findings": [
+    {
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "partial",
+      "rationale": "Row-level security now denies anon reads on public.orders, verified against a non-empty table. The anon write path was never probed: no write-probe consent was given, so the requirement is only partly established.",
+      "evidence": {
+        "provider": "vibecheck supabase probe",
+        "subject_kind": "table",
+        "subject_locator": "public.orders",
+        "environment": "private_test",
+        "operation": "http_select_anon_head",
+        "strength": "decisive",
+        "direction": "refutes",
+        "aspect": "anon write access to public.orders",
+        "scope": "Anon reads of public.orders are denied on a table separately established as non-empty. The anon INSERT path was not exercised: that needs explicit write-probe consent, which was not given.",
+        "valid_until": "2026-09-15T00:00:00Z"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.obs.error_tracking",
+      "status": "fail",
+      "rationale": "No error tracking on either side; server errors are printed to a console nobody reads.",
+      "evidence": {
+        "provider": "vibecheck.sh static scanner",
+        "operation": "static_pattern_scan",
+        "strength": "indicative",
+        "scope": "Current working tree only, ruleset obs.no_error_tracking. No Sentry, Bugsnag or equivalent client found in the dependency manifest.",
+        "valid_until": "2026-09-15T12:00:00Z"
+      }
+    }
+  ],
+  "baseline": {
+    "status": "pass",
+    "rationale": "Reviewed in the walkthrough of 16 August 2026 with the founder present; nothing contradicting was found in the working tree or the project settings.",
+    "screening_status": "answered",
+    "screening_rationale": "Screening question answered during the walkthrough: the pilot does not fall into the EU AI Act category this row screens for.",
+    "evidence": {
+      "environment": "private_test",
+      "operation": "reviewer_walkthrough",
+      "strength": "indicative",
+      "scope": "One reviewer walkthrough of the working tree and the Supabase project settings on 16 August 2026. Covers what could be seen in that session and nothing beyond it.",
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  }
+}

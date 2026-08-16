@@ -1,0 +1,561 @@
+{
+  "actions": [
+    {
+      "action_id": "act-close-anon-read",
+      "blocking_scope": [
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "deadline": {
+        "kind": "immediate",
+        "rationale": "The product is live and the data is reachable with a key that ships in the app bundle."
+      },
+      "kind": "remediate",
+      "outcome": "An independent re-probe with the anon key returns no rows from public.bookings on a table separately established as non-empty.",
+      "owner": {
+        "name": "developer:sam",
+        "role": "developer"
+      },
+      "reason": "Anon callers can currently read every booking, including names, phone numbers and addresses.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "reviewer:vibecheck",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "A re-probe recorded after the policy change, plus the migration diff. A disappeared scanner warning is not sufficient.",
+      "urgency": "immediate"
+    }
+  ],
+  "assessment_id": "va-golden-public-product",
+  "assessments": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-authz.anon_data_access",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-anon_data_access-01"
+        ],
+        "rationale": "An authorized read-only probe returned booking rows to a caller holding nothing but the public anon key."
+      },
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "fail"
+    },
+    {
+      "acceptance": {
+        "accepted_by": "founder:tom",
+        "reason": "Two export requests in twelve months, both served manually within a day. Building self-service export is scheduled after the authorization work.",
+        "review_by": "2026-11-01T00:00:00Z"
+      },
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-continuity.data_export",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-data_export-03"
+        ],
+        "rationale": "There is no self-service export; support runs a manual SQL dump on request. The founder accepted this until the next quarter."
+      },
+      "control_id": "vibecheck.control.continuity.data_export",
+      "status": "risk_accepted"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_id": "asm-cost.budget_caps",
+      "assessor": {
+        "id": "reviewer:vibecheck",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-budget_caps-02"
+        ],
+        "rationale": "No spending cap or billing alert exists on either paid provider; the reviewer confirmed both dashboards with the founder."
+      },
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "fail"
+    }
+  ],
+  "context": {
+    "application": {
+      "description": "Live booking product with open signup, card payments through a hosted checkout, and email confirmations.",
+      "name": "Bookings",
+      "platform": "lovable+supabase+stripe"
+    },
+    "confirmation": {
+      "confirmed_at": "2026-08-16T07:45:00Z",
+      "confirmed_by": "founder:tom",
+      "source_fingerprint": "sha256:3b9d1c2e4f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdef1",
+      "state": "human_reviewed"
+    },
+    "context_fingerprint": "sha256:9173e2943e29206b570aa0b17e6645ce869183d4a9027cc04aca74fca7ba1f56",
+    "context_id": "ctx-golden-public-product",
+    "context_model": {
+      "name": "vibecheck.context_model",
+      "version": "1.0.0"
+    },
+    "current_scope": {
+      "environment": "public_release",
+      "intended_use": "public_product"
+    },
+    "data_summary": "Customer names, emails, phone numbers, booking history and payment references for several thousand users. Cards are handled by the hosted checkout.",
+    "profile": {
+      "audience_scale": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "open_large"
+      },
+      "authentication": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "open_signup"
+      },
+      "business_criticality": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "core_operation"
+      },
+      "data_sensitivity": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "personal_data"
+      },
+      "financial_operations": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "charges_or_payouts"
+      },
+      "lifecycle": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "live"
+      },
+      "network_exposure": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "public_internet"
+      },
+      "privileged_operations": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "external_side_effects"
+      },
+      "tenancy": {
+        "source": "founder:tom",
+        "state": "confirmed",
+        "value": "multi_tenant_shared_store"
+      }
+    },
+    "reassess_triggers": [
+      {
+        "kind": "context_change"
+      },
+      {
+        "kind": "before_environment",
+        "value": "public_release"
+      }
+    ],
+    "revision": 1,
+    "target_scopes": [
+      {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    ],
+    "valid_until": "2026-11-16T00:00:00Z"
+  },
+  "control_registry": {
+    "name": "vibecheck.controls",
+    "version": "1.0.0"
+  },
+  "created_at": "2026-08-16T12:00:00Z",
+  "evidence": [
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "direction": "refutes",
+      "environment": "public_release",
+      "evidence_id": "ev-anon_data_access-01",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "vibecheck supabase probe"
+      },
+      "scope": "One authorized read-only request against public.bookings with the anon key on 16 August 2026. Decisive that anon can read this table; it says nothing about other tables or about write access.",
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.bookings"
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.cost.budget_caps"
+        ],
+        "statement": "The requirement of Hard budget caps + billing alerts on every paid provider is met"
+      },
+      "direction": "refutes",
+      "environment": "public_release",
+      "evidence_id": "ev-budget_caps-02",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "dashboard_review",
+      "provider": {
+        "name": "reviewer, provider dashboards"
+      },
+      "scope": "The two billing dashboards as shown on 16 August 2026. Covers configured caps and alerts only, not actual spend.",
+      "strength": "decisive",
+      "subject": {
+        "kind": "account",
+        "locator": "stripe + email provider billing settings"
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    },
+    {
+      "claim": {
+        "control_ids": [
+          "vibecheck.control.continuity.data_export"
+        ],
+        "statement": "The requirement of Data export: important business and user data can be exported in a usable format is met"
+      },
+      "direction": "refutes",
+      "environment": "public_release",
+      "evidence_id": "ev-data_export-03",
+      "observed_at": "2026-08-16T12:00:00Z",
+      "operation": "reviewer_walkthrough",
+      "provider": {
+        "name": "reviewer, product walkthrough"
+      },
+      "scope": "The product's account area and the documented support procedure on 16 August 2026.",
+      "strength": "indicative",
+      "subject": {
+        "kind": "process",
+        "locator": "support export procedure"
+      },
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  ],
+  "readiness": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blockers": [
+        {
+          "reason": "Open remediate action whose blocking scope covers this environment and intended use: An independent re-probe with the anon key returns no rows from public.bookings on a table separately established as non-empty.",
+          "ref": "act-close-anon-read"
+        },
+        {
+          "reason": "Critical contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.anon_data_access (assessment status: fail)",
+          "ref": "rsk-authz.anon_data_access-public_release.public_product-current-r1"
+        },
+        {
+          "reason": "Critical contextual financial risk in this scope for unresolved control(s) vibecheck.control.cost.budget_caps (assessment status: fail)",
+          "ref": "rsk-cost.budget_caps-public_release.public_product-current-r1"
+        }
+      ],
+      "conditions": [
+        {
+          "condition_id": "cond-public_release.public_product-accepted.continuity.data_export",
+          "enforced_by": "founder:tom",
+          "expires_at": "2026-11-01T00:00:00Z",
+          "reassess_trigger": {
+            "kind": "calendar_date",
+            "value": "2026-11-01T00:00:00Z"
+          },
+          "requirement": "The accepted risk on vibecheck.control.continuity.data_export stays accepted only until 2026-11-01T00:00:00Z, and only for this scope: Two export requests in twelve months, both served manually within a day. Building self-service export is scheduled after the authorization work."
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.blocked.contextual_risk_critical",
+          "readiness.blocked.open_blocking_action",
+          "readiness.incomplete.unassessed_critical_high"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is still incomplete, and readiness for this scope is already blocked by what is known: completing the review can add blockers, never remove this one.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-public_release.public_product",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      },
+      "state": "blocked",
+      "unknowns": [
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.object_level",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.integ.webhook_signatures",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.no_pii_leakage",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "41 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true
+        }
+      ],
+      "valid_until": "2026-09-15T12:00:00Z"
+    }
+  ],
+  "revision": 1,
+  "risks": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.use.public_product",
+          "impact.audience.open_large",
+          "impact.data.personal_data",
+          "impact.financial.charges_or_payouts",
+          "impact.privileged.external_side_effects",
+          "impact.criticality.core_operation",
+          "impact.cap.max_increase",
+          "impact.cap.severity_ceiling",
+          "exposure.base.environment.public_release",
+          "exposure.network.public_internet",
+          "exposure.auth.open_signup",
+          "exposure.cap.max_increase"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-anon_data_access-01"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication open_signup (Anyone can create an account, with or without email verification).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: security.",
+        "blast_radius": "Audience reached: open_large (Open to anyone, thousands or more, or growing without a ceiling). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: external_side_effects (Sends email or messages, calls paid third-party APIs, or acts in external systems). Money movement: charges_or_payouts (Charges customers, issues payouts, or spends metered third-party budget).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all. Publicly discoverable deployments are enumerated by untargeted automation as a matter of routine. An attacker can always obtain a legitimate authenticated position by signing up. Exposure may only be reduced by hard network facts, and by at most one evidenced compensating control on top. Raising is capped at one step because the environment base already carries the dominant signal."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T12:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-public_release.public_product-current-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "The control is marked accepted risk by founder:tom (review by 2026-11-01T00:00:00Z). Acceptance records a decision; it does not remove the exposure."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.continuity.data_export"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Medium",
+          "impact.use.public_product",
+          "impact.audience.open_large",
+          "impact.privileged.external_side_effects",
+          "impact.criticality.core_operation",
+          "impact.cap.max_increase",
+          "impact.cap.severity_ceiling",
+          "exposure.base.environment.public_release",
+          "exposure.network.public_internet",
+          "exposure.auth.open_signup",
+          "exposure.cap.max_increase"
+        ]
+      },
+      "domain": "reliability",
+      "evidence_refs": [
+        "ev-data_export-03"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Normal operation and load in this scope; no attacker required.",
+        "affected": "Data export: important business and user data can be exported in a usable format. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: reliability.",
+        "blast_radius": "Audience reached: open_large (Open to anyone, thousands or more, or growing without a ceiling). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: external_side_effects (Sends email or messages, calls paid third-party APIs, or acts in external systems). Money movement: charges_or_payouts (Charges customers, issues payouts, or spends metered third-party budget).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "moderate",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all. Publicly discoverable deployments are enumerated by untargeted automation as a matter of routine. An attacker can always obtain a legitimate authenticated position by signing up. Exposure may only be reduced by hard network facts, and by at most one evidenced compensating control on top. Raising is capped at one step because the environment base already carries the dominant signal."
+      },
+      "level": "high",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T12:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-continuity.data_export-public_release.public_product-current-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.cost.budget_caps"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.High",
+          "impact.use.public_product",
+          "impact.audience.open_large",
+          "impact.financial.charges_or_payouts",
+          "impact.privileged.external_side_effects",
+          "impact.criticality.core_operation",
+          "impact.cap.max_increase",
+          "exposure.base.environment.public_release",
+          "exposure.network.public_internet",
+          "exposure.auth.open_signup",
+          "exposure.cap.max_increase"
+        ]
+      },
+      "domain": "financial",
+      "evidence_refs": [
+        "ev-budget_caps-02"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Whoever can exercise the cost or payment path: open_signup (Anyone can create an account, with or without email verification).",
+        "affected": "Hard budget caps + billing alerts on every paid provider. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: core_operation (A core business process or a paying customer's daily work runs on it). Risk domain: financial.",
+        "blast_radius": "Audience reached: open_large (Open to anyone, thousands or more, or growing without a ceiling). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: external_side_effects (Sends email or messages, calls paid third-party APIs, or acts in external systems). Money movement: charges_or_payouts (Charges customers, issues payouts, or spends metered third-party budget).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all. Publicly discoverable deployments are enumerated by untargeted automation as a matter of routine. An attacker can always obtain a legitimate authenticated position by signing up. Exposure may only be reduced by hard network facts, and by at most one evidenced compensating control on top. Raising is capped at one step because the environment base already carries the dominant signal."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-15T12:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-cost.budget_caps-public_release.public_product-current-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    }
+  ],
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.1.0"
+}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/jaakla/vibecheck/main/schema/vibecheck.assessment.v1.schema.json",
   "title": "Vibecheck assessment envelope v1",
-  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation only; semantic rules R1-R15 in the RFC apply on top. Readers MUST ignore unknown fields and MUST preserve them when rewriting.",
+  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation only; semantic rules R1-R15 in the RFC apply on top. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added, additively: the per-field application-context profile and its compensating controls, the current scope, derivation records on risks and readiness, blocked transitions, and the legacy framework verdict alongside scoped readiness (RFC section 4.3, gh issue #4).",
   "type": "object",
   "required": ["schema", "schema_version", "assessment_id", "revision", "created_at", "context"],
   "properties": {
@@ -97,13 +97,121 @@
       ]
     },
 
+    "context_field": {
+      "type": "object",
+      "description": "One captured context fact together with how it came to be known. The state is never optional: a recorded value whose provenance is missing cannot be told apart from a guess. unknown and conflicting are treated identically by the risk derivation, and neither may be resolved silently toward the benign value.",
+      "required": ["state"],
+      "properties": {
+        "value": { "type": "string", "description": "A value id from the matching dimension in schema/vibecheck.context.v1.json." },
+        "state": { "enum": ["confirmed", "inferred", "conflicting", "unknown"] },
+        "source": { "type": "string", "description": "Who confirmed it, or what artifact it was inferred from." },
+        "rationale": { "type": "string" },
+        "candidates": { "type": "array", "items": { "type": "string" }, "description": "The disagreeing values, when the state is conflicting." },
+        "confirmed_at": { "$ref": "#/$defs/timestamp" },
+        "status": false,
+        "risk": false
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "confirmed" } }, "required": ["state"] },
+          "then": { "required": ["state", "value", "source"] }
+        },
+        {
+          "if": { "properties": { "state": { "const": "inferred" } }, "required": ["state"] },
+          "then": { "required": ["state", "value", "source", "rationale"] }
+        },
+        {
+          "if": { "properties": { "state": { "const": "conflicting" } }, "required": ["state"] },
+          "then": {
+            "required": ["state", "candidates", "rationale"],
+            "properties": { "candidates": { "minItems": 2 } }
+          }
+        },
+        {
+          "$comment": "An unknown field may not carry a value: that is how unknown silently becomes the benign answer.",
+          "if": { "properties": { "state": { "const": "unknown" } }, "required": ["state"] },
+          "then": { "properties": { "value": false } }
+        }
+      ]
+    },
+
+    "compensating_control": {
+      "type": "object",
+      "description": "A measure already in place that lowers how likely a weakness is to be exercised in this context. It may reduce the exposure input by at most one step and never the impact (rule R7), and only while at least one cited evidence record is current (rule R15). enforced_by names the mechanism or accountable person: an intention is not a compensating control.",
+      "required": ["compensating_control_id", "description", "enforced_by", "evidence_refs"],
+      "properties": {
+        "compensating_control_id": { "type": "string", "pattern": "^cc-[A-Za-z0-9._:-]+$" },
+        "description": { "type": "string" },
+        "enforced_by": { "type": "string" },
+        "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^ev-[A-Za-z0-9._:-]+$" } },
+        "applies_to": {
+          "type": "object",
+          "description": "Which risks this measure may reduce. An empty or absent applies_to means it applies to none: scope is stated, never assumed.",
+          "properties": {
+            "control_ids": { "type": "array", "items": { "$ref": "#/$defs/control_id" } },
+            "domains": { "type": "array", "items": { "enum": ["security", "privacy", "reliability", "financial", "compliance", "product"] } },
+            "scopes": { "type": "array", "items": { "$ref": "#/$defs/scope_pair" } }
+          }
+        },
+        "valid_until": { "$ref": "#/$defs/timestamp" },
+        "readiness_condition": { "type": "boolean", "description": "When true, the measure also becomes an enforceable condition on any conditional readiness that leans on it." },
+        "reassess_trigger": { "$ref": "#/$defs/trigger" },
+        "reduces_impact": false
+      }
+    },
+
+    "derivation_record": {
+      "type": "object",
+      "description": "How a derived object was computed, so the same normalized inputs can be shown to produce the same output. Present on machine-derived risks and readiness; absent on hand-authored ones.",
+      "required": ["policy", "context_revision"],
+      "properties": {
+        "policy": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "enum": ["vibecheck.risk_derivation", "vibecheck.readiness"] },
+            "version": { "$ref": "#/$defs/semver" }
+          }
+        },
+        "context_revision": { "type": "integer", "minimum": 1 },
+        "rules_applied": { "type": "array", "items": { "type": "string" } },
+        "unknown_inputs": { "type": "array", "items": { "type": "string" }, "description": "Context dimensions that were unknown or conflicting and therefore forced an unknown input." },
+        "intrinsic_severity": false
+      }
+    },
+
     "application_context": {
       "type": "object",
-      "description": "Versioned application context. Assessment conclusions are only as good as this context; its confirmation state is part of the record.",
+      "description": "Versioned application context. Assessment conclusions are only as good as this context; its confirmation state is part of the record. The context has its own revision, confirmation date, expiry and reassessment triggers, all independent of the source-code fingerprint: changing what the application is for does not pretend the code changed, and changing the code does not pretend the context was reconfirmed.",
       "required": ["context_id", "revision", "application", "target_scopes", "confirmation"],
       "properties": {
         "context_id": { "type": "string", "pattern": "^ctx-[A-Za-z0-9._:-]+$" },
         "revision": { "type": "integer", "minimum": 1 },
+        "supersedes_revision": { "type": "integer", "minimum": 1 },
+        "context_model": {
+          "type": "object",
+          "description": "Which dimension model the profile keys and values resolve against.",
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "$ref": "#/$defs/semver" }
+          }
+        },
+        "context_fingerprint": {
+          "type": "string",
+          "description": "Digest of the context content itself. Distinct from confirmation.source_fingerprint, which digests the reviewed source tree."
+        },
+        "profile": {
+          "type": "object",
+          "description": "The captured context dimensions, keyed by dimension id from the context model (lifecycle, audience_scale, network_exposure, authentication, tenancy, data_sensitivity, financial_operations, privileged_operations, business_criticality).",
+          "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+          "additionalProperties": { "$ref": "#/$defs/context_field" }
+        },
+        "compensating_controls": { "type": "array", "items": { "$ref": "#/$defs/compensating_control" } },
+        "current_scope": {
+          "$ref": "#/$defs/scope_pair",
+          "description": "Where the application actually is today. Risks for this scope carry the current horizon; every other target scope is event-triggered."
+        },
         "application": {
           "type": "object",
           "required": ["name"],
@@ -419,7 +527,10 @@
           }
         },
         "conflicts": { "type": "string", "description": "How conflicting inputs were treated; unresolved conflicts force level unknown (rule R6)." },
-        "supersedes": { "type": "string", "pattern": "^rsk-[A-Za-z0-9._:-]+$" }
+        "supersedes": { "type": "string", "pattern": "^rsk-[A-Za-z0-9._:-]+$" },
+        "derivation": { "$ref": "#/$defs/derivation_record" },
+        "intrinsic_severity": false,
+        "control_status": false
       }
     },
 
@@ -760,10 +871,39 @@
             }
           }
         },
+        "blocked_transitions": {
+          "type": "array",
+          "description": "More exposed scopes this readiness does not cover, with their own state and why moving there is not possible on today's evidence. Keeps a narrow conditional or no-known-blocker state from reading as permission to widen the scope.",
+          "items": {
+            "type": "object",
+            "required": ["scope", "state", "reason"],
+            "properties": {
+              "scope": { "$ref": "#/$defs/scope_pair" },
+              "state": { "enum": ["incomplete", "blocked", "conditional", "no_known_blocker"] },
+              "reason": { "type": "string" },
+              "refs": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "framework_verdict": {
+          "type": "object",
+          "description": "The legacy checklist verdict computed from the same assessments, kept beside the scoped readiness state instead of being replaced by it. explanation is always required, so a difference between the two is explained rather than hidden.",
+          "required": ["framework", "verdict", "agreement", "explanation"],
+          "properties": {
+            "framework": { "type": "string" },
+            "framework_version": { "type": "string" },
+            "profile": { "enum": ["reviewer", "founder"] },
+            "verdict": { "type": "string" },
+            "agreement": { "enum": ["aligned", "differs"] },
+            "explanation": { "type": "string", "minLength": 1 }
+          }
+        },
+        "derivation": { "$ref": "#/$defs/derivation_record" },
         "assessed_at": { "$ref": "#/$defs/timestamp" },
         "valid_until": { "$ref": "#/$defs/timestamp" },
         "secure": false,
-        "certified": false
+        "certified": false,
+        "ready_to_ship": false
       },
       "allOf": [
         {
