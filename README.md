@@ -121,6 +121,8 @@ python3 scripts/gen_map.py --check         # verify without modifying files
 
 `scripts/items.py` is the single source of truth: the 89-item bank in four wordings, the verification metadata, and `SCANNER_CHECKS` (which checklist items each scanner check covers, and at which tier). `references/checklist-map.md` is generated from it, and `tests/test_coverage_map.py` fails if the scanner, the item bank, the generated map, or the counts quoted in this README drift apart.
 
+`rfcs/0001-assessment-schema-v1.md` is the design contract for the next-generation assessment model (stable control IDs, evidence, contextual risk, actions/procedures, environment-scoped readiness). Its JSON Schemas and validated examples live in `schema/`; `tests/test_rfc_schema.py` pins the schema invariants and the lossless `vibecheck_v1` mapping against `items.py`.
+
 `tests/fixtures/` holds miniature repos for warning signals, quiet signals, and prose false-positive cases. They contain fake credential shapes by design, so scanning this repository itself reports warnings inside `tests/fixtures/`.
 
 ## Legal reference notes (reviewed August 2026 — re-verify at assessment time)

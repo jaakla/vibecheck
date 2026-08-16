@@ -1,0 +1,19 @@
+{
+  "schema": "vibecheck.risk_matrix",
+  "schema_version": "1.0.0",
+  "description": "Deterministic qualitative contextual-risk method. level = matrix[impact][exposure]. If impact or exposure is unknown, level is unknown. Same inputs always produce the same level. Rubrics for choosing impact and exposure are normative in rfcs/0001-assessment-schema-v1.md section 5.",
+  "impact_levels": ["minor", "moderate", "major", "severe"],
+  "exposure_levels": ["rare", "unlikely", "plausible", "expected"],
+  "risk_levels": ["low", "moderate", "high", "critical", "unknown"],
+  "matrix": {
+    "severe":   { "rare": "moderate", "unlikely": "high",     "plausible": "critical", "expected": "critical" },
+    "major":    { "rare": "low",      "unlikely": "moderate", "plausible": "high",     "expected": "critical" },
+    "moderate": { "rare": "low",      "unlikely": "low",      "plausible": "moderate", "expected": "high" },
+    "minor":    { "rare": "low",      "unlikely": "low",      "plausible": "low",      "expected": "moderate" }
+  },
+  "unknown_rule": "If impact or exposure is unknown, or inputs conflict without a recorded resolution, level is unknown. Unknown is never treated, rendered, or sorted as low, and never grants permission to proceed.",
+  "compensating_control_rule": "A compensating control may reduce exposure by at most one level, only with at least one current supporting evidence reference. Compensating controls never reduce impact.",
+  "downgrade_rule": "Setting level below the matrix result requires a downgrade record: from_level, rationale, current supporting evidence, approver. At most one level down. Raising level above the matrix result needs no ceremony.",
+  "freshness_rule": "A risk past its reassess_by, or resting on evidence past valid_until, is stale: readiness derivation treats it as unknown until reassessed.",
+  "severity_separation_rule": "Contextual risk never modifies intrinsic control severity or turns a failed control into a pass; it only changes prioritisation and scoped readiness."
+}

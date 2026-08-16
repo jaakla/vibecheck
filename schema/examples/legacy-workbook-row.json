@@ -1,0 +1,77 @@
+{
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.0.0",
+  "assessment_id": "va-legacy-workbook-demo",
+  "revision": 1,
+  "created_at": "2026-08-14T11:00:00Z",
+  "context": {
+    "context_id": "ctx-legacy-workbook-demo",
+    "revision": 1,
+    "application": { "name": "Legacy workbook demo", "description": "Demonstrates workbook row -> canonical assessment mapping: Pass with evidence, Accepted risk, and N/A. A blank workbook status cell maps to NO assessment object (not reviewed), which is distinct from an explicit not_tested." },
+    "target_scopes": [{ "environment": "private_test", "intended_use": "internal_tool" }],
+    "confirmation": { "state": "human_reviewed", "confirmed_by": "reviewer:jaak", "confirmed_at": "2026-08-14T10:30:00Z" }
+  },
+  "control_registry": { "name": "vibecheck.controls", "version": "1.0.0" },
+
+  "evidence": [
+    {
+      "evidence_id": "ev-idor-two-account",
+      "provider": { "name": "human reviewer (guided manual test)" },
+      "subject": { "kind": "endpoint", "locator": "/orders/{id}" },
+      "environment": "private_test",
+      "operation": "two_account_idor_probe",
+      "scope": "Orders and profile endpoints only, one record each; other object types untested.",
+      "claim": {
+        "control_ids": ["vibecheck.control.authz.object_level"],
+        "statement": "Users cannot reach records they don't own (IDOR)."
+      },
+      "direction": "supports",
+      "strength": "decisive",
+      "observed_at": "2026-08-14T10:15:00Z",
+      "valid_until": "2026-09-14T00:00:00Z",
+      "raw_result_ref": { "kind": "inline", "value": "As account A, requested B's order id via URL swap: HTTP 404; via API: HTTP 403. Recorded in review notes p.4." },
+      "side_effects": { "writes": false, "destructive": false, "external_accounts": false, "data_egress": false }
+    }
+  ],
+
+  "assessments": [
+    {
+      "assessment_id": "asm-wb-idor",
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "pass",
+      "assessor": { "kind": "human", "id": "reviewer:jaak" },
+      "assessed_at": "2026-08-14T10:20:00Z",
+      "basis": {
+        "rationale": "Workbook row #13 'Pass'. Two-account URL-swap and API probes denied cross-account access on the tested object types.",
+        "evidence_refs": ["ev-idor-two-account"]
+      }
+    },
+    {
+      "assessment_id": "asm-wb-budget-accepted",
+      "control_id": "vibecheck.control.cost.budget_caps",
+      "status": "risk_accepted",
+      "assessor": { "kind": "human", "id": "reviewer:jaak" },
+      "assessed_at": "2026-08-14T10:25:00Z",
+      "basis": {
+        "rationale": "Workbook row #24 'Accepted risk'. High-severity control; acceptance recorded with owner, reason, and review-by date exactly as the workbook Notes column requires. Counts as reviewed, never as a pass, and stays visible in counters. A Critical control could not take this status (rule R5).",
+        "evidence_refs": []
+      },
+      "acceptance": {
+        "accepted_by": "founder:mari",
+        "reason": "Internal tool, three users, prepaid API credits capped at the provider account level; full per-provider alerting deferred until pilot.",
+        "review_by": "2026-10-01T00:00:00Z"
+      }
+    },
+    {
+      "assessment_id": "asm-wb-tenant-na",
+      "control_id": "vibecheck.control.authz.tenant_isolation",
+      "status": "not_applicable",
+      "assessor": { "kind": "human", "id": "reviewer:jaak" },
+      "assessed_at": "2026-08-14T10:28:00Z",
+      "basis": {
+        "rationale": "Workbook row #15 'N/A' with required reason: single-tenant deployment, one organisation only; no cross-tenant boundary exists. Reason is mandatory for N/A on Critical/High rows and maps to this rationale field.",
+        "evidence_refs": []
+      }
+    }
+  ]
+}

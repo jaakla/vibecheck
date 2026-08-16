@@ -1,0 +1,79 @@
+{
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.0.0",
+  "assessment_id": "va-vibecheck-v1-mapping-demo",
+  "revision": 1,
+  "created_at": "2026-08-14T12:00:00Z",
+  "context": {
+    "context_id": "ctx-vibecheck-v1-mapping-demo",
+    "revision": 1,
+    "application": { "name": "vibecheck_v1 mapping demo", "description": "Lossless mapping entries for checklist items 13 and 14. The full 89-entry registry ships in Increment 1 (#3); tests/test_rfc_schema.py round-trips these entries against scripts/items.py." },
+    "target_scopes": [{ "environment": "developer_only", "intended_use": "prototype_demo" }],
+    "confirmation": { "state": "human_reviewed", "confirmed_by": "reviewer:jaak", "confirmed_at": "2026-08-14T12:00:00Z" }
+  },
+  "control_registry": { "name": "vibecheck.controls", "version": "1.0.0" },
+
+  "framework_mappings": [
+    {
+      "framework": "vibecheck_v1",
+      "framework_version": "2026.08",
+      "status_map": {
+        "pass": { "en": "Pass", "et": "Korras" },
+        "partial": { "en": "Partial", "et": "Osaline" },
+        "fail": { "en": "Fail", "et": "Puudulik" },
+        "not_tested": { "en": "Not tested", "et": "Testimata" },
+        "not_applicable": { "en": "N/A", "et": "Ei kohaldu" },
+        "risk_accepted": { "en": "Accepted risk", "et": "Aktsepteeritud risk" },
+        "answered": { "en": "Answered", "et": "Vastatud" },
+        "needs_specialist": { "en": "Needs specialist", "et": "Vajab spetsialisti" }
+      },
+      "entries": [
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "item_number": 13,
+          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipaasukontroll" },
+          "severity": "Critical",
+          "weight": 5,
+          "kind": "control",
+          "wording": {
+            "tech_en": "Object-level authorization: users cannot reach records they don't own (IDOR)",
+            "tech_et": "Objektitaseme volitamine: kasutaja ei paase ligi voorastele kirjetele (IDOR)",
+            "plain_en": "Have you tested with two separate accounts that User A cannot view, edit or delete User B's data?",
+            "plain_et": "Kas oled kahe eraldi kontoga testinud, et kasutaja A ei nae, muuda ega kustuta kasutaja B andmeid?",
+            "test_en": "Create two accounts. As A, change the ID number in a URL (e.g. /order/123 -> /order/124) and see if B's data appears. It must not.",
+            "test_et": "Loo kaks kontot. A-na muuda URL-is ID-numbrit (nt /order/123 -> /order/124) ja vaata, kas B andmed ilmuvad. Ei tohi."
+          },
+          "verification": { "codes": ["MAN", "E2E"], "tools": "Two accounts + URL ID swap; Playwright" },
+          "scanner_checks": [
+            { "check_id": "rls.permissive", "tier": "EVIDENCE" },
+            { "check_id": "authz.idor", "tier": "MANUAL" }
+          ],
+          "workbook_profiles": ["reviewer", "founder"]
+        },
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "item_number": 14,
+          "category": { "number": 3, "en": "3. Authorization & access control", "et": "3. Volitamine ja ligipaasukontroll" },
+          "severity": "Critical",
+          "weight": 5,
+          "kind": "control",
+          "wording": {
+            "tech_en": "No data readable/writable by an unauthenticated/anon caller unless intended public",
+            "tech_et": "Ukski andmestik pole autentimata/anon-kutsujale loetav/kirjutatav, v.a teadlikult avalik",
+            "plain_en": "Can a logged-out stranger reach private data through the app's data connection?",
+            "plain_et": "Kas valja logitud vooras paaseb rakenduse andmeuhenduse kaudu privaatandmeteni?",
+            "test_en": "For Supabase/Firebase apps: ask the builder to confirm the public 'anon' key cannot read private tables. Test an API call while logged out.",
+            "test_et": "Supabase/Firebase appidel: palu kinnitada, et avalik 'anon' voti ei loe privaatseid tabeleid. Testi API-kutset valja logituna."
+          },
+          "verification": { "codes": ["AUTO", "MAN"], "tools": "vibecheck supabase probe, curl with anon key" },
+          "scanner_checks": [
+            { "check_id": "rls.missing", "tier": "EVIDENCE" },
+            { "check_id": "rls.permissive", "tier": "EVIDENCE" },
+            { "check_id": "rls.anon_write", "tier": "EVIDENCE" }
+          ],
+          "workbook_profiles": ["reviewer", "founder"]
+        }
+      ]
+    }
+  ]
+}
