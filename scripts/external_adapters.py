@@ -52,6 +52,7 @@ same shape.
 Stdlib only.
 """
 import datetime
+import functools
 import json
 import os
 import shutil
@@ -138,7 +139,7 @@ def availability_report(path_lookup=None):
 
 def run_record(command=None, exit_code=None, timed_out=False, cancelled=False,
                error=None, started_at=None, duration_seconds=None,
-               version=None, target=None, scope_note=None):
+               version=None, scope_note=None):
     """How a tool run was invoked and how it ended.
 
     The exact argv is provenance: a Semgrep run with one ruleset and a Semgrep
@@ -154,7 +155,6 @@ def run_record(command=None, exit_code=None, timed_out=False, cancelled=False,
         "started_at": started_at,
         "duration_seconds": duration_seconds,
         "version": version,
-        "target": target,
         "scope_note": scope_note,
     }
 
@@ -280,12 +280,17 @@ _CONTROL_NUMBERS = {control_id: number
                     for number, control_id in controls_mod.CONTROL_IDS.items()}
 
 
+@functools.lru_cache(maxsize=None)
 def declared_controls(provider_id):
-    """Control IDs this provider's registry record says it can observe."""
+    """Control IDs this provider's registry record says it can observe.
+
+    Cached: the registry is static per process, and every finding in a run
+    (hundreds, for a noisy Semgrep/Trivy pass) calls this via `_claim_within`.
+    """
     record = providers_mod.capability(provider_id)
     if record is None:
         raise KeyError("no such provider: %r" % (provider_id,))
-    return [entry["control_id"] for entry in record.get("coverage") or []]
+    return tuple(entry["control_id"] for entry in record.get("coverage") or [])
 
 
 def _claim_within(provider_id, item_numbers):
