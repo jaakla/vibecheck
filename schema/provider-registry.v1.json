@@ -55,6 +55,22 @@
       "kind": "live",
       "description": "The deployed application's own responses, headers and error pages are read back."
     },
+    "git_history_scan": {
+      "kind": "source",
+      "description": "Pattern and entropy matching over committed history, including commits whose content was later removed from the working tree."
+    },
+    "dependency_audit": {
+      "kind": "source",
+      "description": "Declared dependency versions, lockfiles or image layers are matched against advisory databases. It reads what the project declares, never what the deployment is running."
+    },
+    "sast_code_scan": {
+      "kind": "source",
+      "description": "Rule-based or dataflow static analysis over source code."
+    },
+    "dast_web_scan": {
+      "kind": "live",
+      "description": "A scanner sends requests to a deployed application and reads what comes back."
+    },
     "kind_rule": "A source operation reads what the application intends; a live operation reads what the deployment does. Only a live operation may fill an authorization coverage cell, because an unapplied or dashboard-overridden policy looks exactly like an applied one in the source (RFC 0001 section 6.4). The source set here is the same set scripts/authz.py refuses a cell to.",
     "default_rule": "A coverage entry that does not state fills_coverage_cell is read as filling one exactly when every operation it names is live and the control is coverage-tracked. The explicit flag is for the cases the default gets wrong in the unsafe direction: a live method that still cannot settle a cell, such as a browser flow asserting on the routes somebody wrote tests for while the control speaks about every route. An unrecognized operation is not a live one."
   },
@@ -218,7 +234,7 @@
       {
         "key": "fallback_order",
         "direction": "asc",
-        "rationale": "The declared preference between methods of equal strength: cheapest and least intrusive first, which for authorization means the API probe before a browser flow before a person."
+        "rationale": "The declared preference between methods of equal strength: cheapest and least intrusive first, which for authorization means the API probe before a browser flow before a person. Maintained specialist tools rank ahead of the human review and the bundled grep scanner, because a tool that costs nothing to run and was written by people who do only this finds more than either — and behind the live methods, because reading the source is still not watching the deployment. A person reading the code stays ahead of the bundled scanner, where it has always been."
       },
       {
         "key": "provider_id",
@@ -548,6 +564,22 @@
           "max_strength": "decisive",
           "fills_coverage_cell": false,
           "closure_threshold": "An undeclared route observed refusing an unauthenticated request is evidence about that route. Default-deny is a statement about every route, including the ones nobody wrote a test for, so a flow cannot close it."
+        },
+        {
+          "control_id": "vibecheck.control.testing.core_flow_tests",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": false,
+          "closure_threshold": "The flows a maintained suite asserts on, observed passing against this deployment. A suite that covers the sign-up path says nothing about checkout, so closure needs the critical flows named first and then asserted."
+        },
+        {
+          "control_id": "vibecheck.control.testing.authz_tests",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Automated cross-account assertions exist and ran against this deployment. What each assertion establishes about authorization itself is a coverage cell, tracked separately from whether the tests exist at all."
         }
       ],
       "authorization": {
@@ -608,6 +640,12 @@
         "false_positive_risk": "low",
         "false_negative_risk": "moderate",
         "limitations": "It tests the routes somebody wrote an assertion for. An unasserted route is not a passing route, and a flow that signs in through the UI can be defeated by an unrelated UI change rather than by an authorization failure."
+      },
+      "run_semantics": {
+        "timeout": "Playwright's own per-test timeout. A timed-out assertion observed no decision by the application and is imported as an inconclusive cell, never as a refusal.",
+        "cancellation": "Safe for read-only assertions. A cancelled write or delete flow may leave test data behind, which is why those assertions are separately opt-in.",
+        "partial_results": "The reporter writes the assertions that ran; the ones that did not stay uncovered and are not a pass.",
+        "failure": "A browser that will not launch or a sign-in that fails produces no evidence and one open verify Action. A failed assertion is a result, not a failure."
       },
       "evidence_freshness": {
         "typical_validity": "until the next deploy"
@@ -747,7 +785,7 @@
       "summary_en": "A person who can read the application reads the authorization policies, the server routes and the queries, and states what the source intends.",
       "executor_role": "developer",
       "mechanism": "guided reading of the source and configuration",
-      "fallback_order": 4,
+      "fallback_order": 11,
       "availability": {
         "bundled": true,
         "requires_tools": [],
@@ -806,7 +844,7 @@
       "summary_en": "Recognizes table creation and row-level-security statements in committed migrations and reports the tables created without a matching policy.",
       "executor_role": "automation",
       "mechanism": "analyze_sql.py",
-      "fallback_order": 5,
+      "fallback_order": 12,
       "availability": {
         "bundled": true,
         "requires_tools": ["python3"],
@@ -881,7 +919,7 @@
       "summary_en": "Regex and path heuristics over the working tree. Emits WARN, NO_SIGNAL or MANUAL per check; it proves neither a vulnerability nor its absence.",
       "executor_role": "automation",
       "mechanism": "vibecheck.sh",
-      "fallback_order": 6,
+      "fallback_order": 13,
       "availability": {
         "bundled": true,
         "requires_tools": ["bash", "grep"],
@@ -935,6 +973,662 @@
       },
       "evidence_freshness": {
         "typical_validity": "until the working tree changes"
+      }
+    },
+
+    {
+      "provider_id": "prov-gitleaks",
+      "name": "Gitleaks secret scanner",
+      "version": "external",
+      "summary_en": "Pattern and entropy rules run over the commits a reviewer points them at, including credentials that were deleted from the working tree and are still in the history.",
+      "executor_role": "automation",
+      "mechanism": "gitleaks detect --source <repo> --log-opts <explicit revision range> --report-format json --redact --no-banner",
+      "fallback_order": 7,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["gitleaks"],
+        "detect": "Available when a `gitleaks` executable is on PATH. vibecheck never installs it: an absent tool is a recorded coverage gap, and what runs on the user's machine is the user's decision."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.secrets.no_repo_history_leaks",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A clean run over the *whole* history, plus the reviewer's confirmation that the scanned range is the whole history. A default run reads the working tree only, which is the one case where a green result means least."
+        },
+        {
+          "control_id": "vibecheck.control.secrets.no_client_provider_keys",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A provider key rule that fires is a finding about that key. Nothing closes here: a rule that did not fire has not established that no provider key ships to the client."
+        },
+        {
+          "control_id": "vibecheck.control.secrets.no_frontend_literals",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A hit in a file that ships to the browser is a finding about that file. The control speaks about the built bundle, which this never reads."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the local repository and writes a report file where the caller asks for one."
+      },
+      "prerequisites": ["The review has a git repository with history, not an exported snapshot."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads a working tree, so it is not acting in an environment at all; the environment on its evidence is the one the source belongs to.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none",
+        "notes": "Free. Triaging its output is not: entropy rules fire on test fixtures and generated files."
+      },
+      "network": {
+        "outbound": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "moderate",
+        "false_negative_risk": "moderate",
+        "limitations": "Regex and entropy, not semantics. It finds credential shapes it has a rule for, in the revisions it was pointed at; a passphrase, an unusual key format or an unscanned branch is a miss, and a green run is never a control-wide pass."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. A history scan of a large repository is minutes, not seconds; the adapter applies no timeout of its own.",
+        "cancellation": "Safe at any point: the run only reads. A cancelled run imports as a partial result with an open verify Action.",
+        "partial_results": "Findings written before the run stopped are evidence about themselves; the commits it never reached stay uncovered.",
+        "failure": "A non-zero exit means findings, not an error. A crash or an unreadable report produces no evidence and one open verify Action."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next commit"
+      }
+    },
+
+    {
+      "provider_id": "prov-trufflehog",
+      "name": "TruffleHog credential scanner",
+      "version": "external",
+      "summary_en": "Credential detectors over git history, with optional live verification against the provider each candidate belongs to.",
+      "executor_role": "automation",
+      "mechanism": "trufflehog git file://<repo> --json --no-update (add --only-verified to trade recall for precision; verification is what makes the run reach the network)",
+      "fallback_order": 8,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["trufflehog"],
+        "detect": "Available when a `trufflehog` executable is on PATH. Never installed by vibecheck."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.secrets.no_repo_history_leaks",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A clean run over the whole history. A verified hit is the strongest signal available here — the credential was live at scan time — and it still describes that credential, not the control."
+        },
+        {
+          "control_id": "vibecheck.control.secrets.no_client_provider_keys",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A detector that fires is a finding about that provider's key. Nothing closes on a detector that stayed silent."
+        },
+        {
+          "control_id": "vibecheck.control.secrets.no_frontend_literals",
+          "operations": ["git_history_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A hit in a file that ships to the browser is a finding about that file, not about the built bundle."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the local repository. Verification sends the candidate credential to the provider that issued it, which is a network call and an egress of the credential itself — it is opt-in for that reason."
+      },
+      "prerequisites": ["The review has a git repository with history."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads a working tree, so it is not acting in an environment at all.",
+      "cost": {
+        "monetary": "none",
+        "compute": "moderate",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": false,
+        "opt_in_flags": ["--only-verified"],
+        "targets": ["the issuing provider of each candidate credential, when verification is enabled"]
+      },
+      "data_egress": {
+        "occurs": false,
+        "opt_in_flags": ["--only-verified"],
+        "destinations": ["the issuing provider of each candidate credential, when verification is enabled"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "Detector-based. Verification removes most false positives for the providers it supports and does nothing for the ones it does not; an unsupported credential type is a miss either way."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. Verification adds a network round trip per candidate.",
+        "cancellation": "Safe at any point: read-only against the local clone.",
+        "partial_results": "The JSON-lines stream is imported line by line, so a stopped run keeps what it emitted; lines that do not parse are counted and reported rather than dropped in silence.",
+        "failure": "No readable line produces no evidence and one open verify Action."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next commit"
+      }
+    },
+
+    {
+      "provider_id": "prov-osv-scanner",
+      "name": "OSV-Scanner dependency audit",
+      "version": "external",
+      "summary_en": "Declared dependency versions are matched against the OSV advisory database.",
+      "executor_role": "automation",
+      "mechanism": "osv-scanner --format json --lockfile <path> (or --recursive <dir>)",
+      "fallback_order": 9,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["osv-scanner"],
+        "detect": "Available when an `osv-scanner` executable is on PATH. Never installed by vibecheck."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.deps.vuln_scanning",
+          "operations": ["dependency_audit"],
+          "subjects": ["repo", "file", "dependency"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A clean audit of every lockfile the application actually ships, on a date a reviewer records. Advisories are published continuously, so a clean run is a statement about a moment, not a property of the project."
+        },
+        {
+          "control_id": "vibecheck.control.deps.dependency_trust",
+          "operations": ["dependency_audit"],
+          "subjects": ["repo", "file", "dependency"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Nothing here closes it. An advisory lookup says nothing about who publishes a package, whether the name is a typosquat, or whether it was pinned deliberately."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads local manifests and queries the OSV API. The dependency names and versions of the project leave the machine as part of the lookup."
+      },
+      "prerequisites": ["A lockfile or manifest the tool supports exists in the repository."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads declared dependencies, not a deployment; the environment on its evidence is the one the source belongs to.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["osv.dev"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["osv.dev"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "It reports advisories against declared versions. It does not know whether the vulnerable code path is reachable from this application, and it cannot see a dependency that is vendored, unpinned or installed outside the lockfile."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. The run is a lookup against a remote API and fails the way a network call fails.",
+        "cancellation": "Safe at any point: no local or remote state changes.",
+        "partial_results": "Advisories returned before the stop are imported; lockfiles never read stay uncovered.",
+        "failure": "An unreachable database or an unreadable lockfile produces no evidence and one open verify Action — an audit that could not run is not a clean audit."
+      },
+      "evidence_freshness": {
+        "typical_validity": "days: advisories are published continuously"
+      }
+    },
+
+    {
+      "provider_id": "prov-trivy",
+      "name": "Trivy dependency, image and licence scanner",
+      "version": "external",
+      "summary_en": "Filesystem, lockfile and container-image layers are matched against vulnerability and licence databases.",
+      "executor_role": "automation",
+      "mechanism": "trivy fs --format json --scanners vuln,license <path>, or trivy image --format json <image>",
+      "fallback_order": 10,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["trivy"],
+        "detect": "Available when a `trivy` executable is on PATH. Never installed by vibecheck."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.deps.vuln_scanning",
+          "operations": ["dependency_audit"],
+          "subjects": ["repo", "file", "dependency"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A clean scan of the artifacts that actually ship — the image as well as the lockfile — on a recorded date."
+        },
+        {
+          "control_id": "vibecheck.control.deps.license_compatibility",
+          "operations": ["dependency_audit"],
+          "subjects": ["repo", "file", "dependency"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "The licence inventory is material for a decision about how this application is distributed. Compatibility is that decision, and no scanner makes it."
+        },
+        {
+          "control_id": "vibecheck.control.deps.dependency_trust",
+          "operations": ["dependency_audit"],
+          "subjects": ["repo", "file", "dependency"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Nothing here closes it: the scan reports known advisories, not the provenance of a package."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the filesystem or image layers and downloads its vulnerability database. Scanning a private image needs whatever credentials that registry requires."
+      },
+      "prerequisites": ["A supported lockfile, filesystem path or container image is available to scan."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads build artifacts, not a running deployment.",
+      "cost": {
+        "monetary": "none",
+        "compute": "moderate",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["the Trivy vulnerability database mirror"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the Trivy vulnerability database mirror"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "moderate",
+        "false_negative_risk": "moderate",
+        "limitations": "Severity is the advisory's, not this application's. Image scanning sees the layers it was given, and a base image rebuilt since the scan is a different artifact."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. The first run also downloads the vulnerability database.",
+        "cancellation": "Safe at any point: read-only against the filesystem or image layers.",
+        "partial_results": "Results per target are imported as they were written; targets never reached stay uncovered.",
+        "failure": "A stale or undownloadable database is a failure, not a clean scan, and produces one open verify Action."
+      },
+      "evidence_freshness": {
+        "typical_validity": "days: advisories are published continuously"
+      }
+    },
+
+    {
+      "provider_id": "prov-semgrep-ce",
+      "name": "Semgrep Community Edition",
+      "version": "external",
+      "summary_en": "Rule-based static analysis with intra-file dataflow over the source, for injection classes, unsafe rendering and framework misconfiguration.",
+      "executor_role": "automation",
+      "mechanism": "semgrep scan --config auto --json --metrics=off (--config auto fetches the registry ruleset; --config <local dir> keeps the run offline)",
+      "fallback_order": 5,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["semgrep"],
+        "detect": "Available when a `semgrep` executable is on PATH. Never installed by vibecheck."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.input.sql_parameterized",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A confirmed hit is a finding about that query. A clean run over a language and framework the ruleset actually supports is material; the control closes when a reviewer has seen how queries are built, not when a rule stayed quiet."
+        },
+        {
+          "control_id": "vibecheck.control.input.output_encoding",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Unsafe rendering sinks the ruleset recognizes. A template system it has no rules for is unscanned, not clean."
+        },
+        {
+          "control_id": "vibecheck.control.input.other_injection_classes",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Command, path, SSRF, XXE and deserialization sinks the ruleset recognizes, in the files it parsed."
+        },
+        {
+          "control_id": "vibecheck.control.input.server_side_validation",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Nothing closes it here. Whether every server entry point validates its input is a statement about routes nobody wrote a rule for as much as the ones somebody did."
+        },
+        {
+          "control_id": "vibecheck.control.deploy.debug_disabled",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file", "config"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A debug flag in committed configuration is a finding about the source. What the deployment runs is a live observation this never makes."
+        },
+        {
+          "control_id": "vibecheck.control.llm.no_output_to_exec",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A model response reaching an execution sink in one file. The rules are intra-file, so a path that crosses a module boundary is a miss."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the working tree. `--config auto` fetches rules from the Semgrep registry, which is a network call; a local ruleset keeps the run offline. Source code is not uploaded in either case."
+      },
+      "prerequisites": ["Source in a language the chosen ruleset supports."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads a working tree, so it is not acting in an environment at all.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none",
+        "notes": "Community Edition is free. Triage is where the time goes."
+      },
+      "network": {
+        "outbound": false,
+        "opt_in_flags": ["--config auto"],
+        "targets": ["the Semgrep rule registry, when the ruleset is fetched rather than local"]
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "moderate",
+        "false_negative_risk": "moderate",
+        "limitations": "Syntactic patterns with intra-file dataflow. It does not follow taint across files or through a framework's dispatch, and it reads the source rather than the deployment, so it can never fill an authorization coverage cell."
+      },
+      "run_semantics": {
+        "timeout": "Semgrep's own per-rule and per-file timeouts. Files it gave up on appear in the run's error list and are imported as a gap.",
+        "cancellation": "Safe at any point: read-only against the working tree.",
+        "partial_results": "Results collected before the stop are imported; the rules and files not reached stay uncovered.",
+        "failure": "Unparseable output produces no evidence and one open verify Action. A rule that maps to no declared control becomes a triage Action rather than a claim."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the source changes"
+      }
+    },
+
+    {
+      "provider_id": "prov-codeql",
+      "name": "CodeQL semantic analysis",
+      "version": "external",
+      "summary_en": "Interprocedural taint tracking over a compiled analysis database, following untrusted input to sinks across files.",
+      "executor_role": "automation",
+      "mechanism": "codeql database create <db> --language=<lang> && codeql database analyze <db> <suite> --format=sarif-latest --output=<file>",
+      "fallback_order": 6,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["codeql"],
+        "detect": "Available when a `codeql` executable is on PATH and the project builds. Free for open-source repositories; a licence question for private ones, which is the user's to answer before it runs."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.input.sql_parameterized",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path from an untrusted source to a query sink. A clean suite over a language it fully supports is the strongest static material available here and still not a live observation."
+        },
+        {
+          "control_id": "vibecheck.control.input.output_encoding",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path from an untrusted source to a rendering sink."
+        },
+        {
+          "control_id": "vibecheck.control.input.other_injection_classes",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path to a command, path, SSRF or deserialization sink."
+        },
+        {
+          "control_id": "vibecheck.control.input.server_side_validation",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Nothing closes it here: an unqueried entry point is not a validated one."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the source and builds an analysis database in a scratch directory of the caller's choosing. That database is a build artifact, not a change to the application under review, which is why no write effect is declared. Nothing is uploaded unless the caller chooses to publish the SARIF to a code-scanning service, which is a separate step this registry does not perform."
+      },
+      "prerequisites": [
+        "The project builds, or the language is one CodeQL can extract without a build.",
+        "The repository's licence terms permit CodeQL analysis; free for open source, otherwise the user's decision."
+      ],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads source, so it is not acting in an environment at all.",
+      "cost": {
+        "monetary": "none",
+        "compute": "high",
+        "human_effort": "none",
+        "notes": "Database creation dominates: minutes to hours on a large codebase, which is why it ranks below Semgrep despite finding more."
+      },
+      "network": {
+        "outbound": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "Deep for the languages and query suites it supports and blind outside them. It reads source, not the deployment, so it can never fill an authorization coverage cell."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. Database creation dominates and is minutes to hours on a large codebase.",
+        "cancellation": "Safe at any point; the analysis database is a build artifact and can be discarded.",
+        "partial_results": "SARIF is written at the end of a query suite, so a cancelled analysis usually yields nothing rather than a partial file.",
+        "failure": "A failed build step means no database and therefore no result: an open verify Action, never a clean report."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the source changes"
+      }
+    },
+
+    {
+      "provider_id": "prov-owasp-zap",
+      "name": "OWASP ZAP baseline scan",
+      "version": "external",
+      "summary_en": "A scanner crawls an authorized deployment and reports what its responses, headers and error pages give away.",
+      "executor_role": "automation",
+      "mechanism": "zap-baseline.py -t <authorized target URL> -J <report.json> (passive baseline; -a enables the active scan and needs its own authorization)",
+      "fallback_order": 4,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["zap.sh"],
+        "detect": "Available when ZAP is installed or its container image is present. Never installed by vibecheck."
+      },
+      "required_targets": ["deployed_web_app"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.deploy.transport_security",
+          "operations": ["dast_web_scan", "live_http_response_inspection"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "HSTS, redirect and cookie-flag behaviour on the routes the spider reached. Routes it did not reach are unscanned, not secure."
+        },
+        {
+          "control_id": "vibecheck.control.deploy.cors_restricted",
+          "operations": ["dast_web_scan", "live_http_response_inspection"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "The Access-Control-Allow-Origin behaviour observed on the routes it reached."
+        },
+        {
+          "control_id": "vibecheck.control.deploy.debug_disabled",
+          "operations": ["dast_web_scan", "live_http_response_inspection"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Stack traces, debug endpoints and verbose headers returned by this deployment, as observed."
+        },
+        {
+          "control_id": "vibecheck.control.input.output_encoding",
+          "operations": ["dast_web_scan"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Reflected content and missing response-header protections on the routes it reached. The passive baseline does not attempt injection."
+        },
+        {
+          "control_id": "vibecheck.control.input.server_side_validation",
+          "operations": ["dast_web_scan"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Only the active scan sends malformed input, and it needs its own authorization. Nothing here closes the control."
+        },
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["dast_web_scan", "live_http_response_inspection"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A route that returns data to an unauthenticated crawler is a finding about that route. It fills no coverage cell: the crawler has no second account to compare against and no idea which object it just read, which is exactly what a cell has to name."
+        }
+      ],
+      "authorization": {
+        "required": true,
+        "credentials": [],
+        "notes": "Sends traffic at somebody's deployment. It runs against an explicitly authorized non-production target with a resolved scope; a production run is a separate approval, and the active scan is a third."
+      },
+      "required_inputs": [
+        {
+          "id": "target_url",
+          "description": "The exact deployment URL authorized for this scan. Evidence that cannot name its target is not importable.",
+          "secret": false
+        },
+        {
+          "id": "scan_authorization",
+          "description": "Who authorized the scan of that target, recorded with the evidence.",
+          "secret": false
+        }
+      ],
+      "prerequisites": [
+        "The target is a non-production deployment, or a production run has been separately approved.",
+        "The owner of the target has authorized automated traffic against it and the scope is resolved."
+      ],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "cost": {
+        "monetary": "none",
+        "compute": "moderate",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["the authorized target URL supplied for the run"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the authorized target URL supplied for the run"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false,
+        "opt_in_flags": ["-a"],
+        "details": "The baseline profile is passive: it crawls and reads. The active scan sends crafted input and can create, modify or corrupt data, which is why it is a separate opt-in."
+      },
+      "confidence": {
+        "false_positive_risk": "moderate",
+        "false_negative_risk": "high",
+        "limitations": "It reports on the routes its spider found, unauthenticated unless it was given a session. An application behind a login is largely invisible to a baseline run, and a quiet report mostly means the crawler did not get in."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed, and a scan against somebody's deployment should have one. The baseline profile is passive and bounded by the spider.",
+        "cancellation": "Safe at any point for the passive profile. A cancelled active scan may leave the target with partially processed input.",
+        "partial_results": "Alerts raised before the stop are imported; routes the spider never reached stay uncovered, which is the usual case and is stated in every evidence scope.",
+        "failure": "Exit codes 1 and 2 are alert levels, not errors. An unreachable target produces no evidence and one open verify Action."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next deploy"
       }
     }
   ]

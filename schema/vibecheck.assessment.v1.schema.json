@@ -1116,6 +1116,16 @@
             "limitations": { "type": "string" }
           }
         },
+        "run_semantics": {
+          "type": "object",
+          "description": "How a run of this provider ends when it does not end cleanly. An external tool is not under vibecheck's control, so what a timeout, a cancellation, a crash and a partial result mean for the coverage it claimed has to be stated rather than assumed: a scan that stopped early covers what it reached and nothing else, and that is never the same as a clean result.",
+          "properties": {
+            "timeout": { "type": "string" },
+            "cancellation": { "type": "string" },
+            "partial_results": { "type": "string" },
+            "failure": { "type": "string" }
+          }
+        },
         "evidence_freshness": {
           "type": "object",
           "required": ["typical_validity"],

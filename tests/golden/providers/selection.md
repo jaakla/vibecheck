@@ -16,6 +16,13 @@ n/a       Guided two-account browser test — Guided two-account browser test ob
 SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.object_level.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.object_level.
 Coverage: 0 of 4 requested cell(s); this plan closes no control.
 GAP       no available provider observes user_owned_record / other_account / create
 GAP       no available provider observes user_owned_record / other_account / delete
@@ -35,6 +42,13 @@ unused    Guided two-account browser test — eligible, but a provider already i
 SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.object_level.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.object_level.
 Coverage: 1 of 4 requested cell(s); this plan closes no control.
 GAP       no available provider observes user_owned_record / other_account / create
 GAP       no available provider observes user_owned_record / other_account / delete
@@ -55,9 +69,16 @@ Requirement: vibecheck.control.authz.anon_data_access in private_test, 2 cell(s)
 SELECTED  vibecheck Supabase live probe — decisive; covers 1 requested cell(s)
 n/a       Playwright two-account flow — Playwright two-account flow observes deployed_web_app, which this review does not have.
 n/a       Guided two-account browser test — Guided two-account browser test observes deployed_web_app, which this review does not have.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan observes deployed_web_app, which this review does not have.
 SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.anon_data_access.
 Coverage: 1 of 2 requested cell(s); this plan closes no control.
 GAP       vibecheck Supabase live probe could observe 1 more cell(s): observing this cell needs write, which was not authorized.
 GAP       no available provider observes user_owned_record / anonymous / create
@@ -77,9 +98,16 @@ Requirement: vibecheck.control.authz.anon_data_access in private_test, 2 cell(s)
 SELECTED  vibecheck Supabase live probe — decisive; covers 2 requested cell(s)
 n/a       Playwright two-account flow — Playwright two-account flow observes deployed_web_app, which this review does not have.
 n/a       Guided two-account browser test — Guided two-account browser test observes deployed_web_app, which this review does not have.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan observes deployed_web_app, which this review does not have.
 unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.anon_data_access.
 Coverage: 2 of 2 requested cell(s); this plan closes no control.
 ```
 
@@ -96,9 +124,16 @@ Requirement: vibecheck.control.authz.anon_data_access in public_release, 1 cell(
 EXCLUDED  vibecheck Supabase live probe — this run is authorized for private_test and the requirement is about public_release; the grant does not stretch, and an observation made in private_test would not answer the question anyway.
 n/a       Playwright two-account flow — Playwright two-account flow observes deployed_web_app, which this review does not have.
 n/a       Guided two-account browser test — Guided two-account browser test observes deployed_web_app, which this review does not have.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan observes deployed_web_app, which this review does not have.
 SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.anon_data_access.
 Coverage: 0 of 1 requested cell(s); this plan closes no control.
 GAP       no available provider observes user_owned_record / anonymous / read
 ```
@@ -119,6 +154,13 @@ SELECTED  Guided two-account browser test — decisive; covers 1 requested cell(
 unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.object_level.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.object_level.
 Coverage: 1 of 1 requested cell(s); this plan closes no control.
 ```
 
@@ -139,6 +181,13 @@ EXCLUDED  Guided two-account browser test — Guided two-account browser test de
 SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.authz.object_level.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.authz.object_level.
 Coverage: 3 of 4 requested cell(s); this plan closes no control.
 GAP       Playwright two-account flow could observe 1 more cell(s): observing this cell needs destructive, which was not authorized.
 GAP       no available provider observes user_owned_record / other_account / delete
@@ -150,3 +199,153 @@ Authorization:
 - **required_to_run** — Playwright two-account flow must be supplied with the listed credentials; allowed to send data to the listed destinations; allowed to make network requests to the target; allowed to write to the target system before this step runs.
 - **would_strengthen_the_plan** — Playwright two-account flow is available but unused: authorize destructive.
 - **would_strengthen_the_plan** — Guided two-account browser test is available but unused: authorize prov-guided-browser-test.
+
+## A specialist secret scanner is installed
+
+Gitleaks is free, unattended and written by people who do only this, so it goes ahead of a person reading the repository by hand and ahead of the bundled grep. TruffleHog is the same strength and loses on the declared order, which is what the order is for. Note the last line: covering the requirement is not closing the control, and a scanner that found nothing has not established that there is nothing.
+
+```text
+Requirement: vibecheck.control.secrets.no_repo_history_leaks in developer_only, 0 cell(s).
+SELECTED  Gitleaks secret scanner — indicative; material only, fills no coverage cell and closes nothing
+unused    TruffleHog credential scanner — eligible, but a provider already in the plan covers everything it would have
+unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+## The same review, without the scanner installed
+
+The plan falls back to a person reading the source, and the uninstalled tool does not disappear: it is a gap whose grant is one install command. vibecheck never runs that command itself — what executes on the user's machine is the user's decision.
+
+```text
+Requirement: vibecheck.control.secrets.no_repo_history_leaks in developer_only, 0 cell(s).
+EXCLUDED  Gitleaks secret scanner — Gitleaks secret scanner is not bundled and needs gitleaks, which is not installed here.
+EXCLUDED  TruffleHog credential scanner — TruffleHog credential scanner is not bundled and needs trufflehog, which is not installed here.
+SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+Authorization:
+
+- **would_strengthen_the_plan** — Gitleaks secret scanner is available but unused: install gitleaks.
+- **would_strengthen_the_plan** — TruffleHog credential scanner is available but unused: install trufflehog.
+
+## Two SAST tools, one compute budget
+
+Semgrep and CodeQL both claim the SQL control at the same strength. CodeQL finds more and declares high compute, which this offer did not accept, so it is excluded on cost and reported as a gap rather than silently skipped. Cost is a selection input exactly like authorization is.
+
+```text
+Requirement: vibecheck.control.input.sql_parameterized in developer_only, 0 cell(s).
+SELECTED  Semgrep Community Edition — indicative; material only, fills no coverage cell and closes nothing
+EXCLUDED  CodeQL semantic analysis — CodeQL semantic analysis has high compute cost and only low, moderate was accepted.
+unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.input.sql_parameterized.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+Authorization:
+
+- **would_strengthen_the_plan** — CodeQL semantic analysis is available but unused: accept high compute cost.
+
+## A dependency audit that has to phone home
+
+Both dependency auditors send the project's package names and versions to a remote database. With no egress grant they are excluded and the plan says which destination each one would have reached — a supply-chain inventory leaving the machine is a decision, not an implementation detail.
+
+```text
+Requirement: vibecheck.control.deps.vuln_scanning in developer_only, 0 cell(s).
+EXCLUDED  OSV-Scanner dependency audit — OSV-Scanner dependency audit reaches osv.dev and network access was not authorized.
+EXCLUDED  Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner reaches the Trivy vulnerability database mirror and network access was not authorized.
+SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.deps.vuln_scanning.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+Authorization:
+
+- **would_strengthen_the_plan** — OSV-Scanner dependency audit is available but unused: authorize data egress; authorize network access.
+- **would_strengthen_the_plan** — Trivy dependency, image and licence scanner is available but unused: authorize data egress; authorize network access.
+
+## A DAST scan of an authorized staging deployment
+
+ZAP needs the target URL, the owner's authorization and a network grant before it is selectable at all, and the plan states all three as a request rather than an instruction. Its closure threshold is the honest part: a baseline scan reports on the routes its crawler reached, and a quiet report mostly means the crawler never got past the login.
+
+```text
+Requirement: vibecheck.control.deploy.cors_restricted in private_test, 0 cell(s).
+SELECTED  OWASP ZAP baseline scan — indicative; material only, fills no coverage cell and closes nothing
+unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.deploy.cors_restricted.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+Authorization:
+
+- **required_to_run** — OWASP ZAP baseline scan must be allowed to send data to the listed destinations; allowed to make network requests to the target before this step runs.
+
+## The same DAST requirement with no deployment to point at
+
+A scanner with nothing to observe is inapplicable, not a gap: there is no work to schedule and no grant that would change that. The distinction matters, because a gap is a to-do and an inapplicable provider is not.
+
+```text
+Requirement: vibecheck.control.deploy.cors_restricted in private_test, 0 cell(s).
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan observes deployed_web_app, which this review does not have.
+SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.deploy.cors_restricted.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```

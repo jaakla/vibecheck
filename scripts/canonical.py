@@ -68,7 +68,7 @@ import authz as authz_mod
 import context as context_mod
 import providers as providers_mod
 
-SCHEMA_VERSION = "1.5.0"
+SCHEMA_VERSION = "1.6.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

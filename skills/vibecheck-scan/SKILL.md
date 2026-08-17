@@ -68,6 +68,23 @@ Evidence arrives with credential redaction — known/high-entropy credential sha
 
 Use dedicated free scanners where applicable rather than treating this script as a replacement: Gitleaks or TruffleHog for full-history secrets; Semgrep Community or CodeQL (free for public GitHub repositories) for SAST; OSV-Scanner or Trivy for dependencies/containers; OWASP ZAP against an authorized staging target; and Playwright for critical flows. Run `vibecheck.sh --online-audit` only when sending dependency metadata to the configured npm registry is acceptable.
 
+These are registry providers, and an installed one outranks both this scanner and a reviewer reading the code by hand. Check what is available, and never install anything yourself — offer the install command and let the user decide:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --availability
+```
+
+Ask before running any of them: they read the repository, some of them send package names or rule requests off the machine, and ZAP and Playwright send traffic at a deployment. A network target needs the owner's explicit authorization and a resolved scope; default to a non-production target. Import the result rather than pasting tool output into the report:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import semgrep out.json \
+  --command "semgrep scan --config auto --json"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import zap zap.json \
+  --target-url https://staging.example.com --authorized-by "<who authorized it>"
+```
+
+Read the result the way you read the bundled scanner. A finding is refuting material a reviewer confirms, not a proven vulnerability. A clean run is neutral evidence: "Gitleaks found nothing in the history it scanned" is not "there are no secrets", and it can never be a Pass. A tool that is not installed, crashed, timed out or was cancelled becomes an open to-do naming the controls nobody looked at — carry that into the report as scheduled work, alongside the findings, never instead of them.
+
 What the scanner may claim is declared rather than assumed: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/vibecheck.sh --capability` prints its capability record — indicative at best, filling no authorization coverage cell, and closing nothing. When an item needs more than that, ask which method would settle it instead of reading the source harder:
 
 ```bash

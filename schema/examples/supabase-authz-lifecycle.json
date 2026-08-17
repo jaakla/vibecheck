@@ -1780,7 +1780,7 @@
         "typical_validity": "until the next migration"
       },
       "executor_role": "automation",
-      "fallback_order": 5,
+      "fallback_order": 12,
       "mechanism": "analyze_sql.py",
       "name": "vibecheck SQL migration analysis",
       "network": {
@@ -2913,7 +2913,7 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "signals": [
     {
       "environment": "developer_only",
