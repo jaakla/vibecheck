@@ -40,6 +40,15 @@
         "version": { "$ref": "#/$defs/semver" }
       }
     },
+    "provider_registry": {
+      "type": "object",
+      "description": "Version of the verification-provider registry the capability records in `providers` were taken from, and the selection policy that chose between them (schema/provider-registry.v1.json).",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "vibecheck.provider_registry" },
+        "version": { "$ref": "#/$defs/semver" }
+      }
+    },
     "signals": { "type": "array", "items": { "$ref": "#/$defs/signal" } },
     "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
     "assessments": { "type": "array", "items": { "$ref": "#/$defs/assessment" } },
@@ -981,12 +990,43 @@
 
     "provider_capability": {
       "type": "object",
-      "description": "What a verification provider can observe, at what cost and side effect, so provider selection is explicit and safe.",
+      "description": "What a verification provider can observe, at what cost and side effect, so provider selection is explicit and safe. The bundled capabilities and the deterministic selection policy that reads them live in schema/provider-registry.v1.json; a capability recorded here is the one an envelope actually exercised.",
       "required": ["provider_id", "name", "coverage", "authorization", "environments", "cost", "data_egress", "side_effects", "confidence", "evidence_freshness"],
       "properties": {
         "provider_id": { "type": "string", "pattern": "^prov-[A-Za-z0-9._:-]+$" },
         "name": { "type": "string" },
         "version": { "type": "string" },
+        "summary_en": { "type": "string", "description": "One sentence on what running this provider actually does." },
+        "executor_role": { "enum": ["automation", "founder", "developer", "specialist"], "description": "Who has to run it. A method nobody available can execute is unavailable, however strong it is." },
+        "mechanism": { "type": "string", "description": "The exact tool, script or documented procedure." },
+        "availability": {
+          "type": "object",
+          "description": "Whether this provider can run here at all. A provider that is not bundled and whose tools are absent is a coverage gap naming an install, never a silent skip.",
+          "properties": {
+            "bundled": { "type": "boolean" },
+            "requires_tools": { "type": "array", "items": { "type": "string" } },
+            "detect": { "type": "string" }
+          }
+        },
+        "required_targets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What has to exist for the provider to have anything to observe, e.g. supabase_project, deployed_web_app, source_tree. A missing target makes the provider inapplicable rather than withheld."
+        },
+        "required_inputs": {
+          "type": "array",
+          "description": "Inputs and data fixtures the run needs: credentials, base URLs, a known private record, a maintained flow spec. Missing ones exclude the provider and name themselves in the authorization request.",
+          "items": {
+            "type": "object",
+            "required": ["id", "description"],
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" },
+              "secret": { "type": "boolean", "description": "True when supplying it is handing over a credential." },
+              "required_for": { "type": "array", "items": { "$ref": "#/$defs/control_id" }, "description": "Controls this input is needed for; absent means every control the provider covers." }
+            }
+          }
+        },
         "coverage": {
           "type": "array",
           "minItems": 1,
@@ -995,9 +1035,22 @@
             "required": ["control_id", "operations", "max_strength", "closure_threshold"],
             "properties": {
               "control_id": { "$ref": "#/$defs/control_id" },
-              "operations": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "operations": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "How the observation is made, e.g. static_pattern_scan or http_select_anon_head. Not to be confused with cells.operations, which is what the observed actor tried to do." },
+              "subjects": { "type": "array", "items": { "$ref": "#/$defs/subject/properties/kind" }, "description": "Subject kinds this provider can observe for the control." },
               "max_strength": { "enum": ["decisive", "indicative"], "description": "Best evidence strength this provider can produce for this control. Providers never produce control-wide conclusions." },
-              "closure_threshold": { "type": "string", "description": "What result, in what scope, would let an assessor close the aspect this provider covers." }
+              "fills_coverage_cell": { "type": "boolean", "description": "Whether an observation here fills an authorization coverage cell. Only a live observation of the deployment may: source analysis is structurally refused a cell (rule R20), so a source-reading provider that set this true would be claiming something it cannot see." },
+              "cells": {
+                "type": "object",
+                "description": "Which (actor, operation, object class) cells this provider can observe. This is what makes coverage requirements operation- and subject-specific rather than 'checks authorization'.",
+                "properties": {
+                  "actors": { "type": "array", "items": { "enum": ["anonymous", "other_account", "other_tenant_member", "unprivileged_account"] } },
+                  "operations": { "type": "array", "items": { "enum": ["read", "create", "update", "delete"] } },
+                  "object_classes": { "type": "array", "items": { "type": "string" } }
+                }
+              },
+              "requires_effects": { "type": "array", "items": { "type": "string" }, "description": "Effects that covering these cells would exercise beyond the provider's default posture, e.g. write for an insert probe. Ungranted, they exclude these cells while leaving the provider's read coverage available." },
+              "closure_threshold": { "type": "string", "description": "What result, in what scope, would let an assessor close the aspect this provider covers." },
+              "from_rule": { "type": "string", "description": "Set when this entry was expanded from a registry coverage rule rather than written out." }
             }
           }
         },
@@ -1011,12 +1064,25 @@
           }
         },
         "environments": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/environment" } },
+        "environments_note": { "type": "string", "description": "Why this provider's observations count for those environments, where that is not obvious." },
         "cost": {
           "type": "object",
           "required": ["monetary", "compute"],
           "properties": {
             "monetary": { "enum": ["none", "bounded", "metered", "unknown"] },
-            "compute": { "enum": ["low", "moderate", "high", "unknown"] }
+            "compute": { "enum": ["low", "moderate", "high", "unknown"] },
+            "human_effort": { "enum": ["none", "low", "moderate", "high", "high_once", "unknown"], "description": "What it costs a person, which is the cost that decides whether a manual method is repeated after the next deploy." },
+            "notes": { "type": "string" }
+          }
+        },
+        "network": {
+          "type": "object",
+          "description": "Whether running the provider reaches anything outside this machine. Kept separate from data_egress: a request that leaves the machine is one question, and what it carries out with it is another.",
+          "required": ["outbound"],
+          "properties": {
+            "outbound": { "type": "boolean" },
+            "targets": { "type": "array", "items": { "type": "string" } },
+            "opt_in_flags": { "type": "array", "items": { "type": "string" }, "description": "Flags that turn on network access that is off by default, e.g. --online-audit." }
           }
         },
         "data_egress": {
@@ -1024,7 +1090,8 @@
           "required": ["occurs"],
           "properties": {
             "occurs": { "type": "boolean" },
-            "destinations": { "type": "array", "items": { "type": "string" } }
+            "destinations": { "type": "array", "items": { "type": "string" } },
+            "opt_in_flags": { "type": "array", "items": { "type": "string" } }
           }
         },
         "side_effects": {
@@ -1034,6 +1101,7 @@
             "read": { "type": "boolean" },
             "write": { "type": "boolean" },
             "destructive": { "type": "boolean" },
+            "deployment": { "type": "boolean", "description": "Whether running the provider changes what is running in an environment. A verification provider that deploys is not verifying anything (rule R21)." },
             "external_accounts": { "type": "boolean" },
             "opt_in_flags": { "type": "array", "items": { "type": "string" }, "description": "Flags that unlock write/destructive behavior, e.g. --write-probe." }
           }

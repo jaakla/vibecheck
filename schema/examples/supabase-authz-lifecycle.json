@@ -1721,22 +1721,49 @@
         "notes": "Reads the working tree.",
         "required": false
       },
+      "availability": {
+        "bundled": true,
+        "detect": "Bundled with vibecheck; runs when the repository contains SQL migrations.",
+        "requires_tools": [
+          "python3"
+        ]
+      },
       "confidence": {
         "false_negative_risk": "high",
         "false_positive_risk": "moderate",
-        "limitations": "Statement recognition, not a SQL parser; policies applied outside migrations are invisible to it."
+        "limitations": "Statement recognition, not a SQL parser. Policies applied outside migrations are invisible to it, and a policy that exists can still be wrong."
       },
       "cost": {
         "compute": "low",
+        "human_effort": "none",
         "monetary": "none"
       },
       "coverage": [
         {
-          "closure_threshold": "Cannot close anything: migrations state what the source intends, and an unapplied or overridden migration looks identical here.",
+          "closure_threshold": "Closes nothing. Migrations state what the source intends, and an unapplied migration, a dashboard override and an applied one all look the same from here.",
           "control_id": "vibecheck.control.authz.anon_data_access",
+          "fills_coverage_cell": false,
           "max_strength": "indicative",
           "operations": [
             "migration_analysis"
+          ],
+          "subjects": [
+            "file",
+            "repo",
+            "table"
+          ]
+        },
+        {
+          "closure_threshold": "Closes nothing, for the same reason. A table created without row level security is material worth acting on; it is not an observation of the deployment.",
+          "control_id": "vibecheck.control.authz.server_side_default_deny",
+          "fills_coverage_cell": false,
+          "max_strength": "indicative",
+          "operations": [
+            "migration_analysis"
+          ],
+          "subjects": [
+            "file",
+            "repo"
           ]
         }
       ],
@@ -1744,57 +1771,148 @@
         "occurs": false
       },
       "environments": [
-        "developer_only"
+        "developer_only",
+        "private_test",
+        "public_release"
       ],
+      "environments_note": "Committed migrations are material about whatever environment they were applied to, and about none of them conclusively: an unapplied migration and an applied one are the same text. Indicative everywhere, a cell nowhere.",
       "evidence_freshness": {
         "typical_validity": "until the next migration"
       },
-      "fallback_order": 2,
+      "executor_role": "automation",
+      "fallback_order": 5,
+      "mechanism": "analyze_sql.py",
       "name": "vibecheck SQL migration analysis",
+      "network": {
+        "outbound": false
+      },
+      "prerequisites": [
+        "The repository contains SQL migrations, which required_targets records."
+      ],
       "provider_id": "prov-migration-analysis",
+      "required_targets": [
+        "source_tree",
+        "sql_migrations"
+      ],
       "side_effects": {
+        "deployment": false,
         "destructive": false,
         "external_accounts": false,
         "read": true,
         "write": false
       },
+      "summary_en": "Recognizes table creation and row-level-security statements in committed migrations and reports the tables created without a matching policy.",
       "version": "0.4.0"
     },
     {
       "authorization": {
         "credentials": [
           "SUPABASE_URL",
-          "anon/publishable key",
-          "two test account tokens"
+          "supabase anon/publishable key"
         ],
-        "notes": "Refuses service_role keys; write probing is opt-in per run and records its cleanup.",
+        "notes": "Refuses service_role keys outright. Write probing is opt-in per run and records the row it created and the state of its cleanup.",
         "required": true
+      },
+      "availability": {
+        "bundled": true,
+        "detect": "Bundled with vibecheck; needs no installation.",
+        "requires_tools": [
+          "python3"
+        ]
       },
       "confidence": {
         "false_negative_risk": "moderate",
         "false_positive_risk": "low",
-        "limitations": "Zero visible rows means RLS or an empty table; the difference is settled by reading the same window as a test account, not assumed."
+        "limitations": "Zero visible rows means row level security or an empty table, and the difference is settled by reading the same window as a test account rather than assumed. It sees PostgREST; an application route in front of the database is a separate question."
       },
       "cost": {
         "compute": "low",
+        "human_effort": "none",
         "monetary": "none"
       },
       "coverage": [
         {
-          "closure_threshold": "One cell per run: this object, this actor, this operation, this environment. The control closes only when every required cell of the matrix is observed denied.",
+          "cells": {
+            "actors": [
+              "anonymous"
+            ],
+            "object_classes": [
+              "user_owned_record",
+              "tenant_scoped_record",
+              "admin_or_privileged_record",
+              "credential_or_token_record",
+              "unclassified"
+            ],
+            "operations": [
+              "read"
+            ]
+          },
+          "closure_threshold": "One cell per request: this table, an anonymous caller, a read, this environment. The control closes only when every required cell of the matrix has been observed denied in the assessed environment.",
           "control_id": "vibecheck.control.authz.anon_data_access",
+          "fills_coverage_cell": true,
           "max_strength": "decisive",
           "operations": [
-            "http_select_anon_head",
-            "http_insert_anon"
+            "http_select_anon_head"
+          ],
+          "subjects": [
+            "table",
+            "deployment"
           ]
         },
         {
-          "closure_threshold": "One record and one operation per run; cross-account update and delete are not automated and stay open until an authorized manual test records them.",
+          "cells": {
+            "actors": [
+              "anonymous"
+            ],
+            "object_classes": [
+              "user_owned_record",
+              "tenant_scoped_record",
+              "admin_or_privileged_record",
+              "credential_or_token_record",
+              "unclassified"
+            ],
+            "operations": [
+              "create"
+            ]
+          },
+          "closure_threshold": "One anonymous insert into one table. It is opt-in because a successful one leaves a real row behind, and the attempt owns its cleanup.",
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "fills_coverage_cell": true,
+          "max_strength": "decisive",
+          "operations": [
+            "http_insert_anon"
+          ],
+          "requires_effects": [
+            "write"
+          ],
+          "subjects": [
+            "table"
+          ]
+        },
+        {
+          "cells": {
+            "actors": [
+              "other_account"
+            ],
+            "object_classes": [
+              "user_owned_record",
+              "credential_or_token_record",
+              "unclassified"
+            ],
+            "operations": [
+              "read"
+            ]
+          },
+          "closure_threshold": "One known record, read by one unrelated account. Cross-account create, update and delete are not automated here and stay open until another provider records them.",
           "control_id": "vibecheck.control.authz.object_level",
+          "fills_coverage_cell": true,
           "max_strength": "decisive",
           "operations": [
             "http_select_authenticated_cross_account"
+          ],
+          "subjects": [
+            "table",
+            "endpoint"
           ]
         }
       ],
@@ -1805,19 +1923,68 @@
         "occurs": true
       },
       "environments": [
+        "developer_only",
         "private_test",
         "public_release"
       ],
       "evidence_freshness": {
         "typical_validity": "until the next migration or policy change"
       },
+      "executor_role": "automation",
       "fallback_order": 1,
-      "name": "supabase_probe.py",
+      "mechanism": "supabase_probe.py",
+      "name": "vibecheck Supabase live probe",
+      "network": {
+        "outbound": true,
+        "targets": [
+          "https://acme-orders-pilot.supabase.co"
+        ]
+      },
       "prerequisites": [
-        "The project owner authorizes probing this project."
+        "The project owner authorizes probing this project, which is what authorization.required records."
       ],
       "provider_id": "prov-supabase-probe",
+      "required_inputs": [
+        {
+          "description": "The project URL to probe.",
+          "id": "supabase_url",
+          "secret": false
+        },
+        {
+          "description": "The publishable/anon key the browser already ships.",
+          "id": "supabase_anon_key",
+          "secret": true
+        },
+        {
+          "description": "A session token for a first test account, used to establish that a record exists.",
+          "id": "test_account_a_token",
+          "required_for": [
+            "vibecheck.control.authz.object_level"
+          ],
+          "secret": true
+        },
+        {
+          "description": "A session token for a second, unrelated test account.",
+          "id": "test_account_b_token",
+          "required_for": [
+            "vibecheck.control.authz.object_level"
+          ],
+          "secret": true
+        },
+        {
+          "description": "The identifier of a record account A owns, so a refusal for account B is a denial rather than an empty result.",
+          "id": "known_private_record_id",
+          "required_for": [
+            "vibecheck.control.authz.object_level"
+          ],
+          "secret": false
+        }
+      ],
+      "required_targets": [
+        "supabase_project"
+      ],
       "side_effects": {
+        "deployment": false,
         "destructive": false,
         "external_accounts": false,
         "opt_in_flags": [
@@ -1826,6 +1993,7 @@
         "read": true,
         "write": false
       },
+      "summary_en": "Sends real requests to the deployed Supabase project with the public key and, when two test-account tokens are supplied, reads one account's record with the other account's session.",
       "version": "0.5.0"
     }
   ],
@@ -2745,7 +2913,7 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "signals": [
     {
       "environment": "developer_only",

@@ -42,10 +42,23 @@ Represent current fixes without overloading their meaning:
 - Secret rotation, git-history purging, backups/restore, budget caps, data residency, DPA, and legal classification use founder/platform/specialist Procedures. Editing the tree does not complete them.
 - A leaked secret in history requires separate Procedures for provider rotation and history cleanup. Never claim either happened without its own attempt evidence.
 
+## Choosing the verification method
+
+Verification methods are registry providers, not ad-hoc choices. `schema/provider-registry.v1.json` states per method what it can observe, at what strength, in which environments, and what running it needs and touches; `scripts/providers.py` ranks them and explains the result:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/providers.py --list
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/providers.py \
+  --select vibecheck.control.authz.object_level --environment private_test \
+  --target source_tree --target supabase_project
+```
+
+Prefer the strongest applicable method the user has actually authorized, and walk the declared fallback chain when you cannot have it: Supabase two-account probe → Playwright two-account flow → guided browser test → code and policy review. Report the refusals, never hide them — "the probe would have settled this; it needs the anon key and permission to reach the project" is the useful sentence, and a weaker method silently substituted is the failure. Selecting a method authorizes nothing: a step that reaches the network, uses a credential, writes, deploys or acts in an external account is a request naming the provider, the effects and the destinations, and step 4 below is where it gets granted.
+
 ## Workflow
 
 1. Use fresh scan/review evidence. Create or revise Actions for unresolved outcomes; do not duplicate the same outcome merely to offer another method.
-2. Offer candidate Procedures. For each, state executor, execution mode, prerequisites/input references, exact method, network/egress, effect targets and booleans, reversibility, consent policy, failure/rollback, cost, expected evidence, and an independent verifier.
+2. Offer candidate Procedures. For each, state executor, execution mode, prerequisites/input references, exact method, network/egress, effect targets and booleans, reversibility, consent policy, failure/rollback, cost, expected evidence, and an independent verifier. Name the verifying provider by ID (`verification_provider_ref`) so what the verification is worth is recorded rather than assumed.
 3. Show the proposed diff or exact non-code operation before authorization. Default code changes to a new branch. Keep secrets redacted and store inputs by reference only.
 4. Get consent for one exact attempt. Bind consent to its attempt ID, authorized targets/effects, environment, grant time, expiry if any, and provenance. Consent for one attempt never authorizes a later run or a different side effect.
 5. Execute only within that scope. For repository hygiene, preview the bounded helper first:
@@ -70,5 +83,7 @@ Represent current fixes without overloading their meaning:
 - Never store secret input values in an attempt record.
 - Never fabricate rotation, deployment, rollback, history purge, evidence, or reassessment.
 - Never treat editing the repository as deploying it, or one denied request as a closed control.
+- Never let a provider decide a control. It produces scoped evidence with a stated strength; the assessment is a separate, accountable step.
+- Never substitute a weaker verification method without saying which stronger one was unavailable and what would have enabled it.
 - Never decide on the owner's behalf that an anonymous write is intended, and never treat a confirmed one as finished: it needs the read path denied and an observed limit on the write path before the control can close.
 - One failed or partial attempt never completes the Action; a disappeared warning is never success evidence.

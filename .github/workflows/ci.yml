@@ -53,6 +53,14 @@ jobs:
       - name: Golden context, risk and readiness cases are current
         run: python3 scripts/gen_goldens.py --check
 
+      - name: Golden provider-selection cases are current
+        run: python3 scripts/gen_provider_goldens.py --check
+
+      - name: Bundled tools describe their own capability
+        run: |
+          bash scripts/vibecheck.sh --capability > /dev/null
+          python3 scripts/supabase_probe.py --capability > /dev/null
+
       - name: Workbooks build in all four variants
         run: |
           mkdir -p out

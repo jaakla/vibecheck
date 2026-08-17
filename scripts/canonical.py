@@ -42,6 +42,10 @@ Semantic rules implemented here (numbering from RFC 0001 §10):
        authorized, ordered and evidenced separately (actions.py)
   R22  anything that wrote to a live system records its authorization, target
        environment, result and cleanup/rollback state (authz.py)
+  R24  provider evidence stays inside the declared capability: the operation,
+       environment, strength and effects a provider recorded are ones its
+       capability says it can produce, and only a provider that can observe
+       the deployment may carry a coverage cell (providers.py)
 
 The application context is validated too (context.validate_context): profile
 keys and values resolve against the context model, every field carries a usable
@@ -62,8 +66,9 @@ import _redact
 import actions as actions_mod
 import authz as authz_mod
 import context as context_mod
+import providers as providers_mod
 
-SCHEMA_VERSION = "1.4.0"
+SCHEMA_VERSION = "1.5.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -671,4 +676,5 @@ def validate_envelope(env):
     _check_report(env, problems)
     problems.extend(actions_mod.validate_registry(env))
     problems.extend(authz_mod.validate_coverage(env))
+    problems.extend(providers_mod.validate_providers(env))
     return problems

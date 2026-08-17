@@ -68,6 +68,15 @@ Evidence arrives with credential redaction — known/high-entropy credential sha
 
 Use dedicated free scanners where applicable rather than treating this script as a replacement: Gitleaks or TruffleHog for full-history secrets; Semgrep Community or CodeQL (free for public GitHub repositories) for SAST; OSV-Scanner or Trivy for dependencies/containers; OWASP ZAP against an authorized staging target; and Playwright for critical flows. Run `vibecheck.sh --online-audit` only when sending dependency metadata to the configured npm registry is acceptable.
 
+What the scanner may claim is declared rather than assumed: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/vibecheck.sh --capability` prints its capability record — indicative at best, filling no authorization coverage cell, and closing nothing. When an item needs more than that, ask which method would settle it instead of reading the source harder:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/providers.py --select <control_id> \
+  --environment <environment> --target source_tree --target deployed_web_app
+```
+
+The answer names the stronger methods, what each one needs from the user, and why the ones you cannot run are unavailable. Carry that into the report as scheduled work, not as a caveat.
+
 ## Step 3 — Judgment checks the script cannot do
 
 Read the code and assess these directly (`${CLAUDE_PLUGIN_ROOT}/references/checklist-map.md` has item numbers and severities):

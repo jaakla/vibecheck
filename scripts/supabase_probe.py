@@ -338,9 +338,29 @@ def parse_idor_target(value):
     return table.strip(), row_id.strip()
 
 
+#: The probe is a registry provider (schema/provider-registry.v1.json): what it
+#: is allowed to claim, what it costs to run and what it touches are declared
+#: there rather than inferred from its output. --capability prints that record
+#: so a caller can decide whether to run it before running it. Handled before
+#: argument parsing because the probe's real arguments are required ones.
+PROVIDER_ID = "prov-supabase-probe"
+
+
+def _print_capability():
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import providers
+    print(json.dumps(providers.capability(PROVIDER_ID), indent=2,
+                     ensure_ascii=False, sort_keys=True))
+    return 0
+
+
 def main(argv=None):
+    if "--capability" in (sys.argv[1:] if argv is None else argv):
+        return _print_capability()
     ap = argparse.ArgumentParser(
         description="Read-only Supabase anon-key access-control probe.")
+    ap.add_argument("--capability", action="store_true",
+                    help="print this provider's capability record and exit")
     ap.add_argument("--url", required=True, help="https://<project>.supabase.co")
     ap.add_argument("--anon", required=True,
                     help="legacy anon or sb_publishable key (never service_role/sb_secret)")
