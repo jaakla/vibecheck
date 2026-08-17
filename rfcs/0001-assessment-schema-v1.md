@@ -29,9 +29,12 @@ authorization coverage, the representative-object inventory, staged remediation 
 separate deployment checkpoint, and write-probe accountability. Increment 6 (#8) shipped the
 verification-provider registry, deterministic capability matching and the explainable
 fallback chain, and moved the bundled scanner, migration analysis and Supabase probe behind
-the provider contract. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are normative for the
-shipped code (schema version 1.5.0, additive; coverage model 1.1.0; provider registry
-1.0.0).
+the provider contract. Increment 7 (#9) shipped the external specialist adapters: seven
+maintained tools declared as providers with their availability, authorization, egress, cost,
+side effects and run semantics, and one import path that keeps a missing tool, a crash, a
+timeout and a partial result explicit. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are
+normative for the shipped code (schema version 1.6.0, additive; coverage model 1.1.0;
+provider registry 1.0.0).
 
 ## 1. Invariants this design preserves
 
@@ -702,9 +705,10 @@ at once, so the provider is refused rather than quietly re-pointed. A provider t
 reads the source the review was already given is not acting in an environment at all, so it
 survives the mismatch and remains the last resort of the chain.
 
-Worked plans for six offers — nothing authorized, the probe authorized read-only, the same
-requirement one write grant later, and a review where the strongest method is missing for a
-reason the user could fix — are pinned in
+Worked plans for thirteen offers — nothing authorized, the probe authorized read-only, the
+same requirement one write grant later, a review where the strongest method is missing for a
+reason the user could fix, and the specialist tools of §8.4 compared on install, compute cost,
+egress and whether there is a deployment to point at — are pinned in
 [`tests/golden/providers/selection.md`](../tests/golden/providers/selection.md).
 
 ### 8.3 The bundled tools
@@ -716,6 +720,56 @@ evidence and attach the capability *as exercised* — narrowed to the controls t
 actually claimed — to the envelope, so a result stays readable after the bundled registry
 has moved on. Both tools answer `--capability` with their own record, so a caller can decide
 whether to run one before running it.
+
+### 8.4 External specialist tools
+
+The bundled detection is a grep, and a grep is the weakest thing in this registry. Increment
+7 therefore adds seven maintained specialist tools as providers — Gitleaks and TruffleHog
+over git history, OSV-Scanner and Trivy over dependencies, Semgrep CE and CodeQL over source,
+OWASP ZAP against an authorized deployment — alongside the Playwright two-account flow that
+was already declared. `scripts/external_adapters.py` imports what each one produced; it never
+runs, installs, or fetches anything. The scan skill may install and run the
+default pack after one explicit user yes, then import; that is
+instruction-level execution, not a Python runner.
+
+Each of them declares the same things every provider declares (§8.1) plus `run_semantics`:
+what a **timeout**, a **cancellation**, a **crash** and a **partial result** mean for the
+coverage that run claimed. An external tool is not under vibecheck's control, so this cannot
+be assumed. `mechanism` carries the exact invocation, because a Semgrep run with one ruleset
+and a Semgrep run with another produce identical JSON and cover different things.
+
+**Ranking.** A maintained specialist tool ranks ahead of a person reading the code and ahead
+of the bundled scanner: it costs nothing to run and finds more than either. It ranks behind
+every live method, because reading the source is still not watching the deployment. A person
+reading the code stays ahead of the bundled grep, where it has always been. The full order is
+in `selection.fallback_order`, and the consequences are pinned in the goldens: an installed
+Gitleaks is selected for the secrets-history control and the human review becomes the unused
+alternative; an uninstalled one is a gap whose grant is one install command, and the review is
+selected instead.
+
+**Four safety properties**, each structural rather than remembered:
+
+- **Nothing is installed.** Availability is detected by looking for the declared executables
+  on `PATH`. A missing tool produces `import_tool_unavailable` — an envelope with no evidence,
+  one open verify Action naming the controls nobody looked at, and the capability record that
+  says what the tool would have covered. What runs on a user's machine stays the user's
+  decision.
+- **A claim never exceeds the capability.** Every claim an adapter builds is intersected with
+  the provider's declared coverage. A rule that maps to nothing the provider declares becomes
+  an open triage Action naming the rule, never a claim filed under a control it may not belong
+  to — which is also why a CodeQL rule about debug logging produces a triage Action while the
+  same text under Semgrep produces evidence: only one of them declares that control.
+- **A network target is named and authorized or the import refuses.** `target_url` and
+  `authorized_by` are required positional arguments for ZAP and Playwright, and an import
+  without them raises rather than defaulting to something. Evidence that cannot say which
+  deployment it observed, on whose authority, is not evidence.
+- **Raw output is dropped, redacted and bounded, in that order.** Secret-bearing fields
+  (`Secret`, `Match`, `Raw`, `RawV2`) are removed before anything enters the envelope; what
+  remains goes through the same `bound_raw` redaction the bundled scanner uses. A secret
+  scanner's report is the artifact most likely to contain a live credential.
+
+`python3 scripts/external_adapters.py --availability` reports what is installed, and
+`--import TOOL FILE` imports one result.
 
 ## 9. Completeness and presentation invariants
 
@@ -855,6 +909,40 @@ with the workspace fingerprint stored in `confirmation.source_fingerprint`. A `d
 confirmation caps readiness at `incomplete` (§4.2); `review_bypassed` stays visible as an
 evidence gap, exactly as today.
 
+### 11.6 Specialist tool output → canonical
+
+`scripts/external_adapters.py`. Every adapter maps the same five outcomes the same way, which
+is the point of the shared shape — an adapter that forgets to keep a timeout visible is not a
+thing it can express:
+
+| Outcome | Maps to |
+|---|---|
+| Findings | One Signal + one Evidence `refutes`, `indicative`, per finding, scoped to the file, package, route or record it names |
+| No findings | One Signal + one Evidence `neutral` stating what the run covered — R3 makes it structurally unable to support a pass |
+| Tool not installed | No evidence at all + one open verify Action naming the missing executable and the controls nobody looked at |
+| Timeout / cancellation | The findings produced before the stop, **plus** an open verify Action naming the gap: a partial run is not a clean one |
+| Crash / unparseable output | No evidence + one open verify Action carrying the tool's own error and the exact command |
+
+A non-zero exit is not a failure on its own. Every tool here signals "I found something" that
+way, so it counts only when the run also produced nothing readable.
+
+Per-tool specifics:
+
+| Tool | Operation | Claim mapping |
+|---|---|---|
+| Gitleaks, TruffleHog | `git_history_scan` | Always the history control; the client-bundle controls additionally when the rule names a provider key or the file ships to the browser. TruffleHog's `Verified` flag says in the scope whether the credential was live at scan time — rotate, not only remove |
+| OSV-Scanner, Trivy | `dependency_audit` | Vulnerability rows → the dependency-vulnerability control only. A CVE says nothing about who publishes the package, so `dependency_trust` is never claimed from one; Trivy licence rows map to licence compatibility separately |
+| Semgrep, CodeQL | `sast_code_scan` | Rule text → injection class, intersected with the provider's declared coverage. Source operations, so no coverage cell, ever |
+| OWASP ZAP | `dast_web_scan` | Alert name → transport / CORS / debug / encoding / anon-access control. Live, but fills no cell: a crawler has no second account and does not know which object it just read |
+| Playwright | `browser_two_account_flow` | Actor → the authorization control for that actor, plus the authz-tests control. An assertion with no actor is a core-flow test |
+
+Playwright is the only external adapter that fills authorization coverage cells, and only when
+the assertion names the object it touched. `expects` (default `denied`) and the run status
+together give `observed`: a passing refusal assertion is `denied`, a failing one is `allowed`,
+and a timed-out or interrupted one is `inconclusive` — never `denied`, because a test that
+never got an answer did not watch the application refuse anything. Without a cell the evidence
+stays `indicative`, since `decisive` is for an observation that settles something.
+
 ## 12. End-to-end examples
 
 Two files, deliberately different in kind.
@@ -923,12 +1011,13 @@ of an older envelope should still be able to validate:
 | `schema/provider-registry.v1.json` | The bundled capabilities, the evidence-operation vocabulary, the effects that need authorization, the constraint vocabulary and the deterministic ranking policy, as data |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
 | `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
-| `tests/golden/providers/selection.md` | Seven worked selection plans, committed: the same requirement and capabilities must keep producing the same plan and the same refusals |
+| `tests/golden/providers/selection.md` | Thirteen worked selection plans, committed: the same requirement and capabilities must keep producing the same plan and the same refusals |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
 | `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
 | `tests/test_actions.py` | Increment-4 tests pinning multi-procedure Actions, exact consent scope, attempt effects/rollback, lifecycle completion, deadline labels, and the derived legacy view |
 | `tests/test_authz.py` | Increment-5 tests pinning the whole lifecycle fixture, the deployment checkpoint, per-cell coverage, inconclusive results, legacy probe import, write accountability, and the confirm-then-bound treatment of intended exposures |
 | `tests/test_providers.py` | Increment-6 tests pinning registry coherence, selection determinism under shuffled load order, explained refusals, per-cell requirements, each constraint that can exclude a provider, rule R24, and the bundled tools' compatibility behind the provider contract |
+| `tests/test_external_adapters.py` | Increment-7 tests pinning each specialist adapter's parser, its failure/timeout/unavailable cases, the neutral clean run, the capability boundary on every claim, secret redaction, and one assessment several providers contributed to |
 
 Acceptance criteria → verification:
 
@@ -955,6 +1044,12 @@ Acceptance criteria → verification:
 | Provider results create normalized Evidence only (issue #8) | §8.1, R24, `TestProvidersOnlyMakeEvidence` |
 | Partial coverage cannot close a broader control (issue #8) | §6.4, §8.2, R20/R24, `TestCoverageIsPerCell` |
 | Scanner and Supabase compatibility survive the provider contract (issue #8) | §8.3, `TestBundledToolsAreProviders` |
+| Each specialist adapter has a fixture/parser test and a failure case (issue #9) | §11.6, `tests/test_external_adapters.py` |
+| Tool unavailable, parse failure, timeout and partial coverage stay explicit (issue #9) | §8.4, §11.6, `run_semantics`, `TestAvailability`, per-adapter failure tests |
+| A green specialist result never becomes a control-wide Pass (issue #9) | §8.4, R3, `assertNoPassPossible` in every adapter's clean-run test |
+| Selection compares the adapters on coverage, authorization, environment, cost, egress and side effects (issue #9) | §8.4, `TestSelectionSeesTheAdapters`, `tests/golden/providers/selection.md` |
+| Raw specialist output is bounded and redacted, never copied (issue #9) | §8.4, `TestCapabilityBoundary`, `test_the_secret_itself_never_enters_the_envelope` |
+| Several providers contribute non-overwriting evidence to one assessment (issue #9) | §11.6, `TestMultiProviderAssessment` |
 
 ## 14. Rejected alternatives
 
@@ -1038,16 +1133,16 @@ Acceptance criteria → verification:
     founder-facing EN/ET wording lands with the founder report (#5), alongside the rest of
     the founder vocabulary.
 12. **Detecting provider availability rather than being told it.**
-    `availability.requires_tools` and `required_targets` are compared against what the
-    caller declares, because probing the machine for installed tooling — and the application
-    for a Supabase project — is a separate piece of discovery with its own failure modes.
-    Increment 7's external adapters are where that question has to be answered; until then
-    a caller that under-declares its targets gets a weaker plan, not a wrong one.
-13. **Provider selection driving execution.** Increment 6 chooses and explains; it does not
-    run anything. The bridge from a selected plan to an authorized `ProcedureAttempt` — one
-    plan step becoming one Procedure with one consent record — is Increment 7 work, and it
-    is deliberately a separate decision from choosing the method.
-12. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
+    Increment 7 now detects specialist-tool PATH via `shutil.which`. Remaining work is
+    probing the application for targets (a Supabase project, a deployed URL), not whether
+    Gitleaks is installed. A caller that under-declares its application targets still gets
+    a weaker plan, not a wrong one.
+13. **Provider selection driving execution.** Skill-level run-after-consent is this
+    increment: the scan skill asks once, then installs/runs/imports the default pack. A
+    Python bridge from a selected plan to an authorized `ProcedureAttempt` — one plan
+    step becoming one Procedure with one consent record — is later work, and it is
+    deliberately a separate decision from choosing the method.
+14. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
     impact adjustment: `audience_scale` already accounts for how many parties a failure
     reaches, and counting both double-counts blast radius. Revisit if pilots show
     multi-tenant failures landing systematically harder than the audience band predicts.

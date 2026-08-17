@@ -15,8 +15,9 @@ The plans are committed so that:
     same plan (--check fails on any drift, in CI and in the tests);
   * the cases that matter are pinned side by side — a review with nothing
     authorized, the same review once the probe is allowed to run, the same
-    review once it may write, and one where the strongest method is missing
-    for a reason the user could fix.
+    review once it may write, one where the strongest method is missing for a
+    reason the user could fix, and the specialist tools being compared on
+    install, cost, egress and target rather than on reputation.
 
 Usage: python3 scripts/gen_provider_goldens.py [--check]   (run from anywhere)
 """
@@ -33,6 +34,7 @@ OUTPUT_PATH = os.path.join(REPO_ROOT, "tests", "golden", "providers",
 
 ANON = "vibecheck.control.authz.anon_data_access"
 IDOR = "vibecheck.control.authz.object_level"
+SECRETS_HISTORY = "vibecheck.control.secrets.no_repo_history_leaks"
 
 PROBE_INPUTS = ["supabase_url", "supabase_anon_key", "test_account_a_token",
                 "test_account_b_token", "known_private_record_id"]
@@ -173,6 +175,95 @@ CASES = [
             authorized_providers=["prov-supabase-probe",
                                   "prov-playwright-two-account"],
             authorized_effects=LIVE_EFFECTS + ["write"]),
+    },
+    {
+        "id": "specialist-secret-scanner-installed",
+        "title": "A specialist secret scanner is installed",
+        "why": "Gitleaks is free, unattended and written by people who do only "
+               "this, so it goes ahead of a person reading the repository by "
+               "hand and ahead of the bundled grep. TruffleHog is the same "
+               "strength and loses on the declared order, which is what the "
+               "order is for. Note the last line: covering the requirement is "
+               "not closing the control, and a scanner that found nothing has "
+               "not established that there is nothing.",
+        "requirement": providers_mod.requirement(
+            SECRETS_HISTORY, "developer_only"),
+        "offer": providers_mod.offer(
+            environment="developer_only", targets=["source_tree"],
+            tools=["gitleaks", "trufflehog"], authorized_providers="all"),
+    },
+    {
+        "id": "specialist-secret-scanner-missing",
+        "title": "The same review, without the scanner installed",
+        "why": "The plan falls back to a person reading the source, and the "
+               "uninstalled tool does not disappear: it is a gap whose grant "
+               "is one install command. vibecheck never runs that command "
+               "itself — what executes on the user's machine is the user's "
+               "decision.",
+        "requirement": providers_mod.requirement(
+            SECRETS_HISTORY, "developer_only"),
+        "offer": providers_mod.offer(
+            environment="developer_only", targets=["source_tree"],
+            authorized_providers="all"),
+    },
+    {
+        "id": "sast-cost-comparison",
+        "title": "Two SAST tools, one compute budget",
+        "why": "Semgrep and CodeQL both claim the SQL control at the same "
+               "strength. CodeQL finds more and declares high compute, which "
+               "this offer did not accept, so it is excluded on cost and "
+               "reported as a gap rather than silently skipped. Cost is a "
+               "selection input exactly like authorization is.",
+        "requirement": providers_mod.requirement(
+            "vibecheck.control.input.sql_parameterized", "developer_only"),
+        "offer": providers_mod.offer(
+            environment="developer_only", targets=["source_tree"],
+            tools=["semgrep", "codeql"], authorized_providers="all"),
+    },
+    {
+        "id": "dependency-audit-egress",
+        "title": "A dependency audit that has to phone home",
+        "why": "Both dependency auditors send the project's package names and "
+               "versions to a remote database. With no egress grant they are "
+               "excluded and the plan says which destination each one would "
+               "have reached — a supply-chain inventory leaving the machine is "
+               "a decision, not an implementation detail.",
+        "requirement": providers_mod.requirement(
+            "vibecheck.control.deps.vuln_scanning", "developer_only"),
+        "offer": providers_mod.offer(
+            environment="developer_only", targets=["source_tree"],
+            tools=["osv-scanner", "trivy"], authorized_providers="all"),
+    },
+    {
+        "id": "dast-authorized-against-staging",
+        "title": "A DAST scan of an authorized staging deployment",
+        "why": "ZAP needs the target URL, the owner's authorization and a "
+               "network grant before it is selectable at all, and the plan "
+               "states all three as a request rather than an instruction. Its "
+               "closure threshold is the honest part: a baseline scan reports "
+               "on the routes its crawler reached, and a quiet report mostly "
+               "means the crawler never got past the login.",
+        "requirement": providers_mod.requirement(
+            "vibecheck.control.deploy.cors_restricted", "private_test"),
+        "offer": providers_mod.offer(
+            environment="private_test",
+            targets=["source_tree", "deployed_web_app"],
+            tools=["zap.sh"], inputs=["target_url", "scan_authorization"],
+            authorized_providers="all", authorized_effects=LIVE_EFFECTS),
+    },
+    {
+        "id": "dast-without-a-deployment",
+        "title": "The same DAST requirement with no deployment to point at",
+        "why": "A scanner with nothing to observe is inapplicable, not a gap: "
+               "there is no work to schedule and no grant that would change "
+               "that. The distinction matters, because a gap is a to-do and an "
+               "inapplicable provider is not.",
+        "requirement": providers_mod.requirement(
+            "vibecheck.control.deploy.cors_restricted", "private_test"),
+        "offer": providers_mod.offer(
+            environment="private_test", targets=["source_tree"],
+            tools=["zap.sh"], authorized_providers="all",
+            authorized_effects=LIVE_EFFECTS),
     },
 ]
 

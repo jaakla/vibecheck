@@ -54,7 +54,9 @@ MODEL_PATH = os.path.join(REPO_ROOT, "schema", "authz-coverage.v1.json")
 #: An observation of one of these never fills a cell: it is a signal about the
 #: source tree, not about the deployment (closure.static_analysis_rule).
 STATIC_OPERATIONS = ("static_pattern_scan", "code_review_of_diff",
-                     "migration_analysis", "policy_source_review")
+                     "migration_analysis", "policy_source_review",
+                     "git_history_scan", "dependency_audit",
+                     "sast_code_scan")
 
 _MODEL = None
 

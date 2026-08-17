@@ -327,7 +327,7 @@ Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult sta
 
 | Metoodika | Versioon |
 |---|---|
-| vibecheck.assessment | 1.5.0 |
+| vibecheck.assessment | 1.6.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
 | vibecheck.action_registry | 1.0.0 |

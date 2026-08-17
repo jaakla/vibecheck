@@ -805,7 +805,7 @@
     }
   ],
   "schema": "vibecheck.assessment",
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "signals": [
     {
       "environment": "public_release",

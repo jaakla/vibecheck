@@ -412,7 +412,7 @@ A blank status means the row was never reviewed. That is deliberately different 
 
 | Method | Version |
 |---|---|
-| vibecheck.assessment | 1.5.0 |
+| vibecheck.assessment | 1.6.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
 | vibecheck.action_registry | 1.0.0 |
