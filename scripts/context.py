@@ -194,7 +194,7 @@ def build_context(context_id, application, target_scopes, profile=None,
                   current_scope=None, compensating_controls=None,
                   confirmation=None, data_summary=None, assumptions=None,
                   valid_until=None, reassess_triggers=None, extensions=None,
-                  revision=1):
+                  authorization_objects=None, revision=1):
     """A context at revision 1. Unconfirmed by default: an unattended import
     produces a draft, and a draft caps readiness at incomplete (RFC §4.2)."""
     context = {
@@ -211,6 +211,8 @@ def build_context(context_id, application, target_scopes, profile=None,
         context["profile"] = copy.deepcopy(profile)
     if compensating_controls:
         context["compensating_controls"] = copy.deepcopy(compensating_controls)
+    if authorization_objects:
+        context["authorization_objects"] = copy.deepcopy(authorization_objects)
     if extensions:
         context["extensions"] = copy.deepcopy(extensions)
     if data_summary:
@@ -230,8 +232,8 @@ def build_context(context_id, application, target_scopes, profile=None,
 #: revision, the confirmation block and the timestamps: the fingerprint answers
 #: "are these the same recorded facts?", not "was this the same review?".
 _FINGERPRINTED = ("application", "target_scopes", "current_scope", "profile",
-                  "compensating_controls", "extensions", "data_summary",
-                  "assumptions")
+                  "compensating_controls", "authorization_objects",
+                  "extensions", "data_summary", "assumptions")
 
 
 def context_fingerprint(context):
@@ -256,7 +258,7 @@ def stamp_fingerprint(context):
 def revise(context, profile=None, target_scopes=None, current_scope=None,
            compensating_controls=None, application=None, data_summary=None,
            assumptions=None, valid_until=None, reassess_triggers=None,
-           confirmed_by=None, now=None):
+           authorization_objects=None, confirmed_by=None, now=None):
     """A new context revision carrying the changed facts.
 
     ``profile`` is merged field by field, so a revision can correct one answer
@@ -278,6 +280,7 @@ def revise(context, profile=None, target_scopes=None, current_scope=None,
     for key, value in (("target_scopes", target_scopes),
                        ("current_scope", current_scope),
                        ("compensating_controls", compensating_controls),
+                       ("authorization_objects", authorization_objects),
                        ("application", application),
                        ("data_summary", data_summary),
                        ("assumptions", assumptions),

@@ -46,6 +46,7 @@
           "verification": { "codes": ["MAN", "E2E"], "tools": "Two accounts + URL ID swap; Playwright" },
           "scanner_checks": [
             { "check_id": "rls.permissive", "tier": "EVIDENCE" },
+            { "check_id": "authz.backend_target", "tier": "MANUAL" },
             { "check_id": "authz.idor", "tier": "MANUAL" }
           ],
           "workbook_profiles": ["reviewer", "founder"]
@@ -69,7 +70,8 @@
           "scanner_checks": [
             { "check_id": "rls.missing", "tier": "EVIDENCE" },
             { "check_id": "rls.permissive", "tier": "EVIDENCE" },
-            { "check_id": "rls.anon_write", "tier": "EVIDENCE" }
+            { "check_id": "rls.anon_write", "tier": "EVIDENCE" },
+            { "check_id": "authz.backend_target", "tier": "MANUAL" }
           ],
           "workbook_profiles": ["reviewer", "founder"]
         }

@@ -267,6 +267,24 @@ else
   emit "rls.permissive" "[13,14]" "MANUAL" "No SQL migrations found — inspect live RLS policies and infrastructure sources" ""
   emit "rls.anon_write" "[14]" "MANUAL" "No SQL migrations found — test anonymous writes against an authorized deployment" ""
 fi
+# Where the live authorization surface is. A project URL and a publishable/anon
+# key are public by design, so finding them is not a leak — it is the target the
+# probe needs, because object-level and anonymous access can only be settled
+# against the running deployment, per object and per operation. Platform builders
+# (Lovable Cloud, Bolt, v0) commit these into a tracked .env and a generated
+# client file, which is why they are worth locating rather than asking for.
+SB_URLS=$(grep_src "https://[a-z0-9]{16,}\.supabase\.co")
+SB_ENV=$(grep_src "(VITE_|NEXT_PUBLIC_|PUBLIC_|EXPO_PUBLIC_|REACT_APP_)?SUPABASE_(URL|PROJECT_ID|ANON_KEY|PUBLISHABLE_KEY)")
+SB_CLIENT=$(tr '\0' '\n' < "$ALL_Z" 2>/dev/null \
+  | grep -E '(^|/)supabase/[^/]*client[^/]*\.(ts|tsx|js|jsx|mjs)$|(^|/)supabase\.(ts|js)$' \
+  | head -10 || true)
+if [ -n "$SB_URLS$SB_ENV$SB_CLIENT" ]; then
+  emit "authz.backend_target" "[13,14]" "MANUAL" "Supabase backend target found (project URL, publishable/anon key or generated client) — probe it with the vibecheck-supabase skill: anonymous and cross-account access are settled per object and per operation against the deployment, never from the source" "$SB_URLS
+$SB_ENV
+$SB_CLIENT"
+else
+  emit "authz.backend_target" "[13,14]" "MANUAL" "No Supabase project URL or publishable key found in the scanned files — if this app has a hosted backend, take its URL and public key from the deployed app or the platform settings before #13/#14 can be tested" ""
+fi
 emit "authz.idor" "[13]" "MANUAL" "IDOR requires a live probe — use the vibecheck-supabase skill or two test accounts" ""
 
 # Admin gating that exists only in UI components
@@ -311,6 +329,26 @@ else
   emit "cost.client_llm" "[8,26]" "NO_SIGNAL" "No LLM call found in client-reachable candidate files" ""
 fi
 emit "cost.budget_caps" "[24]" "MANUAL" "Budget caps live in provider dashboards — verify manually" ""
+
+# Unauthenticated write paths: a public form that writes straight to the database
+# is often exactly what the product needs, and it is still reachable by
+# automation. #26 asks whether the unauthenticated path is bounded — by a
+# throttle, a challenge, or a review gate. Presence of a pattern is not proof it
+# wraps the path, and absence is not proof there is no limit at the edge.
+PUBLIC_WRITE=$(grep_client "\.from\(['\"\`][^'\"\`]+['\"\`]\)[[:space:]]*\.(insert|upsert)\(")
+WRITE_GUARD=$(grep_code "(rateLimit|rate_limit|ratelimit|Ratelimit|@upstash/ratelimit|express-rate-limit|rate-limiter-flexible|slowapi|slowDown|throttle|turnstile|hcaptcha|recaptcha|altcha|friendly-?captcha)" -i)
+GUARD_DEPS=$(pkg_dep "@upstash/ratelimit|express-rate-limit|rate-limiter-flexible|bottleneck|slowapi|@marsidev/react-turnstile|react-google-recaptcha|@hcaptcha/react-hcaptcha|altcha")
+if [ -n "$PUBLIC_WRITE" ] || [ -n "${ANONW:-}" ]; then
+  if [ -z "$WRITE_GUARD" ] && [ -z "$GUARD_DEPS" ]; then
+    emit "cost.public_write_abuse" "[26]" "WARN" "Unauthenticated write path present with no rate-limit or bot-defence signal — if the public write is intended, confirm what bounds it (per-source throttle, challenge, or review gate)" "$PUBLIC_WRITE
+${ANONW:-}"
+  else
+    emit "cost.public_write_abuse" "[26]" "NO_SIGNAL" "A throttle or challenge signal is present; confirm it actually wraps the unauthenticated write path" "$WRITE_GUARD
+$GUARD_DEPS"
+  fi
+else
+  emit "cost.public_write_abuse" "[26]" "NO_SIGNAL" "No unauthenticated write path found by this ruleset" ""
+fi
 
 # ---------- 5. Input handling & injection (#28-#32) ----------
 HITS=$(grep_code "dangerouslySetInnerHTML|innerHTML[[:space:]]*=|v-html")

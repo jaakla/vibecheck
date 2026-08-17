@@ -1,0 +1,845 @@
+{
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
+  "actions": [
+    {
+      "action_id": "act-authz-bound-obj-bookings-anonymous-create",
+      "action_key": "authz-bound-obj-bookings-anonymous-create",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access",
+        "vibecheck.control.cost.expensive_endpoints_auth"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "An unbounded public write is being abused or it is not; the deadline follows the exposure of the environment it runs in.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "remediate",
+      "outcome": "The intended anonymous create of public.bookings is bounded and the bound is observed: vibecheck.control.cost.expensive_endpoints_auth is not assessed.",
+      "owner": {
+        "role": "developer"
+      },
+      "priority": "high",
+      "reason": "anonymous create of public.bookings is intended (The public booking form submits enquiries directly from the browser. Requiring an account first would defeat the form.), which makes it reachable by automation as well as by customers. Unbounded, the same path fills the table, sends the mail and spends the quota, and the real submissions are buried in it. Any of these bounds it: bot_defence, queue_or_review_gate, rate_limit.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "An observation of the bound working: the throttle or challenge refusing a repeated automated submission, and the same actor's read of the object still denied. A configuration screenshot is not the bound.",
+      "urgency": "immediate"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-bookings-anonymous",
+      "action_key": "authz-coverage-obj-bookings-anonymous",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what anonymous can do to public.bookings for delete, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.anon_data_access in public_release is partial: 2 of 8 required cells are observed. These are delete, update (not_tested), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-unsubscribe-tokens-anonymous",
+      "action_key": "authz-coverage-obj-unsubscribe-tokens-anonymous",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what anonymous can do to public.email_unsubscribe_tokens for create, delete, read, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.anon_data_access in public_release is partial: 2 of 8 required cells are observed. These are create, delete, read, update (not_tested), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    }
+  ],
+  "assessment_id": "va-example-consultancy-form",
+  "assessments": [
+    {
+      "assessed_at": "2026-08-16T11:00:00Z",
+      "assessment_id": "asm-anon-access-live",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-bookings-read-denied",
+          "ev-bookings-create-open"
+        ],
+        "rationale": "Anonymous reads of public.bookings are denied on a non-empty table. The anonymous insert is confirmed as intended — it is the booking form — so it is not a violation, but nothing bounds it: there is no assessment of the unauthenticated write path being limited, and the unsubscribe-token table has not been probed at all. Partial, and it stays partial until the form is bounded."
+      },
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "partial"
+    }
+  ],
+  "attempts": [],
+  "context": {
+    "application": {
+      "description": "Published marketing site with a booking form that writes enquiries to the database from the browser and emails the owner.",
+      "name": "Example Consultancy site",
+      "platform": "lovable-cloud+supabase"
+    },
+    "authorization_objects": [
+      {
+        "description": "Enquiries: name, email, company, message. Only the owner reads them; anyone may submit one.",
+        "intended_operations": [
+          {
+            "actor": "anonymous",
+            "decided_at": "2026-08-16T09:30:00Z",
+            "operation": "create",
+            "rationale": "The public booking form submits enquiries directly from the browser. Requiring an account first would defeat the form.",
+            "source": "founder:mari",
+            "state": "confirmed"
+          }
+        ],
+        "intent": "private",
+        "locator": "public.bookings",
+        "object_class": "admin_or_privileged_record",
+        "object_id": "obj-bookings",
+        "source": "founder:mari",
+        "state": "confirmed"
+      },
+      {
+        "description": "Single-use unsubscribe tokens; reading one lets anyone act as that recipient.",
+        "intent": "private",
+        "locator": "public.email_unsubscribe_tokens",
+        "object_class": "credential_or_token_record",
+        "object_id": "obj-unsubscribe-tokens",
+        "source": "founder:mari",
+        "state": "confirmed"
+      }
+    ],
+    "confirmation": {
+      "confirmed_at": "2026-08-16T09:00:00Z",
+      "confirmed_by": "founder:mari",
+      "source_fingerprint": "sha256:9a1c77e2b4d0f6a8c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0",
+      "state": "human_reviewed"
+    },
+    "context_fingerprint": "sha256:6dd45601130480bdfc280cf9dcf4df1b5fb96d835ab9085ed7ea34d6f2977d21",
+    "context_id": "ctx-example-consultancy",
+    "context_model": {
+      "name": "vibecheck.context_model",
+      "version": "1.0.0"
+    },
+    "current_scope": {
+      "environment": "public_release",
+      "intended_use": "public_product"
+    },
+    "data_summary": "Names, emails, company names and free-text messages from enquiry forms, plus the unsubscribe tokens the mailer uses.",
+    "profile": {
+      "audience_scale": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "open_large"
+      },
+      "authentication": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "none"
+      },
+      "business_criticality": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "supporting"
+      },
+      "data_sensitivity": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "personal_data"
+      },
+      "financial_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "none"
+      },
+      "lifecycle": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "live"
+      },
+      "network_exposure": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "public_internet"
+      },
+      "privileged_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "external_side_effects"
+      },
+      "tenancy": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "single_tenant"
+      }
+    },
+    "reassess_triggers": [
+      {
+        "kind": "context_change"
+      }
+    ],
+    "revision": 1,
+    "target_scopes": [
+      {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    ]
+  },
+  "control_registry": {
+    "name": "vibecheck.controls",
+    "version": "1.0.0"
+  },
+  "coverage_model": {
+    "name": "vibecheck.authz_coverage",
+    "version": "1.1.0"
+  },
+  "created_at": "2026-08-16T12:00:00Z",
+  "evidence": [
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-16T10:00:00Z",
+        "scope": "read-only anon probe of the published project, plus one authorized insert into public.bookings"
+      },
+      "claim": {
+        "aspect": "anonymous read of public.bookings",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "public_release",
+          "object_class": "admin_or_privileged_record",
+          "object_id": "obj-bookings",
+          "object_ref": "public.bookings",
+          "observed": "denied",
+          "operation": "read"
+        }
+      ],
+      "direction": "supports",
+      "environment": "public_release",
+      "evidence_id": "ev-bookings-read-denied",
+      "observed_at": "2026-08-16T10:05:00Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "supabase_probe.py",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "anon: 0 rows; test account: 41 rows"
+      },
+      "scope": "Nothing returned to the anon role while a test account saw 41 rows in the same window, so the table is not empty and the filtering is real. Covers reading public.bookings as an anonymous caller.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-bookings-read"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.bookings"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-16T10:00:00Z",
+        "scope": "read-only anon probe of the published project, plus one authorized insert into public.bookings"
+      },
+      "claim": {
+        "aspect": "anonymous create in public.bookings",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "public_release",
+          "instance": "probe enquiry 51f0, since deleted",
+          "note": "confirmed as intended: this is the booking form",
+          "object_class": "admin_or_privileged_record",
+          "object_id": "obj-bookings",
+          "object_ref": "public.bookings",
+          "observed": "allowed",
+          "operation": "create"
+        }
+      ],
+      "direction": "neutral",
+      "environment": "public_release",
+      "evidence_id": "ev-bookings-create-open",
+      "observed_at": "2026-08-16T10:08:00Z",
+      "operation": "http_insert_anon",
+      "provider": {
+        "name": "supabase_probe.py",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "HTTP 201; row public.bookings?id=eq.51f0 created with the public key alone"
+      },
+      "scope": "One authorized anon INSERT into public.bookings on the published project. The insert is the form working; this observation says the path is open, and nothing about whether anything limits how often it can be used.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "Created enquiry row public.bookings?id=eq.51f0 on the live site; deleted by founder:mari at 2026-08-16T10:15Z and confirmed gone. The insert also sent the owner one notification email.",
+        "external_accounts": false,
+        "writes": true
+      },
+      "signal_refs": [
+        "sig-bookings-create"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.bookings"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    }
+  ],
+  "procedures": [],
+  "readiness": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blockers": [
+        {
+          "reason": "Critical contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.anon_data_access (assessment status: partial)",
+          "ref": "rsk-authz.anon_data_access-public_release.public_product-current-r1"
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.blocked.contextual_risk_critical",
+          "readiness.incomplete.authorization_coverage_gap",
+          "readiness.incomplete.unassessed_critical_high",
+          "readiness.incomplete.unbounded_intended_exposure"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is still incomplete, and readiness for this scope is already blocked by what is known: completing the review can add blockers, never remove this one.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-public_release.public_product",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      },
+      "state": "blocked",
+      "unknowns": [
+        {
+          "control_ids": [
+            "vibecheck.control.authz.anon_data_access"
+          ],
+          "description": "Authorization coverage for vibecheck.control.authz.anon_data_access in this environment is partial: 2 of 8 required (object, actor, operation) cells are observed, and the rest are obj-bookings/anonymous/delete (not_tested), obj-bookings/anonymous/update (not_tested), obj-unsubscribe-tokens/anonymous/create (not_tested), obj-unsubscribe-tokens/anonymous/delete (not_tested), obj-unsubscribe-tokens/anonymous/read (not_tested), obj-unsubscribe-tokens/anonymous/update (not_tested). One denied request covers one cell, never the control.",
+          "material": true,
+          "ref": "asm-anon-access-live",
+          "unknown_id": "unk-public_release.public_product-authz_coverage.authz.anon_data_access"
+        },
+        {
+          "description": "anonymous create of public.bookings is intended (The public booking form submits enquiries directly from the browser. Requiring an account first would defeat the form.), but nothing bounds it in this environment: vibecheck.control.cost.expensive_endpoints_auth is not assessed. An unauthenticated write path is reachable by automation as well as by customers, so an unbounded one is an open question about cost, spam and the usability of what it fills.",
+          "material": true,
+          "unknown_id": "unk-public_release.public_product-authz_exposure.obj-bookings.anonymous.create"
+        },
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.object_level",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.budget_caps",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.integ.webhook_signatures",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.no_pii_leakage",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "42 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true,
+          "unknown_id": "unk-public_release.public_product-controls.unassessed_critical_high"
+        }
+      ],
+      "valid_until": "2026-09-13T00:00:00Z"
+    }
+  ],
+  "report": {
+    "appendix": {
+      "action_refs": [
+        "act-authz-bound-obj-bookings-anonymous-create",
+        "act-authz-coverage-obj-bookings-anonymous",
+        "act-authz-coverage-obj-unsubscribe-tokens-anonymous"
+      ],
+      "action_registry": {
+        "name": "vibecheck.action_registry",
+        "version": "1.0.0"
+      },
+      "assessment_refs": [
+        "asm-anon-access-live"
+      ],
+      "attempt_refs": [],
+      "control_registry": {
+        "name": "vibecheck.controls",
+        "version": "1.0.0"
+      },
+      "evidence_refs": [
+        "ev-bookings-create-open",
+        "ev-bookings-read-denied"
+      ],
+      "framework": "vibecheck_v1",
+      "framework_version": "2026.08",
+      "item_count": 89,
+      "legacy_action_view": {
+        "actions": [
+          {
+            "action_ref": "act-authz-bound-obj-bookings-anonymous-create",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-authz-coverage-obj-bookings-anonymous",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-authz-coverage-obj-unsubscribe-tokens-anonymous",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          }
+        ],
+        "derived_from": {
+          "action_registry": {
+            "name": "vibecheck.action_registry",
+            "version": "1.0.0"
+          },
+          "assessment_id": "va-example-consultancy-form",
+          "assessment_revision": 1
+        },
+        "lossy": true,
+        "schema": "vibecheck.action_legacy_view",
+        "schema_version": "1.0.0",
+        "warning": "AUTO describes an automated method, not permission to run it. PROPOSE describes a guided method, not an approval requirement. ADVISORY is the fallback for manual work or an Action with no executable Procedure. Read the canonical executor, effects and consent fields before acting."
+      },
+      "procedure_refs": [],
+      "risk_refs": [
+        "rsk-authz.anon_data_access-public_release.public_product-current-r1"
+      ],
+      "scenario_refs": [
+        "scn-unauthorised_data_access"
+      ]
+    },
+    "audience": "founder",
+    "context_summary": {
+      "application": {
+        "description": "Published marketing site with a booking form that writes enquiries to the database from the browser and emails the owner.",
+        "name": "Example Consultancy site",
+        "platform": "lovable-cloud+supabase"
+      },
+      "confirmation_state": "human_reviewed",
+      "context_fingerprint": "sha256:6dd45601130480bdfc280cf9dcf4df1b5fb96d835ab9085ed7ea34d6f2977d21",
+      "context_id": "ctx-example-consultancy",
+      "current_scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      },
+      "data_summary": "Names, emails, company names and free-text messages from enquiry forms, plus the unsubscribe tokens the mailer uses.",
+      "revision": 1,
+      "source_fingerprint": "sha256:9a1c77e2b4d0f6a8c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0",
+      "target_scopes": [
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ]
+    },
+    "derivation": {
+      "context_revision": 1,
+      "policy": {
+        "name": "vibecheck.report",
+        "version": "1.1.0"
+      },
+      "rules_applied": [
+        "report.headline_cap.5",
+        "report.mandatory.readiness_blocking_unknown_refs",
+        "report.mandatory.unresolved_critical_high_refs"
+      ]
+    },
+    "disclosure_placement": [
+      {
+        "categories": [
+          "unresolved_critical_high_refs"
+        ],
+        "category": "unresolved_critical_high_refs",
+        "ref": "asm-anon-access-live",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-public_release.public_product-authz_coverage.authz.anon_data_access",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-public_release.public_product-authz_exposure.obj-bookings.anonymous.create",
+        "rendered_in": "mandatory_section"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-public_release.public_product-controls.unassessed_critical_high",
+        "rendered_in": "mandatory_section"
+      }
+    ],
+    "generated_at": "2026-08-16T12:00:00Z",
+    "headline_scenario_refs": [
+      "scn-unauthorised_data_access"
+    ],
+    "language": "en",
+    "mandatory_disclosures": {
+      "deadline_blocking_action_refs": [],
+      "incident_response_action_refs": [],
+      "readiness_blocking_unknown_refs": [
+        "unk-public_release.public_product-authz_coverage.authz.anon_data_access",
+        "unk-public_release.public_product-authz_exposure.obj-bookings.anonymous.create",
+        "unk-public_release.public_product-controls.unassessed_critical_high"
+      ],
+      "specialist_assessment_refs": [],
+      "specialist_escalation_refs": [],
+      "unresolved_critical_high_refs": [
+        "asm-anon-access-live"
+      ]
+    },
+    "readiness_refs": [
+      "rdy-public_release.public_product"
+    ],
+    "scenario_ranking": [
+      {
+        "headline": true,
+        "inputs": {
+          "current_level": "critical",
+          "derived_by_policy": true,
+          "domain_rank": 0,
+          "future_level": "none",
+          "max_control_severity_rank": 4,
+          "unresolved_control_count": 1
+        },
+        "rank": 1,
+        "scenario_ref": "scn-unauthorised_data_access"
+      }
+    ],
+    "sections": {
+      "can_wait": [],
+      "needs_developer_or_specialist": [
+        "act-authz-bound-obj-bookings-anonymous-create"
+      ],
+      "vibecheck_can_do_now": [],
+      "you_need_to_do": [
+        "act-authz-coverage-obj-bookings-anonymous",
+        "act-authz-coverage-obj-unsubscribe-tokens-anonymous"
+      ]
+    }
+  },
+  "revision": 1,
+  "risks": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Assessment asm-anon-access-live is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.use.public_product",
+          "impact.audience.open_large",
+          "impact.data.personal_data",
+          "impact.privileged.external_side_effects",
+          "impact.cap.max_increase",
+          "impact.cap.severity_ceiling",
+          "exposure.base.environment.public_release",
+          "exposure.network.public_internet",
+          "exposure.auth.none",
+          "exposure.cap.max_increase"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-bookings-read-denied",
+        "ev-bookings-create-open"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication none (No login at all; anyone who reaches the app is inside it).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: open_large (Open to anyone, thousands or more, or growing without a ceiling). Tenancy: single_tenant (One organisation's data in one deployment). Privileged operations available: external_side_effects (Sends email or messages, calls paid third-party APIs, or acts in external systems). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all. Publicly discoverable deployments are enumerated by untargeted automation as a matter of routine. Whoever reaches the application is already inside it; no precondition remains. Exposure may only be reduced by hard network facts, and by at most one evidenced compensating control on top. Raising is capped at one step because the environment base already carries the dominant signal."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-13T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-public_release.public_product-current-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "action_refs": [
+        "act-authz-bound-obj-bookings-anonymous-create",
+        "act-authz-coverage-obj-bookings-anonymous",
+        "act-authz-coverage-obj-unsubscribe-tokens-anonymous"
+      ],
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_refs": [
+        "asm-anon-access-live"
+      ],
+      "assumptions": [
+        "Assessment asm-anon-access-live is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "current_level": "critical",
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.report_derivation",
+          "version": "1.1.0"
+        },
+        "rules_applied": [
+          "scenario.control.vibecheck.control.authz.anon_data_access",
+          "scenario.group.unauthorised_data_access"
+        ]
+      },
+      "domains": [
+        "security"
+      ],
+      "evidence_refs": [
+        "ev-bookings-create-open",
+        "ev-bookings-read-denied"
+      ],
+      "future_level": "none",
+      "group_id": "unauthorised_data_access",
+      "narrative": "Server-side authorization is the only thing standing between one user's records and everybody else. Where it is not enforced, reading or changing someone else's data needs no exploit at all. At stake: personal data of identifiable people. Reachable by: open to anyone, thousands or growing. Risk today, for public release + public product: critical.",
+      "procedure_refs": [],
+      "risk_by_scope": [
+        {
+          "horizon": {
+            "kind": "current"
+          },
+          "level": "critical",
+          "risk_refs": [
+            "rsk-authz.anon_data_access-public_release.public_product-current-r1"
+          ],
+          "scope": {
+            "environment": "public_release",
+            "intended_use": "public_product"
+          }
+        }
+      ],
+      "risk_refs": [
+        "rsk-authz.anon_data_access-public_release.public_product-current-r1"
+      ],
+      "scenario_id": "scn-unauthorised_data_access",
+      "title": "Someone reaches data that is not theirs",
+      "wording": {
+        "narrative": {
+          "en": "Server-side authorization is the only thing standing between one user's records and everybody else. Where it is not enforced, reading or changing someone else's data needs no exploit at all. At stake: personal data of identifiable people. Reachable by: open to anyone, thousands or growing. Risk today, for public release + public product: critical.",
+          "et": "Serveripoolne õiguste kontroll on ainus asi, mis eraldab ühe kasutaja kirjeid kõigist teistest. Seal, kus seda ei jõustata, ei ole teiste andmete lugemiseks või muutmiseks vaja mingit rünnakut. Kaalul: tuvastatavate inimeste isikuandmed. Kättesaadav: avatud kõigile, tuhandeid või kasvav hulk. Risk täna, ulatuses avalik väljalase + avalik toode: kriitiline."
+        },
+        "title": {
+          "en": "Someone reaches data that is not theirs",
+          "et": "Keegi pääseb ligi andmetele, mis ei ole tema omad"
+        }
+      }
+    }
+  ],
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.4.0",
+  "signals": [
+    {
+      "environment": "public_release",
+      "observed_at": "2026-08-16T10:05:00Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_select\",\"table\":\"public.bookings\",\"http\":200,\"verdict\":\"PASS_no_anon_rows_on_non_empty_table\",\"rows_visible_to_anon\":0,\"rows_visible_to_test_account\":41}"
+      },
+      "signal_id": "sig-bookings-read",
+      "source": {
+        "check_id": "anon_select",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.bookings"
+      }
+    },
+    {
+      "environment": "public_release",
+      "observed_at": "2026-08-16T10:08:00Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_insert_probe\",\"table\":\"public.bookings\",\"http\":201,\"verdict\":\"FAIL_anon_write_succeeded\",\"target_environment\":\"public_release\",\"created_row_hint\":\"/bookings?id=eq.51f0\",\"cleanup\":{\"state\":\"pending\"}}"
+      },
+      "signal_id": "sig-bookings-create",
+      "source": {
+        "check_id": "anon_insert_probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.bookings"
+      }
+    }
+  ]
+}

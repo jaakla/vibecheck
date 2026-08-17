@@ -36,6 +36,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
 import actions as actions_mod
+import authz as authz_mod
 import context as ctx
 import risk as risk_mod
 from controls import FRAMEWORK, FRAMEWORK_VERSION
@@ -482,6 +483,59 @@ def _assess_scope(envelope, scope, now):
                     "material": True,
                 })
                 rules.append("readiness.incomplete.expired_risk_acceptance")
+
+    current_by_control = {a.get("control_id"): a
+                          for a in canonical.current_assessments(envelope)}
+    for control_id, coverage in sorted(
+            authz_mod.coverage_gaps(envelope, scope.get("environment"), now).items()):
+        assessment = current_by_control.get(control_id)
+        if assessment is None or assessment.get("status") not in ("pass", "partial"):
+            # A failing control is already an unresolved blocker in its own
+            # right; the coverage gap matters where the control otherwise
+            # looks handled.
+            continue
+        unknowns.append({
+            "unknown_id": unknown_id(
+                scope, "authz_coverage.%s" % _control_slug(control_id)),
+            "ref": assessment.get("assessment_id"),
+            "description": "Authorization coverage for %s in this environment "
+                           "is %s: %d of %d required (object, actor, "
+                           "operation) cells are observed, and the rest are %s. "
+                           "One denied request covers one cell, never the "
+                           "control."
+                           % (control_id, coverage["state"],
+                              coverage["satisfied_count"],
+                              coverage["required_count"],
+                              ", ".join(sorted({"%s/%s/%s (%s)"
+                                                % (gap["object_id"], gap["actor"],
+                                                   gap["operation"], gap["reason"])
+                                                for gap in coverage["gaps"]}))),
+            "material": True,
+            "control_ids": [control_id],
+        })
+        rules.append("readiness.incomplete.authorization_coverage_gap")
+
+    for exposure in authz_mod.unbounded_exposures(
+            envelope, scope.get("environment"), now):
+        unknowns.append({
+            "unknown_id": unknown_id(
+                scope, "authz_exposure.%s.%s.%s"
+                % (exposure["object_id"], exposure["actor"],
+                   exposure["operation"])),
+            "description": "%s %s of %s is intended (%s), but nothing bounds it "
+                           "in this environment: %s. An unauthenticated write "
+                           "path is reachable by automation as well as by "
+                           "customers, so an unbounded one is an open question "
+                           "about cost, spam and the usability of what it fills."
+                           % (exposure["actor"], exposure["operation"],
+                              exposure["object_ref"] or exposure["object_id"],
+                              exposure.get("rationale") or "no reason recorded",
+                              "; ".join(item["detail"]
+                                        for item in exposure["safeguards"]
+                                        if item["required"] and not item["met"])),
+            "material": True,
+        })
+        rules.append("readiness.incomplete.unbounded_intended_exposure")
 
     confirmation = ctx.confirmation_state(context, now)
     if confirmation != "human_reviewed":

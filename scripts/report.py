@@ -50,6 +50,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
 import actions as actions_mod
+import authz as authz_mod
 import context as ctx
 import readiness as readiness_mod
 import risk as risk_mod
@@ -415,13 +416,16 @@ def apply_report(envelope, audience="founder", language="en", now=None):
 
 
 def derive_into(envelope, audience="founder", language="en", now=None):
-    """Risks, then readiness over those risks, then scenarios, then the report.
+    """Actions, risks, readiness over those risks, scenarios, then the report.
 
     Each stage reads the stage before it, so a single call re-derives the whole
     presentation from the assessments and evidence without any of them being
-    able to write back.
+    able to write back. The two derived Action kinds run first, because
+    readiness reads them: specialist escalations for screening assessments, and
+    one verify Action per uncovered authorization cell (RFC §6.4).
     """
     source = actions_mod.materialize_specialist_actions(envelope, now)
+    source = authz_mod.materialize_coverage_actions(source, now)
     derived = readiness_mod.derive_into(source, now)
     derived = scenarios_mod.apply_scenarios(derived, now)
     return apply_report(derived, audience, language, now)

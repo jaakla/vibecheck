@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Action / Procedure registry semantics (gh issue #6, Increment 4).
+"""Action / Procedure registry semantics (gh issues #6 and #7, Increments 4-5).
 
 The JSON Schema describes record shape.  This module enforces the relations
 that a structural schema cannot express: revision lineages, lifecycle
 transitions, dependency cycles, exact-attempt consent, observed effects being
-inside the authorized scope, and evidence-backed completion.
+inside the authorized scope, evidence-backed completion, and the staged
+remediation checkpoints — patch, deploy, verify — that a remediation touching a
+running system has to pass one at a time (rule R21).
 
 AUTO / PROPOSE / ADVISORY is intentionally only a lossy derived display view.
 It is never read to decide whether a Procedure may execute.
@@ -490,6 +492,244 @@ def _validate_procedure(procedure, modern, problems):
             % procedure_id)
 
 
+def stage_policy():
+    """The staged-remediation policy: which checkpoints exist, in which order."""
+    return load_policy().get("remediation_stages") or {"order": [], "stages": {}}
+
+
+def _validate_stage_procedure(procedure, problems):
+    """A Procedure that claims a checkpoint must actually be that checkpoint."""
+    stage = procedure.get("stage")
+    if stage is None:
+        return
+    procedure_id = procedure.get("procedure_id", "<missing id>")
+    policy = stage_policy()
+    spec = (policy.get("stages") or {}).get(stage)
+    if spec is None:
+        problems.append("R21: procedure %s declares unknown remediation stage %r"
+                        % (procedure_id, stage))
+        return
+    effects = procedure.get("effects") or {}
+    for flag in spec.get("required_effects") or []:
+        if not effects.get(flag):
+            problems.append(
+                "R21: %s procedure %s must declare the %s effect it performs"
+                % (stage, procedure_id, flag))
+    for flag in spec.get("forbidden_effects") or []:
+        if effects.get(flag):
+            problems.append(
+                "R21: %s procedure %s declares the %s effect, which belongs to "
+                "a separate checkpoint" % (stage, procedure_id, flag))
+    allowed_consent = spec.get("consent")
+    consent = (procedure.get("authorization") or {}).get("consent")
+    if allowed_consent and consent not in allowed_consent:
+        problems.append(
+            "R21: %s procedure %s needs consent %s, not %r"
+            % (stage, procedure_id, " or ".join(allowed_consent), consent))
+    if spec.get("requires_independent_verification") and not (
+            procedure.get("verification") or {}).get("independent_from_executor"):
+        problems.append(
+            "R21: %s procedure %s must be verified independently of whoever "
+            "made and deployed the change" % (stage, procedure_id))
+
+
+def _validate_stage_attempt(attempt, procedure, problems):
+    """Diff-first for patches, a named target and revision for deployments."""
+    stage = procedure.get("stage")
+    spec = (stage_policy().get("stages") or {}).get(stage)
+    if not spec:
+        return
+    attempt_id = attempt.get("attempt_id", "<missing id>")
+    started = ctx.parse_instant(attempt.get("started_at"))
+
+    if spec.get("requires_change_control"):
+        change_control = attempt.get("change_control") or {}
+        if not (change_control.get("diff_ref") or {}).get("value"):
+            problems.append(
+                "R21: %s attempt %s must record the exact diff that was shown "
+                "before authorization" % (stage, attempt_id))
+        if not change_control.get("branch"):
+            problems.append(
+                "R21: %s attempt %s must record the branch it wrote to; "
+                "repository changes are branch-first" % (stage, attempt_id))
+        if not change_control.get("approved_by"):
+            problems.append(
+                "R21: %s attempt %s must record who approved the diff"
+                % (stage, attempt_id))
+        approved = ctx.parse_instant(change_control.get("approved_at"))
+        if approved is None:
+            problems.append(
+                "R21: %s attempt %s must record when the diff was approved"
+                % (stage, attempt_id))
+        elif started is not None and approved > started:
+            problems.append(
+                "R21: %s attempt %s was approved after it started; diff-first "
+                "means the approval precedes the change" % (stage, attempt_id))
+
+    if spec.get("requires_execution_context"):
+        execution_context = attempt.get("execution_context") or {}
+        forbidden = spec.get("forbidden_execution_context_kinds") or []
+        if execution_context.get("kind") in forbidden:
+            problems.append(
+                "R21: %s attempt %s ran in execution context %r; a deployment "
+                "has to name the running environment it changed"
+                % (stage, attempt_id, execution_context.get("kind")))
+        if not execution_context.get("source_ref"):
+            problems.append(
+                "R21: %s attempt %s must record the exact revision it deployed"
+                % (stage, attempt_id))
+        if attempt.get("result") == "succeeded" and not (
+                attempt.get("side_effects_observed") or {}).get("deployment"):
+            problems.append(
+                "R21: %s attempt %s succeeded without observing a deployment "
+                "effect" % (stage, attempt_id))
+
+
+def _staged_attempts(envelope, action_id, stage, procedures):
+    """Succeeded attempts of one checkpoint for one Action, oldest first."""
+    selected = []
+    for attempt in envelope.get("attempts") or []:
+        if attempt.get("action_ref") != action_id:
+            continue
+        if attempt.get("result") != "succeeded":
+            continue
+        procedure = procedures.get(attempt.get("procedure_ref")) or {}
+        if procedure.get("stage") != stage:
+            continue
+        selected.append(attempt)
+
+    def order(item):
+        # Compare instants, not their spellings: the same moment written with a
+        # numeric offset and with Z does not sort chronologically as text.
+        at = (ctx.parse_instant(item.get("finished_at"))
+              or ctx.parse_instant(item.get("started_at")))
+        return (at is None, at or ctx.instant("1970-01-01T00:00:00Z"),
+                str(item.get("attempt_id")))
+
+    return sorted(selected, key=order)
+
+
+def _verification_provider_matches(procedure, record):
+    expected = procedure.get("verification") or {}
+    actual = record.get("provider") or {}
+    if expected.get("provider_ref"):
+        return actual.get("provider_ref") == expected["provider_ref"]
+    return bool(expected.get("provider")
+                and actual.get("name") == expected.get("provider"))
+
+
+def _qualifying_stage_evidence(attempt, procedure, spec, evidence,
+                               previous_attempt=None):
+    """Evidence refs that actually establish this remediation checkpoint."""
+    records = [evidence[ref] for ref in attempt.get("evidence_refs") or []
+               if ref in evidence]
+    if not records:
+        return []
+
+    forbidden = set(spec.get("forbidden_evidence_operations") or [])
+    if forbidden:
+        records = [record for record in records
+                   if record.get("operation") not in forbidden]
+
+    if spec.get("evidence_provider_must_match_procedure"):
+        records = [record for record in records
+                   if _verification_provider_matches(procedure, record)]
+
+    if spec.get("evidence_environment_must_match_previous"):
+        # A standalone verification Action has no deployment checkpoint. When
+        # this stage is part of a remediation chain, however, both the attempt
+        # and its evidence must target that deployment's environment.
+        if previous_attempt is not None:
+            target_environment = previous_attempt.get("execution_environment")
+            if (not target_environment
+                    or attempt.get("execution_environment") != target_environment):
+                return []
+            records = [record for record in records
+                       if record.get("environment") == target_environment]
+
+    if previous_attempt is not None:
+        previous_finished = (
+            ctx.parse_instant(previous_attempt.get("finished_at"))
+            or ctx.parse_instant(previous_attempt.get("started_at")))
+        if previous_finished is None:
+            return []
+        records = [record for record in records
+                   if ctx.parse_instant(record.get("observed_at")) is not None
+                   and ctx.parse_instant(record.get("observed_at"))
+                   >= previous_finished]
+    return [record.get("evidence_id") for record in records]
+
+
+def _validate_required_stages(envelope, problems):
+    """R21: an Action completes one checkpoint at a time, in order."""
+    policy = stage_policy()
+    order = policy.get("order") or []
+    known = policy.get("stages") or {}
+    procedures = _index(envelope.get("procedures"), "procedure_id")
+    evidence = _index(envelope.get("evidence"), "evidence_id")
+
+    for action in current_actions(envelope):
+        stages = action.get("required_stages") or []
+        if not stages:
+            continue
+        action_id = action.get("action_id", "<missing id>")
+        unknown = [stage for stage in stages if stage not in known]
+        if unknown:
+            problems.append("R21: action %s requires unknown stage(s) %s"
+                            % (action_id, ", ".join(sorted(unknown))))
+        ordered = [stage for stage in order if stage in stages]
+        if [stage for stage in stages if stage in order] != ordered:
+            problems.append(
+                "R21: action %s lists its stages out of order; the checkpoints "
+                "run %s" % (action_id, " -> ".join(order)))
+        offered = {(procedures.get(ref) or {}).get("stage")
+                   for ref in action.get("procedure_refs") or []}
+        for stage in ordered:
+            if stage not in offered:
+                problems.append(
+                    "R21: action %s requires the %s checkpoint but offers no "
+                    "Procedure that performs it" % (action_id, stage))
+
+        if action.get("state") != "done":
+            continue
+        cursor, chosen = None, {}
+        for stage in ordered:
+            spec = known.get(stage) or {}
+            previous = chosen.get(spec.get("must_follow"))
+            candidates = _staged_attempts(
+                envelope, action_id, stage, procedures)
+            usable = None
+            for attempt in candidates:
+                started = ctx.parse_instant(attempt.get("started_at"))
+                if cursor is not None and started is not None and started < cursor:
+                    continue
+                procedure = procedures.get(attempt.get("procedure_ref")) or {}
+                if not _qualifying_stage_evidence(
+                        attempt, procedure, spec, evidence, previous):
+                    continue
+                usable = attempt
+                break
+            if usable is None:
+                live_detail = (
+                    "; live verification needs fresh non-static evidence from "
+                    "the Procedure's verification provider, observed in the "
+                    "same environment as the deployment"
+                    if stage == "live_verification" else "")
+                problems.append(
+                    "R21: done action %s has no succeeded %s attempt with "
+                    "qualifying evidence%s%s"
+                    % (action_id, stage,
+                       "; a repository patch that was never deployed changes "
+                       "nothing in the reviewed environment"
+                       if stage == "deployment" else "",
+                       live_detail))
+                cursor = None
+                continue
+            chosen[stage] = usable
+            cursor = (ctx.parse_instant(usable.get("finished_at"))
+                      or ctx.parse_instant(usable.get("started_at")))
+
+
 def _has_fresh_completion_chain(attempt, action, evidence, assessments):
     started = ctx.parse_instant(attempt.get("started_at"))
     finished = ctx.parse_instant(attempt.get("finished_at")) or started
@@ -589,12 +829,17 @@ def validate_registry(envelope):
         _validate_deadline(action, problems, modern)
     for procedure in procedures:
         _validate_procedure(procedure, modern, problems)
+        _validate_stage_procedure(procedure, problems)
     _validate_dependencies(envelope, problems)
     _validate_offered_procedures(envelope, problems)
     by_action = _index(actions, "action_id")
     by_procedure = _index(procedures, "procedure_id")
     for attempt in attempts:
         _validate_attempt(attempt, by_action, by_procedure, problems, modern)
+        procedure = by_procedure.get(attempt.get("procedure_ref"))
+        if procedure is not None:
+            _validate_stage_attempt(attempt, procedure, problems)
+    _validate_required_stages(envelope, problems)
     authorization_ids = [
         (attempt.get("authorization") or {}).get("authorization_id")
         for attempt in attempts

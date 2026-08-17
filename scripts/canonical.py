@@ -35,6 +35,13 @@ Semantic rules implemented here (numbering from RFC 0001 §10):
   R13  supersedes chains resolve and are acyclic; envelope revisions monotonic
   R16-R19 Action/Procedure lineage and lifecycle, usable deadlines, exact
           attempt authorization, and evidence-backed completion (actions.py)
+  R20  authorization coverage: one observation covers one object, actor and
+       operation in one environment, and a coverage-backed pass needs the whole
+       required matrix (authz.py)
+  R21  staged remediation: patch, deployment and live verification are
+       authorized, ordered and evidenced separately (actions.py)
+  R22  anything that wrote to a live system records its authorization, target
+       environment, result and cleanup/rollback state (authz.py)
 
 The application context is validated too (context.validate_context): profile
 keys and values resolve against the context model, every field carries a usable
@@ -53,9 +60,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _redact
 import actions as actions_mod
+import authz as authz_mod
 import context as context_mod
 
-SCHEMA_VERSION = "1.3.0"
+SCHEMA_VERSION = "1.4.0"
 SCHEMA_NAME = "vibecheck.assessment"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -662,4 +670,5 @@ def validate_envelope(env):
     _check_readiness(env, problems)
     _check_report(env, problems)
     problems.extend(actions_mod.validate_registry(env))
+    problems.extend(authz_mod.validate_coverage(env))
     return problems

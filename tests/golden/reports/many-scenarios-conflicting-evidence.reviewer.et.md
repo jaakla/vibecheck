@@ -419,7 +419,7 @@ Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult sta
 
 | Metoodika | Versioon |
 |---|---|
-| vibecheck.assessment | 1.3.0 |
+| vibecheck.assessment | 1.4.0 |
 | vibecheck_v1 | 2026.08 |
 | vibecheck.controls | 1.0.0 |
 | vibecheck.action_registry | 1.0.0 |
@@ -427,5 +427,5 @@ Tühi staatus tähendab, et rida ei ole üle vaadatud. See erineb teadlikult sta
 | vibecheck.readiness | 1.0.0 |
 | vibecheck.report_derivation | 1.1.0 |
 | vibecheck.report | 1.1.0 |
-| vibecheck.action_policy | 1.0.0 |
+| vibecheck.action_policy | 1.1.0 |
 | vibecheck.report_wording | 1.1.0 |
