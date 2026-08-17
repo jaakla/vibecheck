@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/jaakla/vibecheck/main/schema/vibecheck.assessment.v1.schema.json",
   "title": "Vibecheck assessment envelope v1",
-  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation is supplemented by semantic rules in scripts/canonical.py and scripts/actions.py. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added context/risk/readiness (gh issue #4), 1.2.0 added founder scenarios and completeness-safe reports (gh issue #5), and 1.3.0 adds the versioned Action/Procedure registry, exact-attempt consent and evidence-backed completion (gh issue #6).",
+  "description": "Canonical envelope for a context-aware, risk-based Vibecheck assessment. Normative design: rfcs/0001-assessment-schema-v1.md. Syntactic validation is supplemented by semantic rules in scripts/canonical.py, scripts/actions.py and scripts/authz.py. Readers MUST ignore unknown fields and MUST preserve them when rewriting. Schema version 1.1.0 added context/risk/readiness (gh issue #4), 1.2.0 added founder scenarios and completeness-safe reports (gh issue #5), 1.3.0 added the versioned Action/Procedure registry, exact-attempt consent and evidence-backed completion (gh issue #6), and 1.4.0 adds authorization-coverage cells, the representative-object inventory and staged remediation checkpoints (gh issue #7).",
   "type": "object",
   "required": ["schema", "schema_version", "assessment_id", "revision", "created_at", "context"],
   "properties": {
@@ -28,6 +28,15 @@
       "required": ["name", "version"],
       "properties": {
         "name": { "const": "vibecheck.action_registry" },
+        "version": { "$ref": "#/$defs/semver" }
+      }
+    },
+    "coverage_model": {
+      "type": "object",
+      "description": "Version of the authorization-coverage model that evidence coverage cells and the representative-object inventory resolve against (schema/authz-coverage.v1.json).",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "vibecheck.authz_coverage" },
         "version": { "$ref": "#/$defs/semver" }
       }
     },
@@ -217,6 +226,30 @@
           "additionalProperties": { "$ref": "#/$defs/context_field" }
         },
         "compensating_controls": { "type": "array", "items": { "$ref": "#/$defs/compensating_control" } },
+        "authorization_objects": {
+          "type": "array",
+          "description": "The representative private object types this application holds, one entry per class the review treats as representative. This inventory is what makes authorization coverage measurable: required cells are generated from it, and with no inventory coverage is unestablished rather than met. Excluding an object as intended_public takes a confirmed decision.",
+          "items": {
+            "type": "object",
+            "required": ["object_id", "object_class", "locator", "intent", "state"],
+            "properties": {
+              "object_id": { "type": "string" },
+              "object_class": { "type": "string", "description": "A class from the coverage model: user_owned_record, tenant_scoped_record, admin_or_privileged_record, credential_or_token_record, file_or_storage_object, reference_data, unclassified." },
+              "locator": { "type": "string", "description": "Where the object lives, e.g. public.orders or storage:invoices. For a PostgREST table in its default schema, a bare probe name such as orders resolves to the qualified inventory locator public.orders; other schema prefixes remain distinct." },
+              "intent": {
+                "enum": ["private", "intended_public", "unknown"],
+                "description": "Whether the owner means this object to be reachable without authorization. unknown is not intended_public."
+              },
+              "state": { "enum": ["confirmed", "inferred", "conflicting", "unknown"] },
+              "source": { "type": "string" },
+              "rationale": { "type": "string" },
+              "description": { "type": "string" },
+              "status": false,
+              "verdict": false,
+              "control_status": false
+            }
+          }
+        },
         "current_scope": {
           "$ref": "#/$defs/scope_pair",
           "description": "Where the application actually is today. Risks for this scope carry the current horizon; every other target scope is event-triggered."
@@ -383,6 +416,31 @@
             "external_accounts": { "type": "boolean" },
             "data_egress": { "type": "boolean" },
             "details": { "type": "string" }
+          }
+        },
+        "coverage": {
+          "type": "array",
+          "description": "Authorization cells this observation actually covers. One cell is one (object, actor, operation) in one environment; it is never generalized to another object, operation, actor or environment, and never to the control as a whole (rule R20). Static source analysis never fills a cell.",
+          "items": {
+            "type": "object",
+            "required": ["object_ref", "actor", "operation", "observed"],
+            "properties": {
+              "object_ref": { "type": "string", "description": "The exact object observed, e.g. public.orders." },
+              "object_id": { "type": "string", "description": "The inventory entry this object is, when it is a declared representative object." },
+              "object_class": { "type": "string", "description": "Class from the coverage model; unclassified when nobody has classified this object yet." },
+              "actor": { "enum": ["anonymous", "other_account", "other_tenant_member", "unprivileged_account"] },
+              "operation": { "enum": ["read", "create", "update", "delete"] },
+              "observed": {
+                "enum": ["denied", "allowed", "inconclusive"],
+                "description": "What the request did, not what it means. inconclusive covers invalid keys, expired tokens, network failures, empty tables and non-200 responses that may not be policy; it never counts as denied."
+              },
+              "environment": { "$ref": "#/$defs/environment" },
+              "instance": { "type": "string", "description": "The exact record, row or object the observation used." },
+              "note": { "type": "string" },
+              "status": false,
+              "verdict": false,
+              "control_status": false
+            }
           }
         },
         "redaction": { "type": "string" },
@@ -662,7 +720,12 @@
         "scenario_refs": { "type": "array", "items": { "type": "string", "pattern": "^scn-[A-Za-z0-9._:-]+$" } },
         "procedure_refs": { "type": "array", "items": { "type": "string", "pattern": "^prc-[A-Za-z0-9._:-]+$" } },
         "success_evidence": { "type": "string", "description": "What evidence closes this action. A disappeared warning is never sufficient." },
-        "reassess_control_ids": { "type": "array", "items": { "$ref": "#/$defs/control_id" } }
+        "reassess_control_ids": { "type": "array", "items": { "$ref": "#/$defs/control_id" } },
+        "required_stages": {
+          "type": "array",
+          "description": "Remediation checkpoints this Action must pass before it can be done, in policy order. Each one needs its own authorized, succeeded attempt with produced evidence; a missing deployment leaves the Action incomplete however good the patch looks (rule R21).",
+          "items": { "enum": ["repository_patch", "deployment", "live_verification"] }
+        }
       }
     },
 
@@ -680,6 +743,7 @@
         "executor_role": { "enum": ["founder", "developer", "specialist", "vibecheck_agent", "platform"] },
         "execution_mode": { "enum": ["automated", "guided", "manual"], "description": "How the method is carried out. This is independent of executor_role and never implies authorization." },
         "mechanism": { "type": "string", "description": "e.g. sql_migration, code_change, dashboard_setting, account_transfer" },
+        "stage": { "enum": ["repository_patch", "deployment", "live_verification"], "description": "Which remediation checkpoint this method performs. Patching the repository, deploying it, and verifying the deployed behaviour are authorized and evidenced separately (rule R21, schema/action-policy.v1.json)." },
         "prerequisites": { "type": "array", "items": { "type": "string" } },
         "required_inputs": { "type": "array", "items": { "type": "string" } },
         "effects": {
@@ -887,6 +951,26 @@
             "state": { "enum": ["not_needed", "not_attempted", "pending", "succeeded", "failed"] },
             "notes": { "type": "string" },
             "finished_at": { "$ref": "#/$defs/timestamp" }
+          }
+        },
+        "change_control": {
+          "type": "object",
+          "description": "Diff-first and branch-first record for a repository_patch attempt: the exact diff that was shown before authorization, the branch it was written to, and who approved it when. An approval later than started_at is not diff-first (rule R21).",
+          "required": ["diff_ref", "branch", "approved_by", "approved_at"],
+          "properties": {
+            "diff_ref": {
+              "type": "object",
+              "required": ["kind", "value"],
+              "properties": {
+                "kind": { "enum": ["inline", "file", "url"] },
+                "value": { "type": "string" }
+              }
+            },
+            "branch": { "type": "string" },
+            "base_ref": { "type": "string" },
+            "approved_by": { "type": "string" },
+            "approved_at": { "$ref": "#/$defs/timestamp" },
+            "review_record": { "type": "string", "description": "Where the approval lives: pull request, chat transcript, ticket." }
           }
         },
         "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^ev-[A-Za-z0-9._:-]+$" } },

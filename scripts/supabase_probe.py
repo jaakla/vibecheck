@@ -4,15 +4,23 @@
 Reflects exactly what an attacker with a browser has. By default the probe
 sends **no writes at all**: PostgREST offers no dry-run insert, so any write
 probe risks creating a real row on a table whose columns are all nullable or
-defaulted. Anon-write testing is therefore opt-in via --write-probe, and the
+defaulted. Anon-write testing is therefore opt-in via --write-probe, which also
+requires the target environment and the person who authorized it, and the
 report says plainly when it was not tested.
 
 Exposure is judged on rows actually returned, not on HTTP 200. A table with
 RLS enabled and no matching policy returns `200 []` to anon, not 401 — so
 "200" alone is not a finding.
+
+Every finding carries the authorization coverage it establishes: one object,
+one actor, one operation, in one environment (schema/authz-coverage.v1.json).
+Anything the probe could not settle — an unproven key, an empty table, a
+network failure, a response the server did not explain — is recorded as
+`inconclusive`, which never counts as a denial.
 """
 import argparse
 import base64
+import datetime
 import json
 import os
 import re
@@ -22,6 +30,7 @@ import urllib.parse
 import urllib.request
 
 TIMEOUT_DEFAULT = 15
+ENVIRONMENTS = ("developer_only", "private_test", "public_release")
 
 
 class SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -96,26 +105,51 @@ def discover_tables(base, H, timeout):
     return status, tables
 
 
-def probe_select(base, H, table, timeout):
-    """Anon SELECT. Exposure = rows actually returned."""
-    # HEAD + a one-row range exercises SELECT/RLS without downloading a row or
-    # forcing an exact full-table count on a potentially large relation.
+def head_count(base, headers, table, timeout):
+    """(status, rows visible in a one-row window or None, body) for one caller."""
     url = "%s/rest/v1/%s?select=*&limit=1" % (
         base, urllib.parse.quote(table, safe=""))
-    h = dict(H)
+    h = dict(headers)
     h["Range"] = "0-0"
     h["Range-Unit"] = "items"
-    s, b, hdrs = req(url, h, method="HEAD", timeout=timeout)
+    status, body, hdrs = req(url, h, method="HEAD", timeout=timeout)
+    return status, (visible_count(hdrs, body) if status in (200, 206) else None), body
 
-    n = visible_count(hdrs, b) if s in (200, 206) else None
+
+def probe_select(base, H, table, timeout, owner_headers=None):
+    """Anon SELECT. Exposure = rows actually returned.
+
+    An empty response means RLS *or* an empty table. When a test account token
+    was supplied, the same window is read as that account: rows visible to it
+    and none to anon is the one case where zero rows is a denial rather than an
+    unknown, and that distinction is recorded rather than assumed.
+    """
+    # HEAD + a one-row range exercises SELECT/RLS without downloading a row or
+    # forcing an exact full-table count on a potentially large relation.
+    s, n, b = head_count(base, H, table, timeout)
+    owner_rows = None
+
     if s in (200, 206) and n:
         verdict = "REVIEW_rows_readable_by_anon"
         note = ("%d row(s) visible to an unauthenticated caller; this is a "
                 "failure only if the table is intended to be private") % n
     elif s in (200, 206) and n == 0:
-        verdict = "NO_ROWS_VISIBLE_UNCONFIRMED"
-        note = ("no rows returned to anon — RLS is filtering, OR the table is "
-                "empty; confirm with a seeded row before recording a Pass")
+        if owner_headers:
+            _owner_status, owner_rows, _owner_body = head_count(
+                base, owner_headers, table, timeout)
+        if owner_rows:
+            verdict = "PASS_no_anon_rows_on_non_empty_table"
+            note = ("no rows returned to anon while test account A sees %d "
+                    "row(s): the table is not empty, so anon reads are being "
+                    "filtered. Covers reading this table as an anonymous "
+                    "caller and nothing else" % owner_rows)
+        else:
+            verdict = "NO_ROWS_VISIBLE_UNCONFIRMED"
+            note = ("no rows returned to anon — RLS is filtering, OR the table is "
+                    "empty; confirm with a seeded row before recording a Pass")
+            if owner_headers:
+                note += (" (test account A saw no rows either, so emptiness is "
+                         "not ruled out)")
     elif s in (200, 206):
         verdict = "UNKNOWN_count_unavailable"
         note = ("the server returned success without a usable row count; no data was "
@@ -131,17 +165,26 @@ def probe_select(base, H, table, timeout):
         verdict = "UNKNOWN_%s" % s
         note = b[:180]
 
-    return {"check": "anon_select", "table": table, "http": s,
-            "verdict": verdict, "rows_visible_to_anon": n, "note": note}
+    finding = {"check": "anon_select", "table": table, "http": s,
+               "verdict": verdict, "rows_visible_to_anon": n, "note": note}
+    if owner_rows is not None:
+        finding["rows_visible_to_test_account"] = owner_rows
+    return finding
 
 
-def probe_insert(base, H, table, timeout):
-    """Anon INSERT — only runs under --write-probe. MAY CREATE A ROW."""
+def probe_insert(base, H, table, timeout, environment=None):
+    """Anon INSERT — only runs under --write-probe. MAY CREATE A ROW.
+
+    The response's Location header names the row PostgREST created, so the
+    cleanup target is recorded exactly instead of being described as "find and
+    delete whatever this made".
+    """
     h = dict(H)
     h["Prefer"] = "return=minimal"
-    s, b, _ = req("%s/rest/v1/%s" %
-                  (base, urllib.parse.quote(table, safe="")),
-                  h, method="POST", body={}, timeout=timeout)
+    s, b, hdrs = req("%s/rest/v1/%s" %
+                     (base, urllib.parse.quote(table, safe="")),
+                     h, method="POST", body={}, timeout=timeout)
+    location = hdrs.get("Location") or hdrs.get("location") or ""
     if s in (401, 403):
         verdict = "BLOCKED_OR_KEY_INVALID"
     elif s in (400, 409, 422):
@@ -150,8 +193,25 @@ def probe_insert(base, H, table, timeout):
         verdict = "FAIL_anon_write_succeeded"      # a row was very likely created
     else:
         verdict = "UNKNOWN_%s" % s
+
+    if verdict == "FAIL_anon_write_succeeded":
+        cleanup = {
+            "state": "pending",
+            "target": location or ("%s (row identifier not returned)" % table),
+            "instructions": ("delete the row this probe created in %s, as the "
+                             "project owner, and record that it is gone" % table),
+        }
+    else:
+        cleanup = {
+            "state": "not_needed",
+            "note": ("the insert did not succeed, so no probe row exists to "
+                     "remove; the request itself is the only side effect"),
+        }
     return {"check": "anon_insert_probe", "table": table, "http": s,
-            "verdict": verdict, "note": b[:180]}
+            "verdict": verdict, "note": b[:180],
+            "target_environment": environment,
+            "created_row_hint": location or None,
+            "cleanup": cleanup}
 
 
 def probe_idor(base, anon, table, row_id, jwt_a, jwt_b, timeout):
@@ -200,6 +260,42 @@ def probe_idor(base, anon, table, row_id, jwt_a, jwt_b, timeout):
                      else "account B could not read the known A-owned record")}
 
 
+def key_was_accepted(findings):
+    """Did this project ever accept the key we probed with?
+
+    A 401/403 only means "denied" once the key is known to be valid for the
+    project; before that it is indistinguishable from a wrong key, and the
+    coverage mapping keeps it inconclusive.
+    """
+    return any(f.get("http") in (200, 201, 204, 206) for f in findings)
+
+
+def annotate_coverage(findings):
+    """Stamp each finding with the authorization cell it establishes.
+
+    The verdict-to-cell mapping lives in schema/authz-coverage.v1.json so the
+    probe, the import adapter and the coverage derivation cannot drift apart.
+    A probe run outside the repository simply reports no coverage rather than
+    guessing at one.
+    """
+    validated = key_was_accepted(findings)
+    try:
+        import authz
+    except ImportError:  # pragma: no cover - probe copied out of the repo
+        return findings
+    for finding in findings:
+        if finding.get("check") not in ("anon_select", "anon_insert_probe", "idor"):
+            continue
+        finding["key_validated"] = validated
+        try:
+            cells = authz.cells_from_probe_finding(finding)
+        except (OSError, ValueError, KeyError):  # pragma: no cover
+            continue
+        if cells:
+            finding["coverage"] = cells
+    return findings
+
+
 def jwt_claims(token):
     """Best-effort unverified JWT claim decoding for input validation only."""
     try:
@@ -242,7 +338,7 @@ def parse_idor_target(value):
     return table.strip(), row_id.strip()
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Read-only Supabase anon-key access-control probe.")
     ap.add_argument("--url", required=True, help="https://<project>.supabase.co")
@@ -253,7 +349,13 @@ def main():
     ap.add_argument("--max-tables", type=int, default=50)
     ap.add_argument("--write-probe", action="store_true",
                     help="ALSO attempt an anon INSERT per table. This can CREATE A ROW "
-                         "and trigger side effects. Use only on an authorized test project.")
+                         "and trigger side effects. Use only on an authorized test project. "
+                         "Requires --environment and --authorized-by.")
+    ap.add_argument("--environment", choices=ENVIRONMENTS,
+                    help="which environment is being probed; required for --write-probe "
+                         "so the record says where the write landed")
+    ap.add_argument("--authorized-by", default="",
+                    help="who authorized this run; required for --write-probe")
     ap.add_argument("--jwt-a", default=os.environ.get("SUPABASE_JWT_A", ""),
                     help="test account A token; prefer SUPABASE_JWT_A to avoid shell history")
     ap.add_argument("--jwt-b", default=os.environ.get("SUPABASE_JWT_B", ""),
@@ -261,7 +363,7 @@ def main():
     ap.add_argument("--idor-target", action="append", default=[],
                     type=parse_idor_target, metavar="TABLE:ID",
                     help="known private record owned by A; repeat for multiple records")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     role = _jwt_role(args.anon)
     if args.anon.startswith("sb_secret_") or role == "service_role":
@@ -279,6 +381,12 @@ def main():
         return 2
     if args.timeout <= 0 or args.max_tables <= 0:
         print(json.dumps({"error": "timeout and max-tables must be positive"}))
+        return 2
+
+    if args.write_probe and not (args.environment and args.authorized_by):
+        print(json.dumps({"error": "a write probe must record its target "
+                                   "environment (--environment) and who "
+                                   "authorized it (--authorized-by)"}))
         return 2
 
     if bool(args.jwt_a) != bool(args.jwt_b):
@@ -312,10 +420,16 @@ def main():
                                    % (status, len(tables))})
     tables = tables[:args.max_tables]
 
+    owner_headers = ({"apikey": args.anon,
+                      "Authorization": "Bearer " + args.jwt_a,
+                      "Content-Type": "application/json"}
+                     if args.jwt_a else None)
+
     for t in tables:
-        findings.append(probe_select(base, H, t, args.timeout))
+        findings.append(probe_select(base, H, t, args.timeout, owner_headers))
         if args.write_probe:
-            findings.append(probe_insert(base, H, t, args.timeout))
+            findings.append(probe_insert(base, H, t, args.timeout,
+                                         args.environment))
     for table, row_id in args.idor_target:
         findings.append(probe_idor(base, args.anon, table, row_id,
                                    args.jwt_a, args.jwt_b, args.timeout))
@@ -333,13 +447,18 @@ def main():
                     "known private record created by account A. Set SUPABASE_JWT_A/B and "
                     "pass --idor-target TABLE:ID."})
 
+    annotate_coverage(findings)
+
     fails = [f for f in findings if str(f.get("verdict", "")).startswith("FAIL")]
     unknown = [f for f in findings if (str(f.get("verdict", "")).startswith("UNKNOWN")
                                        or f.get("status") == "UNKNOWN")]
     exposures = [f for f in findings if str(f.get("verdict", "")).startswith("REVIEW")]
     not_tested = [f for f in findings
                   if str(f.get("verdict", "")).startswith("NOT_TESTED")]
-    print(json.dumps({
+    inconclusive = [f for f in findings
+                    for cell in f.get("coverage") or []
+                    if cell.get("observed") == "inconclusive"]
+    output = {
         "supabase_probe": True,
         "url": base,
         "anon_key": mask(args.anon),
@@ -349,9 +468,26 @@ def main():
         "exposures_needing_intent_review": len(exposures),
         "unknown_results": len(unknown),
         "not_tested": len(not_tested),
+        "inconclusive_cells": len(inconclusive),
+        # The probe fills cells; it never closes a control. Read the coverage
+        # cells against the required matrix (schema/authz-coverage.v1.json)
+        # before anyone calls an authorization control verified.
+        "coverage_model": {"name": "vibecheck.authz_coverage", "version": "1.0.0"},
         "probe_complete": not unknown and not not_tested,
         "findings": findings,
-    }, indent=2))
+    }
+    if args.environment:
+        output["environment"] = args.environment
+    if args.write_probe:
+        output["authorization"] = {
+            "authorized_by": args.authorized_by,
+            "granted_at": datetime.datetime.now(
+                datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "scope": ("one anon write probe of %s in %s; any row it created is "
+                      "listed under the finding's cleanup target"
+                      % (base, args.environment)),
+        }
+    print(json.dumps(output, indent=2))
     return 0
 
 

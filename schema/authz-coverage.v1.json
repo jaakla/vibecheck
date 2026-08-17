@@ -1,0 +1,228 @@
+{
+  "schema": "vibecheck.authz_coverage",
+  "schema_version": "1.1.0",
+  "description": "What an authorization observation is worth, and what it takes to close an object-level authorization control (gh issue #7, epic #1). One probe result establishes exactly one (object, actor, operation) cell in one environment. Closure is a property of the whole required matrix, never of the single request that happened to be easy to run. Version 1.1.0 adds intended exposures: a public form legitimately needs an anonymous insert, so the owner can confirm that exception per operation — and confirming it does not make it free, because an unauthenticated write path inherits abuse risk that has to be bounded and evidenced.",
+  "object_classes": {
+    "user_owned_record": {
+      "description": "A record belonging to one end user: their order, message, document, profile.",
+      "default_intent": "private"
+    },
+    "tenant_scoped_record": {
+      "description": "A record belonging to an organisation, workspace or team that several users share.",
+      "default_intent": "private"
+    },
+    "admin_or_privileged_record": {
+      "description": "Records only staff or admins may reach: audit logs, billing, feature flags, moderation queues.",
+      "default_intent": "private"
+    },
+    "credential_or_token_record": {
+      "description": "Invitations, password resets, API keys, sessions, signed URLs. Reading one is usually equivalent to becoming its owner.",
+      "default_intent": "private"
+    },
+    "file_or_storage_object": {
+      "description": "Objects in a storage bucket rather than rows in a table. Table policies say nothing about them.",
+      "default_intent": "private"
+    },
+    "reference_data": {
+      "description": "Lookup data the application is meant to serve to anyone: countries, plan tiers, published content.",
+      "default_intent": "intended_public"
+    },
+    "unclassified": {
+      "description": "An object that was observed but that nobody has classified. It records what was seen and never satisfies a required cell: an observation about an object of unknown kind cannot stand in for a representative one.",
+      "default_intent": "unknown"
+    }
+  },
+  "operations": {
+    "read": "Retrieve the object or any part of it.",
+    "create": "Insert a new object of this class.",
+    "update": "Modify an existing object of this class.",
+    "delete": "Remove an existing object of this class."
+  },
+  "actors": {
+    "anonymous": {
+      "description": "An unauthenticated caller holding only what every browser has: the public URL and the publishable/anon key."
+    },
+    "other_account": {
+      "description": "An authenticated user with a valid session and no relationship to the object."
+    },
+    "other_tenant_member": {
+      "description": "An authenticated member of a different organisation, workspace or team."
+    },
+    "unprivileged_account": {
+      "description": "An authenticated user without the role the operation is supposed to require."
+    }
+  },
+  "observations": {
+    "denied": "The exact request was refused, or returned nothing on an object separately established to exist. Positive evidence for that one cell only.",
+    "allowed": "The actor reached the object with that operation. Refuting evidence for that cell, and material for every cell it makes plausible without establishing any of them.",
+    "inconclusive": "The result establishes neither: an invalid or unproven key, an expired or malformed token, a network, DNS or TLS failure, a non-200 response that may not be policy, an empty table, or a count the server did not return. Inconclusive never supports a claim and never counts as denied."
+  },
+  "requirements": [
+    {
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "actors": ["anonymous"],
+      "operations": ["read", "create", "update", "delete"],
+      "object_classes": [
+        "user_owned_record",
+        "tenant_scoped_record",
+        "admin_or_privileged_record",
+        "credential_or_token_record",
+        "file_or_storage_object"
+      ],
+      "rationale": "A public key that can read one table usually reaches the others, and a policy that denies reads frequently allows inserts. Every private object class present in the application has to be observed for every operation before the control is closed."
+    },
+    {
+      "control_id": "vibecheck.control.authz.object_level",
+      "actors": ["other_account"],
+      "operations": ["read", "create", "update", "delete"],
+      "object_classes": [
+        "user_owned_record",
+        "credential_or_token_record",
+        "file_or_storage_object"
+      ],
+      "rationale": "IDOR is per object type and per operation. One known private record that account B could not read says nothing about a second table, about updating that same record, or about the storage bucket behind it."
+    },
+    {
+      "control_id": "vibecheck.control.authz.tenant_isolation",
+      "actors": ["other_tenant_member"],
+      "operations": ["read", "create", "update", "delete"],
+      "object_classes": ["tenant_scoped_record", "file_or_storage_object"],
+      "rationale": "Cross-tenant reach is a separate question from cross-user reach: a policy keyed on the owning user leaves shared, organisation-scoped rows untested."
+    },
+    {
+      "control_id": "vibecheck.control.authz.admin_actions_server_side",
+      "actors": ["unprivileged_account"],
+      "operations": ["read", "create", "update", "delete"],
+      "object_classes": ["admin_or_privileged_record"],
+      "rationale": "A hidden admin route is not an enforced one. The privileged object classes must be observed from an account that does not hold the role."
+    }
+  ],
+  "closure": {
+    "single_cell_rule": "An observation establishes exactly one (object, actor, operation) cell in the environment it ran against. It is never generalized to another object, another operation, another actor, or another environment, and never to the control as a whole.",
+    "closed_requires": "Every required cell observed denied by evidence that is current at the time of assessment, in the assessed environment.",
+    "unestablished_rule": "When the application declares no representative private objects (context.authorization_objects), coverage is unestablished. Unestablished coverage can never close a control and is reported as a gap, because an empty requirement set is not a met one.",
+    "evidence_backed_pass_rule": "An assessment whose basis cites coverage-carrying evidence may only read pass when coverage is closed for its environment. With gaps, partial is the strongest available status; the gaps stay visible as unknowns rather than being averaged away.",
+    "intent_rule": "Required cells come from objects whose intent is private or unknown. An object may be excluded only by an explicit intended_public decision recorded in the inventory: unknown intent is never resolved toward the benign answer.",
+    "static_analysis_rule": "Static analysis of migrations, policies or code never fills a cell. It is a signal about the source, not an observation of the deployment; the two go stale for different reasons and an unapplied migration proves nothing about a live project."
+  },
+  "coverage_actions": {
+    "kind": "verify",
+    "urgency": "next",
+    "owner_role": "founder",
+    "id_prefix": "act-authz-coverage",
+    "rule": "Every uncovered required cell becomes part of one open verify Action per object and actor, so a gap is scheduled work rather than silence. Coverage Actions never carry a blocking scope of their own: they state what is untested, and the readiness derivation decides what an untested authorization path means for a scope."
+  },
+  "intended_exposure": {
+    "rule": "Some unauthenticated writes are the product working: a contact form, a booking request, a lead capture. The tool never decides that. An observed write the inventory does not already cover becomes a decide Action for the owner, and only a confirmed decision recorded per (actor, operation) makes it an intended exposure rather than a violation.",
+    "not_free_rule": "Confirming an intended exposure records what the application means, not that it is safe. An unauthenticated write path is reachable by automation: the same form that takes one enquiry takes ten thousand, which fills the table, sends the mail, spends the quota and buries the real messages. The exception therefore carries required bounds, and an unbounded intended exposure keeps the control open exactly like an unintended one.",
+    "declaration": {
+      "field": "context.authorization_objects[].intended_operations",
+      "requires_state": "confirmed",
+      "requires": ["actor", "operation", "state", "source", "rationale"],
+      "provenance_rule": "inferred, conflicting or unknown state is not a decision. It leaves the cell a required denial and stays visible as an open question, because guessing that an exposure was deliberate is exactly the mistake this model exists to prevent."
+    },
+    "required_safeguards": [
+      {
+        "id": "no_read_back",
+        "kind": "coverage_cell",
+        "operation": "read",
+        "expect": "denied",
+        "requirement": "The same actor's read of the same object is observed denied.",
+        "rationale": "Write plus read is a full dump with extra steps: an anonymous caller who can insert into a table it can also read owns the whole table's contents. This is the single most common form of the mistake, and the matrix already measures it."
+      },
+      {
+        "id": "bounded_public_write",
+        "kind": "control",
+        "control_id": "vibecheck.control.cost.expensive_endpoints_auth",
+        "expect_status": ["pass"],
+        "mechanisms": ["rate_limit", "bot_defence", "queue_or_review_gate"],
+        "requirement": "The unauthenticated write path is bounded by an enforced mechanism, evidenced rather than intended.",
+        "rationale": "Per-source throttling (one submission a minute is plenty for a human), a bot-defence challenge such as Turnstile or hCaptcha, or a queue that a human releases — any of them bounds the path. Which one is the owner's choice; having none is not."
+      }
+    ],
+    "recommended_safeguards": [
+      {
+        "id": "abuse_limits",
+        "kind": "control",
+        "control_id": "vibecheck.control.cost.abuse_limits",
+        "requirement": "Body and upload size limits, and limits on any mail or messages the write triggers."
+      },
+      {
+        "id": "input_validation",
+        "kind": "control",
+        "control_id": "vibecheck.control.input.server_side_validation",
+        "requirement": "Server-side validation of every submitted field, so junk rows cannot be written at scale."
+      },
+      {
+        "id": "usage_quotas",
+        "kind": "control",
+        "control_id": "vibecheck.control.cost.usage_quotas",
+        "requirement": "A ceiling on volume per source and in total, with an alert before it is reached."
+      }
+    ],
+    "inherited_domains": ["financial", "reliability", "product", "privacy"],
+    "inherited_risk_rule": "The abuse risk of an intended exposure belongs to the control that bounds it, not to the authorization control that allowed it. Linking the exception to cost.expensive_endpoints_auth is what makes the financial and reliability reading appear in the ordinary risk derivation instead of being described in prose.",
+    "decide_action": {
+      "kind": "decide",
+      "urgency": "next",
+      "owner_role": "founder",
+      "id_prefix": "act-authz-intent",
+      "rule": "One decide Action per observed but undeclared write, naming the object, actor and operation, and asking for a yes or no plus the reason. It never proposes an answer."
+    },
+    "bound_action": {
+      "kind": "remediate",
+      "urgency": "immediate",
+      "owner_role": "developer",
+      "id_prefix": "act-authz-bound",
+      "rule": "One remediate Action per confirmed exposure whose required bounds are unmet, naming which bound is missing and the mechanisms that would satisfy it."
+    }
+  },
+  "write_probe_policy": {
+    "default": "read_only",
+    "rule": "Create, update and delete cells are never filled by an unattended run. A data-writing probe is opt-in per run, and its attempt records the exact authorization, the target environment, the result, and the cleanup or rollback state of anything it created.",
+    "cross_account_write_rule": "Vibecheck does not automate cross-account update or delete probes: the safe version of that test writes to a record the tester does not own. Those cells stay open and visible, and close only through an authorized manual test whose result is recorded as evidence."
+  },
+  "probe_mapping": {
+    "description": "How the supabase_probe.py CLI output maps to coverage cells. Current findings may carry a derived coverage cache and older output may omit it, but the adapter always re-derives cells from the check and verdict. Imported annotations are never trusted to change the actor, operation, observation or environment.",
+    "checks": {
+      "anon_select": {
+        "actor": "anonymous",
+        "operation": "read",
+        "verdicts": {
+          "REVIEW_rows_readable_by_anon": {"observed": "allowed"},
+          "PASS_no_anon_rows_on_non_empty_table": {"observed": "denied"},
+          "NO_ROWS_VISIBLE_UNCONFIRMED": {"observed": "inconclusive"},
+          "BLOCKED_OR_KEY_INVALID": {
+            "observed": "inconclusive",
+            "observed_when_key_validated": "denied"
+          },
+          "INFO_not_exposed": {"observed": "inconclusive"},
+          "UNKNOWN": {"observed": "inconclusive"}
+        }
+      },
+      "anon_insert_probe": {
+        "actor": "anonymous",
+        "operation": "create",
+        "verdicts": {
+          "FAIL_anon_write_succeeded": {"observed": "allowed"},
+          "WARN_write_reached_validation": {"observed": "inconclusive"},
+          "BLOCKED_OR_KEY_INVALID": {
+            "observed": "inconclusive",
+            "observed_when_key_validated": "denied"
+          },
+          "UNKNOWN": {"observed": "inconclusive"}
+        }
+      },
+      "idor": {
+        "actor": "other_account",
+        "operation": "read",
+        "verdicts": {
+          "FAIL_cross_account_read": {"observed": "allowed"},
+          "PASS_no_cross_account_read_of_known_private_record": {"observed": "denied"},
+          "NOT_TESTED_target_not_visible_to_a": {"observed": null},
+          "UNKNOWN": {"observed": "inconclusive"}
+        }
+      }
+    }
+  }
+}

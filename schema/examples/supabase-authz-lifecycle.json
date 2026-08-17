@@ -1,0 +1,2878 @@
+{
+  "action_registry": {
+    "name": "vibecheck.action_registry",
+    "version": "1.0.0"
+  },
+  "actions": [
+    {
+      "action_id": "act-enforce-order-read-access-v1",
+      "action_key": "enforce-order-read-access",
+      "blocking_scope": [
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access",
+        "vibecheck.control.authz.object_level"
+      ],
+      "created_at": "2026-08-12T12:15:00Z",
+      "deadline": {
+        "kind": "before_environment",
+        "rationale": "Anonymous access to customer orders at public launch is a critical contextual risk; during the pilot it is already high.",
+        "reassess_trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        },
+        "value": "public_release"
+      },
+      "kind": "remediate",
+      "outcome": "Anonymous and cross-account reads of public.orders are denied in the deployed pilot project, observed after the change is live.",
+      "owner": {
+        "name": "dev:priit",
+        "role": "developer"
+      },
+      "priority": "critical",
+      "procedure_refs": [
+        "prc-orders-rls-migration-v1",
+        "prc-pilot-migration-deploy-v1",
+        "prc-anon-read-reprobe-v1"
+      ],
+      "reason": "An anonymous caller read an order row and account B read account A's order (asm-anon-access-1, asm-object-level-1).",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access",
+        "vibecheck.control.authz.object_level"
+      ],
+      "required_stages": [
+        "repository_patch",
+        "deployment",
+        "live_verification"
+      ],
+      "revision": 1,
+      "state": "done",
+      "state_history": [
+        {
+          "at": "2026-08-12T12:15:00Z",
+          "by": "reviewer:jaak",
+          "state": "open"
+        },
+        {
+          "at": "2026-08-13T14:50:00Z",
+          "by": "dev:priit",
+          "state": "in_progress"
+        },
+        {
+          "at": "2026-08-14T09:10:00Z",
+          "by": "reviewer:jaak",
+          "note": "Patch, deploy and an independent re-probe each have their own attempt and evidence. The read cells are denied; the write cells were never part of this outcome and stay open.",
+          "state": "done"
+        }
+      ],
+      "success_evidence": "A re-probe after the deploy showing anon reads denied on a table established as non-empty, and account B refused account A's order. The original warning disappearing is not evidence.",
+      "urgency": "immediate"
+    },
+    {
+      "action_id": "act-probe-anon-write-v1",
+      "action_key": "probe-anon-write",
+      "blocking_scope": [
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-14T09:30:00Z",
+      "deadline": {
+        "kind": "before_environment",
+        "rationale": "An anon-writable orders table would let anyone forge orders at launch.",
+        "reassess_trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        },
+        "value": "public_release"
+      },
+      "kind": "verify",
+      "outcome": "What an anonymous caller can insert into public.orders is observed and recorded, with any created row removed.",
+      "owner": {
+        "name": "founder:mari",
+        "role": "founder"
+      },
+      "priority": "high",
+      "procedure_refs": [
+        "prc-anon-write-probe-v1"
+      ],
+      "reason": "The read cells are denied and the write cells were never observed. An untested operation is not a denied one (asm-anon-access-2).",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "required_stages": [
+        "live_verification"
+      ],
+      "revision": 1,
+      "state": "done",
+      "state_history": [
+        {
+          "at": "2026-08-14T09:30:00Z",
+          "by": "reviewer:jaak",
+          "state": "open"
+        },
+        {
+          "at": "2026-08-15T09:55:00Z",
+          "by": "founder:mari",
+          "state": "in_progress"
+        },
+        {
+          "at": "2026-08-15T10:30:00Z",
+          "by": "reviewer:jaak",
+          "note": "Observed: the insert succeeded. The probe row was deleted and the control went back to fail.",
+          "state": "done"
+        }
+      ],
+      "success_evidence": "A recorded observation of the anon insert attempt, whichever way it went, plus the cleanup state of anything it created.",
+      "urgency": "immediate"
+    },
+    {
+      "action_id": "act-deny-anon-order-writes-v1",
+      "action_key": "deny-anon-order-writes",
+      "blocking_scope": [
+        {
+          "environment": "private_test",
+          "intended_use": "invite_only_pilot"
+        },
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-15T10:35:00Z",
+      "deadline": {
+        "kind": "immediate",
+        "rationale": "The pilot is live with real testers and anyone holding the public key can write to it now.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "remediate",
+      "outcome": "Anonymous inserts into public.orders are denied in the deployed project, observed by a re-run of the write probe after the change is live.",
+      "owner": {
+        "name": "dev:priit",
+        "role": "developer"
+      },
+      "priority": "critical",
+      "procedure_refs": [
+        "prc-anon-write-policy-migration-v1",
+        "prc-pilot-migration-deploy-v1",
+        "prc-anon-write-probe-v1"
+      ],
+      "reason": "The authorized write probe created a row in public.orders with nothing but the public key (asm-anon-access-3).",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "required_stages": [
+        "repository_patch",
+        "deployment",
+        "live_verification"
+      ],
+      "revision": 1,
+      "risk_refs": [],
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-15T10:35:00Z",
+          "by": "reviewer:jaak",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "The write probe re-run after the deploy, observing the insert refused. The committed migration on its own is not the fix.",
+      "urgency": "immediate"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-invitations-anonymous",
+      "action_key": "authz-coverage-obj-invitations-anonymous",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what anonymous can do to public.invitations for create, delete, read, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.anon_data_access in private_test is partial: 1 of 8 required cells are observed. These are create, delete, read, update (inconclusive, not_tested), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-orders-anonymous",
+      "action_key": "authz-coverage-obj-orders-anonymous",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what anonymous can do to public.orders for create, delete, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.anon_data_access in private_test is partial: 1 of 8 required cells are observed. These are create, delete, update (not_tested, observed_allowed), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-invitations-other-account",
+      "action_key": "authz-coverage-obj-invitations-other-account",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what other_account can do to public.invitations for create, delete, read, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.object_level in private_test is partial: 1 of 8 required cells are observed. These are create, delete, read, update (not_tested), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    },
+    {
+      "action_id": "act-authz-coverage-obj-orders-other-account",
+      "action_key": "authz-coverage-obj-orders-other-account",
+      "blocking_scope": [],
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "created_at": "2026-08-16T12:00:00Z",
+      "deadline": {
+        "kind": "unknown",
+        "rationale": "The deadline follows from the scope this untested path would ride into; set it when the target environment and use are confirmed.",
+        "reassess_trigger": {
+          "kind": "context_change"
+        }
+      },
+      "kind": "verify",
+      "outcome": "An authorized test observes what other_account can do to public.orders for create, delete, update, and the result is recorded as evidence for each operation separately.",
+      "owner": {
+        "role": "founder"
+      },
+      "priority": "unknown",
+      "reason": "Coverage for vibecheck.control.authz.object_level in private_test is partial: 1 of 8 required cells are observed. These are create, delete, update (not_tested), and an untested operation is not a denied one.",
+      "reassess_control_ids": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "revision": 1,
+      "state": "open",
+      "state_history": [
+        {
+          "at": "2026-08-16T12:00:00Z",
+          "by": "vibecheck authorization coverage",
+          "state": "open"
+        }
+      ],
+      "success_evidence": "One evidence record per observed cell, each naming the object, actor, operation and environment it covers. A denial observed for one operation never closes another.",
+      "urgency": "next"
+    }
+  ],
+  "assessment_id": "va-acme-orders-authz",
+  "assessments": [
+    {
+      "assessed_at": "2026-08-12T12:05:00Z",
+      "assessment_id": "asm-anon-access-1",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-rls-static-missing",
+          "ev-anon-read-orders-open"
+        ],
+        "rationale": "An unauthenticated caller read an order row with the public key, and the founder confirms orders are private. The migration signal agrees."
+      },
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "fail"
+    },
+    {
+      "assessed_at": "2026-08-12T12:06:00Z",
+      "assessment_id": "asm-object-level-1",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-idor-orders-open"
+        ],
+        "rationale": "Account B read an order owned by account A."
+      },
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "fail"
+    },
+    {
+      "assessed_at": "2026-08-14T09:05:00Z",
+      "assessment_id": "asm-anon-access-2",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-rls-migration-diff",
+          "ev-rls-deployment-record",
+          "ev-anon-read-orders-denied"
+        ],
+        "rationale": "The read path is fixed and independently re-observed after the deploy on a table established as non-empty. Partial, not pass: anonymous create, update and delete were never attempted, and public.invitations returned an empty response that settles nothing. One denied request covers one cell."
+      },
+      "conflicts": [
+        {
+          "evidence_ref": "ev-anon-read-orders-open",
+          "resolution": "Superseded by ev-anon-read-orders-denied: same provider and operation, observed after the deployment finished at 2026-08-13T16:20Z."
+        }
+      ],
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "partial",
+      "supersedes": "asm-anon-access-1"
+    },
+    {
+      "assessed_at": "2026-08-14T09:06:00Z",
+      "assessment_id": "asm-object-level-2",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-rls-migration-diff",
+          "ev-idor-orders-denied"
+        ],
+        "rationale": "One known private order is no longer readable by an unrelated account. That is one cell of the matrix: cross-account update and delete, and the invitations table, remain untested."
+      },
+      "conflicts": [
+        {
+          "evidence_ref": "ev-idor-orders-open",
+          "resolution": "Superseded by ev-idor-orders-denied: same record, same operation, observed after the deployment."
+        }
+      ],
+      "control_id": "vibecheck.control.authz.object_level",
+      "status": "partial",
+      "supersedes": "asm-object-level-1"
+    },
+    {
+      "assessed_at": "2026-08-15T10:20:00Z",
+      "assessment_id": "asm-anon-access-3",
+      "assessor": {
+        "id": "reviewer:jaak",
+        "kind": "human"
+      },
+      "basis": {
+        "evidence_refs": [
+          "ev-anon-write-orders-open"
+        ],
+        "rationale": "The authorized write probe created a row in public.orders with nothing but the public key. The read path being fixed does not make the control met: the requirement covers reading and writing."
+      },
+      "control_id": "vibecheck.control.authz.anon_data_access",
+      "status": "fail",
+      "supersedes": "asm-anon-access-2"
+    }
+  ],
+  "attempts": [
+    {
+      "action_ref": "act-enforce-order-read-access-v1",
+      "attempt_id": "att-orders-rls-patch-1",
+      "authorization": {
+        "attempt_ref": "att-orders-rls-patch-1",
+        "authorization_id": "auth-orders-rls-patch-1",
+        "authorized_by": "founder:mari",
+        "effects": {
+          "data": false,
+          "data_egress": false,
+          "data_egress_destinations": [],
+          "deployment": false,
+          "destructive": false,
+          "external_accounts": false,
+          "targets": [
+            "supabase/migrations/20260813_orders_rls.sql"
+          ],
+          "write": true
+        },
+        "expires_at": "2026-08-13T20:00:00Z",
+        "granted_at": "2026-08-13T14:45:00Z",
+        "mode": "explicit_consent",
+        "record": "PR #14, approval comment",
+        "scope": "Write the RLS migration on branch fix/orders-rls. Nothing is deployed under this consent."
+      },
+      "change_control": {
+        "approved_at": "2026-08-13T14:45:00Z",
+        "approved_by": "founder:mari",
+        "base_ref": "main @ 91e77c0",
+        "branch": "fix/orders-rls",
+        "diff_ref": {
+          "kind": "file",
+          "value": "supabase/migrations/20260813_orders_rls.sql"
+        },
+        "review_record": "PR #14"
+      },
+      "evidence_refs": [
+        "ev-rls-migration-diff"
+      ],
+      "execution_context": {
+        "kind": "local",
+        "locator": "workstation dev:priit",
+        "source_ref": "branch fix/orders-rls @ 3f9c1ab",
+        "tool_versions": {
+          "git": "2.45.2"
+        }
+      },
+      "execution_environment": "developer_only",
+      "executor": {
+        "id": "dev:priit",
+        "kind": "human"
+      },
+      "finished_at": "2026-08-13T15:40:00Z",
+      "input_refs": [
+        {
+          "kind": "record",
+          "locator": "PR #14 description",
+          "name": "ownership column"
+        }
+      ],
+      "notes": "The diff was shown and approved before the file was committed.",
+      "procedure_ref": "prc-orders-rls-migration-v1",
+      "result": "succeeded",
+      "rollback": {
+        "notes": "The branch is the change; deleting it undoes everything this attempt did.",
+        "state": "not_needed"
+      },
+      "side_effects_observed": {
+        "data": false,
+        "data_egress": false,
+        "data_egress_destinations": [],
+        "deployment": false,
+        "destructive": false,
+        "details": [
+          "One migration file added on branch fix/orders-rls.",
+          "No running system was touched by this attempt."
+        ],
+        "external_accounts": false,
+        "targets": [
+          "supabase/migrations/20260813_orders_rls.sql"
+        ],
+        "write": true
+      },
+      "started_at": "2026-08-13T15:00:00Z"
+    },
+    {
+      "action_ref": "act-enforce-order-read-access-v1",
+      "attempt_id": "att-orders-rls-deploy-1",
+      "authorization": {
+        "attempt_ref": "att-orders-rls-deploy-1",
+        "authorization_id": "auth-orders-rls-deploy-1",
+        "authorized_by": "founder:mari",
+        "effects": {
+          "data": false,
+          "data_egress": false,
+          "data_egress_destinations": [],
+          "deployment": true,
+          "destructive": false,
+          "external_accounts": false,
+          "targets": [
+            "pilot Supabase project:public.orders policies"
+          ],
+          "write": false
+        },
+        "expires_at": "2026-08-13T18:00:00Z",
+        "granted_at": "2026-08-13T16:00:00Z",
+        "mode": "explicit_consent",
+        "record": "chat approval 2026-08-13 16:00, quoted in PR #14",
+        "scope": "Apply migration 20260813_orders_rls to the pilot project. This is a second decision, asked for after the diff was approved."
+      },
+      "evidence_refs": [
+        "ev-rls-deployment-record"
+      ],
+      "execution_context": {
+        "kind": "staging",
+        "locator": "supabase project acme-orders-pilot",
+        "source_ref": "migration 20260813_orders_rls (merge commit 7d20fe1)",
+        "tool_versions": {
+          "supabase-cli": "1.192.5"
+        }
+      },
+      "execution_environment": "private_test",
+      "executor": {
+        "id": "dev:priit",
+        "kind": "human"
+      },
+      "finished_at": "2026-08-13T16:20:00Z",
+      "input_refs": [
+        {
+          "kind": "file",
+          "locator": "supabase/migrations/20260813_orders_rls.sql",
+          "name": "approved migration"
+        },
+        {
+          "kind": "secret_store",
+          "locator": "1password://acme/supabase-cli",
+          "name": "project access token",
+          "sensitive": true
+        }
+      ],
+      "notes": "Production is not linked to this CLI session and was not part of the consent.",
+      "procedure_ref": "prc-pilot-migration-deploy-v1",
+      "result": "succeeded",
+      "rollback": {
+        "notes": "The deploy succeeded; the down migration is ready if the pilot reports access errors.",
+        "state": "not_needed"
+      },
+      "side_effects_observed": {
+        "data": false,
+        "data_egress": false,
+        "data_egress_destinations": [],
+        "deployment": true,
+        "destructive": false,
+        "details": [
+          "Migration 20260813_orders_rls applied to the pilot project; no rows were modified."
+        ],
+        "external_accounts": false,
+        "targets": [
+          "pilot Supabase project:public.orders policies"
+        ],
+        "write": false
+      },
+      "started_at": "2026-08-13T16:10:00Z"
+    },
+    {
+      "action_ref": "act-enforce-order-read-access-v1",
+      "attempt_id": "att-orders-rls-verify-1",
+      "authorization": {
+        "attempt_ref": "att-orders-rls-verify-1",
+        "authorization_id": "auth-orders-rls-verify-1",
+        "authorized_by": "founder:mari",
+        "effects": {
+          "data": false,
+          "data_egress": true,
+          "data_egress_destinations": [
+            "https://acme-orders-pilot.supabase.co"
+          ],
+          "deployment": false,
+          "destructive": false,
+          "external_accounts": false,
+          "targets": [
+            "pilot Supabase project:public.orders"
+          ],
+          "write": false
+        },
+        "expires_at": "2026-08-14T12:00:00Z",
+        "granted_at": "2026-08-14T08:45:00Z",
+        "mode": "explicit_consent",
+        "record": "chat approval 2026-08-14 08:45",
+        "scope": "Read-only re-probe of the pilot project: anon read of public.orders, the same window as account A, and one cross-account read."
+      },
+      "evidence_refs": [
+        "ev-anon-read-orders-denied",
+        "ev-idor-orders-denied"
+      ],
+      "execution_context": {
+        "kind": "sandbox",
+        "locator": "vibecheck runner",
+        "source_ref": "supabase_probe.py 0.5.0",
+        "tool_versions": {
+          "supabase_probe.py": "0.5.0"
+        }
+      },
+      "execution_environment": "private_test",
+      "executor": {
+        "id": "vibecheck:supabase-probe",
+        "kind": "agent"
+      },
+      "finished_at": "2026-08-14T09:00:00Z",
+      "input_refs": [
+        {
+          "kind": "environment_variable",
+          "locator": "SUPABASE_URL",
+          "name": "SUPABASE_URL"
+        },
+        {
+          "kind": "environment_variable",
+          "locator": "SUPABASE_ANON_KEY",
+          "name": "anon key",
+          "sensitive": true
+        },
+        {
+          "kind": "environment_variable",
+          "locator": "SUPABASE_JWT_A / SUPABASE_JWT_B",
+          "name": "test account tokens",
+          "sensitive": true
+        }
+      ],
+      "notes": "Run by the probe rather than by the developer who wrote and deployed the migration.",
+      "procedure_ref": "prc-anon-read-reprobe-v1",
+      "reassessment_refs": [
+        "asm-anon-access-2",
+        "asm-object-level-2"
+      ],
+      "result": "succeeded",
+      "rollback": {
+        "notes": "No request in this attempt changed state.",
+        "state": "not_needed"
+      },
+      "side_effects_observed": {
+        "data": false,
+        "data_egress": true,
+        "data_egress_destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "deployment": false,
+        "destructive": false,
+        "details": [
+          "Read-only requests to the pilot project."
+        ],
+        "external_accounts": false,
+        "targets": [
+          "pilot Supabase project:public.orders"
+        ],
+        "write": false
+      },
+      "started_at": "2026-08-14T08:50:00Z"
+    },
+    {
+      "action_ref": "act-probe-anon-write-v1",
+      "attempt_id": "att-anon-write-probe-1",
+      "authorization": {
+        "attempt_ref": "att-anon-write-probe-1",
+        "authorization_id": "auth-anon-write-probe-1",
+        "authorized_by": "founder:mari",
+        "effects": {
+          "data": true,
+          "data_egress": true,
+          "data_egress_destinations": [
+            "https://acme-orders-pilot.supabase.co"
+          ],
+          "deployment": false,
+          "destructive": false,
+          "external_accounts": false,
+          "targets": [
+            "pilot Supabase project:public.orders"
+          ],
+          "write": true
+        },
+        "expires_at": "2026-08-15T11:00:00Z",
+        "granted_at": "2026-08-15T09:50:00Z",
+        "mode": "explicit_consent",
+        "record": "chat approval 2026-08-15 09:50, quoting the warning that a row may be created",
+        "scope": "One anon INSERT attempt against public.orders in the pilot project, on the understanding that it may create a real row which the founder then deletes."
+      },
+      "evidence_refs": [
+        "ev-anon-write-orders-open"
+      ],
+      "execution_context": {
+        "kind": "sandbox",
+        "locator": "vibecheck runner",
+        "source_ref": "supabase_probe.py 0.5.0 --write-probe",
+        "tool_versions": {
+          "supabase_probe.py": "0.5.0"
+        }
+      },
+      "execution_environment": "private_test",
+      "executor": {
+        "id": "vibecheck:supabase-probe",
+        "kind": "agent"
+      },
+      "finished_at": "2026-08-15T10:05:00Z",
+      "input_refs": [
+        {
+          "kind": "environment_variable",
+          "locator": "SUPABASE_URL",
+          "name": "SUPABASE_URL"
+        },
+        {
+          "kind": "environment_variable",
+          "locator": "SUPABASE_ANON_KEY",
+          "name": "anon key",
+          "sensitive": true
+        }
+      ],
+      "notes": "The attempt succeeded in the sense that the probe ran and settled the cell. What it observed is a failure of the control, which is a different question.",
+      "procedure_ref": "prc-anon-write-probe-v1",
+      "reassessment_refs": [
+        "asm-anon-access-3"
+      ],
+      "result": "succeeded",
+      "rollback": {
+        "finished_at": "2026-08-15T10:12:00Z",
+        "notes": "Row public.orders?id=eq.90ab41c2 was deleted by founder:mari as the owner and a follow-up read confirmed it is gone.",
+        "state": "succeeded"
+      },
+      "side_effects_observed": {
+        "data": true,
+        "data_egress": true,
+        "data_egress_destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "deployment": false,
+        "destructive": false,
+        "details": [
+          "The insert returned 201 and created row public.orders?id=eq.90ab41c2.",
+          "No other table was touched."
+        ],
+        "external_accounts": false,
+        "targets": [
+          "pilot Supabase project:public.orders"
+        ],
+        "write": true
+      },
+      "started_at": "2026-08-15T10:00:00Z"
+    }
+  ],
+  "context": {
+    "application": {
+      "description": "Lovable + Supabase order tracker piloted with twelve named testers before a public launch decision.",
+      "name": "Acme Orders",
+      "platform": "lovable+supabase",
+      "repo_ref": "github.com/acme/orders"
+    },
+    "assumptions": [
+      "The pilot stays limited to the twelve named testers.",
+      "No public marketing before the launch decision."
+    ],
+    "authorization_objects": [
+      {
+        "description": "One customer's order with their delivery address.",
+        "intent": "private",
+        "locator": "public.orders",
+        "object_class": "user_owned_record",
+        "object_id": "obj-orders",
+        "source": "founder:mari",
+        "state": "confirmed"
+      },
+      {
+        "description": "Single-use invitation tokens; reading one is enough to join the pilot as someone else.",
+        "intent": "private",
+        "locator": "public.invitations",
+        "object_class": "credential_or_token_record",
+        "object_id": "obj-invitations",
+        "source": "founder:mari",
+        "state": "confirmed"
+      },
+      {
+        "description": "Published price tiers the marketing page reads.",
+        "intent": "intended_public",
+        "locator": "public.plan_tiers",
+        "object_class": "reference_data",
+        "object_id": "obj-plan-tiers",
+        "source": "founder:mari",
+        "state": "confirmed"
+      }
+    ],
+    "confirmation": {
+      "confirmed_at": "2026-08-12T10:00:00Z",
+      "confirmed_by": "founder:mari",
+      "source_fingerprint": "sha256:2f7c1a44b0e9d3aa61c5f0b8e2d94c7a913e5b6f8d0a2c4e6b8d0f2a4c6e8b0d",
+      "state": "human_reviewed"
+    },
+    "context_fingerprint": "sha256:f3fdddaa4ff5430f45e761399ed00917df73f050d6583f68aacddd30bd9a9c57",
+    "context_id": "ctx-acme-orders-authz",
+    "context_model": {
+      "name": "vibecheck.context_model",
+      "version": "1.0.0"
+    },
+    "current_scope": {
+      "environment": "private_test",
+      "intended_use": "invite_only_pilot"
+    },
+    "data_summary": "Customer names, emails, delivery addresses, order lines, and the invitation tokens that let a tester create an account. No card data (hosted checkout).",
+    "profile": {
+      "audience_scale": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "named_handful"
+      },
+      "authentication": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "invite_only_accounts"
+      },
+      "business_criticality": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "supporting"
+      },
+      "data_sensitivity": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "personal_data"
+      },
+      "financial_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "none"
+      },
+      "lifecycle": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "piloting"
+      },
+      "network_exposure": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "unlisted_public_url"
+      },
+      "privileged_operations": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "internal_admin_actions"
+      },
+      "tenancy": {
+        "source": "founder:mari",
+        "state": "confirmed",
+        "value": "multi_tenant_shared_store"
+      }
+    },
+    "reassess_triggers": [
+      {
+        "kind": "before_environment",
+        "value": "public_release"
+      },
+      {
+        "kind": "context_change"
+      }
+    ],
+    "revision": 1,
+    "target_scopes": [
+      {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    ],
+    "valid_until": "2026-11-12T00:00:00Z"
+  },
+  "control_registry": {
+    "name": "vibecheck.controls",
+    "version": "1.0.0"
+  },
+  "coverage_model": {
+    "name": "vibecheck.authz_coverage",
+    "version": "1.1.0"
+  },
+  "created_at": "2026-08-16T12:00:00Z",
+  "evidence": [
+    {
+      "claim": {
+        "aspect": "row level security enabled in the creating migration",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access",
+          "vibecheck.control.authz.server_side_default_deny"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met; The requirement of Authorization enforced server-side, default-deny is met"
+      },
+      "direction": "refutes",
+      "environment": "developer_only",
+      "evidence_id": "ev-rls-static-missing",
+      "observed_at": "2026-08-12T11:02:14Z",
+      "operation": "migration_analysis",
+      "provider": {
+        "name": "vibecheck SQL migration analysis",
+        "provider_ref": "prov-migration-analysis",
+        "version": "0.4.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "create table public.orders without a matching enable row level security"
+      },
+      "scope": "Recognized statements in the committed migrations only. The migration creating public.orders has no matching ENABLE ROW LEVEL SECURITY. This is a statement about the source tree; the deployed project may differ in either direction.",
+      "side_effects": {
+        "data_egress": false,
+        "destructive": false,
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-rls-static-1"
+      ],
+      "strength": "indicative",
+      "subject": {
+        "kind": "file",
+        "locator": "supabase/migrations/20260801_orders.sql"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-12T11:30:00Z",
+        "scope": "read-only anon and two-account probe of the pilot project"
+      },
+      "claim": {
+        "aspect": "anonymous read of public.orders",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "private_test",
+          "object_class": "user_owned_record",
+          "object_id": "obj-orders",
+          "object_ref": "public.orders",
+          "observed": "allowed",
+          "operation": "read"
+        }
+      ],
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-anon-read-orders-open",
+      "observed_at": "2026-08-12T11:40:31Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "HTTP 200, one order row visible to the anon role; the founder confirms orders are private"
+      },
+      "scope": "One HEAD request with the public key against the pilot project. Covers reading public.orders as an anonymous caller: not writing it, not another table, not another actor.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the probed project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-probe-orders-read-1"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-12T11:30:00Z",
+        "scope": "read-only anon and two-account probe of the pilot project"
+      },
+      "claim": {
+        "aspect": "anonymous read of public.invitations",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "private_test",
+          "note": "an empty response is not a denial",
+          "object_class": "credential_or_token_record",
+          "object_id": "obj-invitations",
+          "object_ref": "public.invitations",
+          "observed": "inconclusive",
+          "operation": "read"
+        }
+      ],
+      "direction": "neutral",
+      "environment": "private_test",
+      "evidence_id": "ev-anon-read-invitations-empty",
+      "observed_at": "2026-08-12T11:41:02Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "HTTP 200, zero rows in the response window"
+      },
+      "scope": "Zero rows returned to the anon role, and no test account read of the same window to establish that the table holds anything. Empty and filtered are indistinguishable here, so this settles nothing.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the probed project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-probe-invitations-read-1"
+      ],
+      "strength": "indicative",
+      "subject": {
+        "kind": "table",
+        "locator": "public.invitations"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-12T11:30:00Z",
+        "scope": "read-only anon and two-account probe of the pilot project"
+      },
+      "claim": {
+        "aspect": "cross-account read of one order record",
+        "control_ids": [
+          "vibecheck.control.authz.object_level"
+        ],
+        "statement": "The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met"
+      },
+      "coverage": [
+        {
+          "actor": "other_account",
+          "environment": "private_test",
+          "instance": "ord-7c1a",
+          "object_class": "user_owned_record",
+          "object_id": "obj-orders",
+          "object_ref": "public.orders",
+          "observed": "allowed",
+          "operation": "read"
+        }
+      ],
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-idor-orders-open",
+      "observed_at": "2026-08-12T11:44:10Z",
+      "operation": "http_select_authenticated_cross_account",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "account B read order ord-7c1a owned by account A"
+      },
+      "scope": "Test account B requested one order owned by test account A and received it. Covers reading that one record as an unrelated account.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the probed project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-probe-idor-1"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders (record ord-7c1a)"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "claim": {
+        "aspect": "owner-only policies present in the source",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access",
+          "vibecheck.control.authz.object_level",
+          "vibecheck.control.authz.server_side_default_deny"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met; The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met; The requirement of Authorization enforced server-side, default-deny is met"
+      },
+      "direction": "supports",
+      "environment": "developer_only",
+      "evidence_id": "ev-rls-migration-diff",
+      "observed_at": "2026-08-13T15:35:00Z",
+      "operation": "code_review_of_diff",
+      "provider": {
+        "name": "human reviewer",
+        "version": "n/a"
+      },
+      "raw_result_ref": {
+        "kind": "file",
+        "value": "supabase/migrations/20260813_orders_rls.sql"
+      },
+      "scope": "The remediation migration on branch fix/orders-rls: row level security enabled plus owner-only policies on public.orders. Evidence about the repository; it says nothing about which revision the pilot project is running.",
+      "side_effects": {
+        "data_egress": false,
+        "destructive": false,
+        "external_accounts": false,
+        "writes": false
+      },
+      "strength": "indicative",
+      "subject": {
+        "kind": "file",
+        "locator": "supabase/migrations/20260813_orders_rls.sql"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-13T16:00:00Z",
+        "scope": "read the pilot project's migration history"
+      },
+      "claim": {
+        "aspect": "the reviewed migration is live in the pilot",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access",
+          "vibecheck.control.authz.object_level"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met; The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met"
+      },
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-rls-deployment-record",
+      "observed_at": "2026-08-13T16:22:00Z",
+      "operation": "deployment_record",
+      "provider": {
+        "name": "supabase project migration history",
+        "version": "n/a"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "acme-orders-pilot: applied 20260813_orders_rls at 2026-08-13T16:19Z"
+      },
+      "scope": "The pilot project's migration history after the push: 20260813_orders_rls is the current revision. Establishes what is deployed, not how it behaves.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "Read of the project API only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "strength": "indicative",
+      "subject": {
+        "kind": "deployment",
+        "locator": "https://acme-orders-pilot.supabase.co"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-14T08:45:00Z",
+        "scope": "read-only anon re-probe of the pilot project"
+      },
+      "claim": {
+        "aspect": "anonymous read of public.orders",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "private_test",
+          "object_class": "user_owned_record",
+          "object_id": "obj-orders",
+          "object_ref": "public.orders",
+          "observed": "denied",
+          "operation": "read"
+        }
+      ],
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-anon-read-orders-denied",
+      "observed_at": "2026-08-14T08:55:10Z",
+      "operation": "http_select_anon_head",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "anon: 0 rows; test account A: 3 rows; deployed revision 20260813_orders_rls"
+      },
+      "scope": "After the deploy: nothing returned to the anon role while test account A saw three rows in the same window, so the table is not empty and the filtering is real. Covers reading public.orders as an anonymous caller in the pilot project, and nothing else.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the probed project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-probe-orders-read-2"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-14T08:45:00Z",
+        "scope": "read-only two-account re-probe of the pilot project"
+      },
+      "claim": {
+        "aspect": "cross-account read of one order record",
+        "control_ids": [
+          "vibecheck.control.authz.object_level"
+        ],
+        "statement": "The requirement of Object-level authorization: users cannot reach records they don't own (IDOR) is met"
+      },
+      "coverage": [
+        {
+          "actor": "other_account",
+          "environment": "private_test",
+          "instance": "ord-7c1a",
+          "object_class": "user_owned_record",
+          "object_id": "obj-orders",
+          "object_ref": "public.orders",
+          "observed": "denied",
+          "operation": "read"
+        }
+      ],
+      "direction": "supports",
+      "environment": "private_test",
+      "evidence_id": "ev-idor-orders-denied",
+      "observed_at": "2026-08-14T08:57:40Z",
+      "operation": "http_select_authenticated_cross_account",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "account B: 0 rows for ord-7c1a; account A still reads it"
+      },
+      "scope": "After the deploy: account B asked for account A's order ord-7c1a and received nothing, while account A still sees it. Covers reading that one record as an unrelated account. It is not evidence about updating or deleting it, about the invitations table, or about any other record.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "HTTP requests to the probed project URL only.",
+        "external_accounts": false,
+        "writes": false
+      },
+      "signal_refs": [
+        "sig-probe-idor-2"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders (record ord-7c1a)"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "authorization": {
+        "authorized_by": "founder:mari",
+        "granted_at": "2026-08-15T09:50:00Z",
+        "scope": "one opt-in anon write probe of public.orders in the pilot project"
+      },
+      "claim": {
+        "aspect": "anonymous create in public.orders",
+        "control_ids": [
+          "vibecheck.control.authz.anon_data_access"
+        ],
+        "statement": "The requirement of No data readable/writable by an unauthenticated/anon caller unless intended public is met"
+      },
+      "coverage": [
+        {
+          "actor": "anonymous",
+          "environment": "private_test",
+          "instance": "probe row 90ab41c2, since deleted",
+          "object_class": "user_owned_record",
+          "object_id": "obj-orders",
+          "object_ref": "public.orders",
+          "observed": "allowed",
+          "operation": "create"
+        }
+      ],
+      "direction": "refutes",
+      "environment": "private_test",
+      "evidence_id": "ev-anon-write-orders-open",
+      "observed_at": "2026-08-15T10:02:00Z",
+      "operation": "http_insert_anon",
+      "provider": {
+        "name": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe",
+        "version": "0.5.0"
+      },
+      "raw_result_ref": {
+        "kind": "inline",
+        "value": "HTTP 201; row public.orders?id=eq.90ab41c2 created with the public key alone"
+      },
+      "scope": "One authorized anon INSERT against public.orders in the pilot project. Covers creating a row as an anonymous caller; it says nothing about update or delete, or about any other table.",
+      "side_effects": {
+        "data_egress": true,
+        "destructive": false,
+        "details": "Created row public.orders?id=eq.90ab41c2 in the pilot project; deleted by founder:mari at 2026-08-15T10:12Z and confirmed gone (see att-anon-write-probe-1).",
+        "external_accounts": false,
+        "writes": true
+      },
+      "signal_refs": [
+        "sig-probe-orders-write-1"
+      ],
+      "strength": "decisive",
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      },
+      "valid_until": "2026-09-13T00:00:00Z"
+    }
+  ],
+  "procedures": [
+    {
+      "authorization": {
+        "consent": "explicit_consent",
+        "notes": "The diff is shown before the consent is asked for.",
+        "scope": "Write one migration file on a branch. Nothing is deployed and no data is touched by this step."
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "created_at": "2026-08-12T12:20:00Z",
+      "data_egress": {
+        "occurs": false
+      },
+      "effects": {
+        "data": false,
+        "deployment": false,
+        "destructive": false,
+        "external_accounts": false,
+        "reversibility": "reversible",
+        "targets": [
+          "supabase/migrations"
+        ],
+        "write": true
+      },
+      "execution_mode": "guided",
+      "executor_role": "developer",
+      "failure_behavior": {
+        "on_failure": "Nothing outside the branch changes.",
+        "rollback": "Delete the branch; the pilot project is untouched because this step never reaches it."
+      },
+      "mechanism": "sql_migration",
+      "method": {
+        "steps": [
+          "Write the migration: enable row level security on public.orders, add owner-only select/insert/update policies keyed on auth.uid() = user_id.",
+          "Open a branch and show the diff.",
+          "Commit only after the diff is approved."
+        ],
+        "tool": "editor + git"
+      },
+      "network": {
+        "required": false
+      },
+      "prerequisites": [
+        "The ownership column of each private table is agreed with the founder."
+      ],
+      "procedure_id": "prc-orders-rls-migration-v1",
+      "procedure_key": "orders-rls-migration",
+      "required_inputs": [
+        "Table list and ownership column (user_id)"
+      ],
+      "revision": 1,
+      "stage": "repository_patch",
+      "success_evidence": "The reviewed diff on the approved branch. It is evidence about the repository, not about the running project.",
+      "title": "Enable RLS with owner-only policies in a committed migration",
+      "verification": {
+        "independent_from_executor": true,
+        "provider": "reviewer reading the diff"
+      }
+    },
+    {
+      "authorization": {
+        "consent": "explicit_consent_per_run",
+        "notes": "Approving a diff is not approving a deploy; this is asked for separately, per run.",
+        "scope": "Apply one named migration revision to the pilot project only. Production is not linked and is not part of this consent."
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "created_at": "2026-08-12T12:20:00Z",
+      "data_egress": {
+        "occurs": false
+      },
+      "effects": {
+        "data": false,
+        "deployment": true,
+        "destructive": false,
+        "external_accounts": false,
+        "reversibility": "reversible",
+        "targets": [
+          "pilot Supabase project"
+        ],
+        "write": false
+      },
+      "execution_mode": "manual",
+      "executor_role": "developer",
+      "failure_behavior": {
+        "on_failure": "The migration fails closed: enabling row level security without policies denies access rather than exposing data, and pilot testers see errors.",
+        "rollback": "Push the down migration and record that the previous revision is live again."
+      },
+      "mechanism": "deployment",
+      "method": {
+        "steps": [
+          "Confirm the linked project is the pilot.",
+          "Push the approved migration revision.",
+          "Record the revision that is now live."
+        ],
+        "tool": "supabase db push"
+      },
+      "network": {
+        "destinations": [
+          "api.supabase.com",
+          "db.acme-orders-pilot.supabase.co"
+        ],
+        "purpose": "Apply the migration to the linked project.",
+        "required": true
+      },
+      "prerequisites": [
+        "The migration is approved and committed.",
+        "The Supabase CLI is linked to the pilot project."
+      ],
+      "procedure_id": "prc-pilot-migration-deploy-v1",
+      "procedure_key": "pilot-migration-deploy",
+      "required_inputs": [
+        "The approved migration revision"
+      ],
+      "revision": 1,
+      "stage": "deployment",
+      "success_evidence": "A deployment record naming the pilot project and the exact revision now live.",
+      "title": "Apply the approved migration to the pilot project",
+      "verification": {
+        "independent_from_executor": true,
+        "provider": "supabase project migration history"
+      }
+    },
+    {
+      "authorization": {
+        "consent": "explicit_consent",
+        "scope": "Read-only requests against the pilot project. No write probe is included in this consent."
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "created_at": "2026-08-12T12:20:00Z",
+      "data_egress": {
+        "destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "occurs": true
+      },
+      "effects": {
+        "data": false,
+        "deployment": false,
+        "destructive": false,
+        "external_accounts": false,
+        "reversibility": "reversible",
+        "targets": [
+          "pilot Supabase project:public.orders"
+        ],
+        "write": false
+      },
+      "execution_mode": "automated",
+      "executor_role": "vibecheck_agent",
+      "failure_behavior": {
+        "on_failure": "The cells stay inconclusive and the control stays unverified; no retry without fresh consent.",
+        "rollback": "Nothing to roll back: no request in this procedure changes state."
+      },
+      "mechanism": "live_probe",
+      "method": {
+        "reference": "skills/vibecheck-supabase/SKILL.md",
+        "steps": [
+          "Read public.orders as the anon role.",
+          "Read the same window as test account A to establish the table is not empty.",
+          "Request account A's order as account B."
+        ],
+        "tool": "python3 scripts/supabase_probe.py"
+      },
+      "network": {
+        "destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "purpose": "Send the probe requests.",
+        "required": true
+      },
+      "prerequisites": [
+        "The migration is deployed.",
+        "Two test account tokens exist so an empty response can be told apart from a filtered one."
+      ],
+      "procedure_id": "prc-anon-read-reprobe-v1",
+      "procedure_key": "anon-read-reprobe",
+      "required_inputs": [
+        "SUPABASE_URL",
+        "anon key",
+        "test account tokens"
+      ],
+      "revision": 1,
+      "stage": "live_verification",
+      "success_evidence": "One evidence record per observed cell, each naming its object, actor, operation and environment.",
+      "title": "Re-probe anonymous and cross-account reads after the deploy",
+      "verification": {
+        "independent_from_executor": true,
+        "provider": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe"
+      }
+    },
+    {
+      "authorization": {
+        "consent": "explicit_consent_per_run",
+        "notes": "Never run against a project the user does not own.",
+        "scope": "One anon INSERT attempt against public.orders in the pilot project. Any row it creates is deleted by the owner and the deletion is recorded."
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "created_at": "2026-08-14T09:30:00Z",
+      "data_egress": {
+        "destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "occurs": true
+      },
+      "effects": {
+        "data": true,
+        "deployment": false,
+        "destructive": false,
+        "external_accounts": false,
+        "reversibility": "reversible",
+        "targets": [
+          "pilot Supabase project:public.orders"
+        ],
+        "write": true
+      },
+      "execution_mode": "automated",
+      "executor_role": "vibecheck_agent",
+      "failure_behavior": {
+        "on_failure": "The create cell stays inconclusive rather than reading as denied.",
+        "rollback": "Delete the created row by the identifier the response returned, and record the deletion."
+      },
+      "mechanism": "live_probe",
+      "method": {
+        "reference": "skills/vibecheck-supabase/SKILL.md",
+        "steps": [
+          "Attempt one anon INSERT.",
+          "Record the created row identifier from the response.",
+          "Delete the row as the owner and record that it is gone."
+        ],
+        "tool": "python3 scripts/supabase_probe.py --write-probe"
+      },
+      "network": {
+        "destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "purpose": "Send the insert attempt.",
+        "required": true
+      },
+      "prerequisites": [
+        "The founder owns the target project.",
+        "Explicit per-run consent: PostgREST has no dry-run insert, so this can create a real row and fire triggers."
+      ],
+      "procedure_id": "prc-anon-write-probe-v1",
+      "procedure_key": "anon-write-probe",
+      "required_inputs": [
+        "SUPABASE_URL",
+        "anon key",
+        "table list",
+        "target environment",
+        "who authorized the run"
+      ],
+      "revision": 1,
+      "stage": "live_verification",
+      "success_evidence": "The observed result of the insert attempt, plus the recorded cleanup state.",
+      "title": "Authorized anon write probe, with cleanup",
+      "verification": {
+        "independent_from_executor": true,
+        "provider": "supabase_probe.py",
+        "provider_ref": "prov-supabase-probe"
+      }
+    },
+    {
+      "authorization": {
+        "consent": "explicit_consent",
+        "scope": "Write one migration file on a branch; nothing is deployed by this step."
+      },
+      "cost": {
+        "monetary": "none"
+      },
+      "created_at": "2026-08-15T11:00:00Z",
+      "data_egress": {
+        "occurs": false
+      },
+      "effects": {
+        "data": false,
+        "deployment": false,
+        "destructive": false,
+        "external_accounts": false,
+        "reversibility": "reversible",
+        "targets": [
+          "supabase/migrations"
+        ],
+        "write": true
+      },
+      "execution_mode": "guided",
+      "executor_role": "developer",
+      "failure_behavior": {
+        "on_failure": "Nothing outside the branch changes.",
+        "rollback": "Delete the branch."
+      },
+      "mechanism": "sql_migration",
+      "method": {
+        "steps": [
+          "Revoke insert on public.orders from anon.",
+          "Restrict the insert policy to auth.uid() = user_id.",
+          "Show the diff before asking for consent."
+        ],
+        "tool": "editor + git"
+      },
+      "network": {
+        "required": false
+      },
+      "prerequisites": [
+        "The intended writers of public.orders are agreed with the founder."
+      ],
+      "procedure_id": "prc-anon-write-policy-migration-v1",
+      "procedure_key": "anon-write-policy-migration",
+      "required_inputs": [
+        "The role each write path runs as"
+      ],
+      "revision": 1,
+      "stage": "repository_patch",
+      "success_evidence": "The reviewed diff on the approved branch.",
+      "title": "Remove the anon insert grant in a committed migration",
+      "verification": {
+        "independent_from_executor": true,
+        "provider": "reviewer reading the diff"
+      }
+    }
+  ],
+  "providers": [
+    {
+      "authorization": {
+        "credentials": [],
+        "notes": "Reads the working tree.",
+        "required": false
+      },
+      "confidence": {
+        "false_negative_risk": "high",
+        "false_positive_risk": "moderate",
+        "limitations": "Statement recognition, not a SQL parser; policies applied outside migrations are invisible to it."
+      },
+      "cost": {
+        "compute": "low",
+        "monetary": "none"
+      },
+      "coverage": [
+        {
+          "closure_threshold": "Cannot close anything: migrations state what the source intends, and an unapplied or overridden migration looks identical here.",
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "max_strength": "indicative",
+          "operations": [
+            "migration_analysis"
+          ]
+        }
+      ],
+      "data_egress": {
+        "occurs": false
+      },
+      "environments": [
+        "developer_only"
+      ],
+      "evidence_freshness": {
+        "typical_validity": "until the next migration"
+      },
+      "fallback_order": 2,
+      "name": "vibecheck SQL migration analysis",
+      "provider_id": "prov-migration-analysis",
+      "side_effects": {
+        "destructive": false,
+        "external_accounts": false,
+        "read": true,
+        "write": false
+      },
+      "version": "0.4.0"
+    },
+    {
+      "authorization": {
+        "credentials": [
+          "SUPABASE_URL",
+          "anon/publishable key",
+          "two test account tokens"
+        ],
+        "notes": "Refuses service_role keys; write probing is opt-in per run and records its cleanup.",
+        "required": true
+      },
+      "confidence": {
+        "false_negative_risk": "moderate",
+        "false_positive_risk": "low",
+        "limitations": "Zero visible rows means RLS or an empty table; the difference is settled by reading the same window as a test account, not assumed."
+      },
+      "cost": {
+        "compute": "low",
+        "monetary": "none"
+      },
+      "coverage": [
+        {
+          "closure_threshold": "One cell per run: this object, this actor, this operation, this environment. The control closes only when every required cell of the matrix is observed denied.",
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "max_strength": "decisive",
+          "operations": [
+            "http_select_anon_head",
+            "http_insert_anon"
+          ]
+        },
+        {
+          "closure_threshold": "One record and one operation per run; cross-account update and delete are not automated and stay open until an authorized manual test records them.",
+          "control_id": "vibecheck.control.authz.object_level",
+          "max_strength": "decisive",
+          "operations": [
+            "http_select_authenticated_cross_account"
+          ]
+        }
+      ],
+      "data_egress": {
+        "destinations": [
+          "https://acme-orders-pilot.supabase.co"
+        ],
+        "occurs": true
+      },
+      "environments": [
+        "private_test",
+        "public_release"
+      ],
+      "evidence_freshness": {
+        "typical_validity": "until the next migration or policy change"
+      },
+      "fallback_order": 1,
+      "name": "supabase_probe.py",
+      "prerequisites": [
+        "The project owner authorizes probing this project."
+      ],
+      "provider_id": "prov-supabase-probe",
+      "side_effects": {
+        "destructive": false,
+        "external_accounts": false,
+        "opt_in_flags": [
+          "--write-probe"
+        ],
+        "read": true,
+        "write": false
+      },
+      "version": "0.5.0"
+    }
+  ],
+  "readiness": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blocked_transitions": [
+        {
+          "reason": "Moving to this scope is a separate question with its own answer: blocked (3 blocker(s), 2 material unknown(s)). Readiness here is not permission to go there.",
+          "refs": [
+            "act-deny-anon-order-writes-v1",
+            "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+            "rsk-authz.object_level-public_release.public_product-event_triggered-r1"
+          ],
+          "scope": {
+            "environment": "public_release",
+            "intended_use": "public_product"
+          },
+          "state": "blocked"
+        }
+      ],
+      "blockers": [
+        {
+          "reason": "Open remediate action whose blocking scope covers this environment and intended use: Anonymous inserts into public.orders are denied in the deployed project, observed by a re-run of the write probe after the change is live.",
+          "ref": "act-deny-anon-order-writes-v1"
+        },
+        {
+          "reason": "High contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.anon_data_access (assessment status: fail)",
+          "ref": "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1"
+        },
+        {
+          "reason": "High contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.object_level (assessment status: partial)",
+          "ref": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1"
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.blocked.contextual_risk_high",
+          "readiness.blocked.open_blocking_action",
+          "readiness.incomplete.authorization_coverage_gap",
+          "readiness.incomplete.unassessed_critical_high"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is still incomplete, and readiness for this scope is already blocked by what is known: completing the review can add blockers, never remove this one.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-private_test.invite_only_pilot",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      "state": "blocked",
+      "unknowns": [
+        {
+          "control_ids": [
+            "vibecheck.control.authz.object_level"
+          ],
+          "description": "Authorization coverage for vibecheck.control.authz.object_level in this environment is partial: 1 of 8 required (object, actor, operation) cells are observed, and the rest are obj-invitations/other_account/create (not_tested), obj-invitations/other_account/delete (not_tested), obj-invitations/other_account/read (not_tested), obj-invitations/other_account/update (not_tested), obj-orders/other_account/create (not_tested), obj-orders/other_account/delete (not_tested), obj-orders/other_account/update (not_tested). One denied request covers one cell, never the control.",
+          "material": true,
+          "ref": "asm-object-level-2",
+          "unknown_id": "unk-private_test.invite_only_pilot-authz_coverage.authz.object_level"
+        },
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.budget_caps",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.integ.webhook_signatures",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.no_pii_leakage",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "41 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true,
+          "unknown_id": "unk-private_test.invite_only_pilot-controls.unassessed_critical_high"
+        }
+      ],
+      "valid_until": "2026-09-13T00:00:00Z"
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "blockers": [
+        {
+          "reason": "Open remediate action whose blocking scope covers this environment and intended use: Anonymous inserts into public.orders are denied in the deployed project, observed by a re-run of the write probe after the change is live.",
+          "ref": "act-deny-anon-order-writes-v1"
+        },
+        {
+          "reason": "Critical contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.anon_data_access (assessment status: fail)",
+          "ref": "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1"
+        },
+        {
+          "reason": "Critical contextual security risk in this scope for unresolved control(s) vibecheck.control.authz.object_level (assessment status: partial)",
+          "ref": "rsk-authz.object_level-public_release.public_product-event_triggered-r1"
+        }
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.readiness",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "readiness.blocked.contextual_risk_critical",
+          "readiness.blocked.open_blocking_action",
+          "readiness.incomplete.authorization_coverage_gap",
+          "readiness.incomplete.unassessed_critical_high"
+        ]
+      },
+      "framework_verdict": {
+        "agreement": "differs",
+        "explanation": "The checklist is still incomplete, and readiness for this scope is already blocked by what is known: completing the review can add blockers, never remove this one.",
+        "framework": "vibecheck_v1",
+        "framework_version": "2026.08",
+        "profile": "reviewer",
+        "verdict": "INCOMPLETE REVIEW"
+      },
+      "readiness_id": "rdy-public_release.public_product",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      },
+      "state": "blocked",
+      "unknowns": [
+        {
+          "control_ids": [
+            "vibecheck.control.authz.object_level"
+          ],
+          "description": "Authorization coverage for vibecheck.control.authz.object_level in this environment is open: 0 of 8 required (object, actor, operation) cells are observed, and the rest are obj-invitations/other_account/create (not_tested), obj-invitations/other_account/delete (not_tested), obj-invitations/other_account/read (not_tested), obj-invitations/other_account/update (not_tested), obj-orders/other_account/create (not_tested), obj-orders/other_account/delete (not_tested), obj-orders/other_account/read (not_tested), obj-orders/other_account/update (not_tested). One denied request covers one cell, never the control.",
+          "material": true,
+          "ref": "asm-object-level-2",
+          "unknown_id": "unk-public_release.public_product-authz_coverage.authz.object_level"
+        },
+        {
+          "control_ids": [
+            "vibecheck.control.arch.datastore_fit",
+            "vibecheck.control.arch.mainstream_stack",
+            "vibecheck.control.arch.proven_auth_provider",
+            "vibecheck.control.authz.admin_actions_server_side",
+            "vibecheck.control.authz.server_side_default_deny",
+            "vibecheck.control.authz.tenant_isolation",
+            "vibecheck.control.continuity.account_ownership",
+            "vibecheck.control.continuity.bus_factor",
+            "vibecheck.control.cost.bounded_agent_loops",
+            "vibecheck.control.cost.budget_caps",
+            "vibecheck.control.cost.expensive_endpoints_auth",
+            "vibecheck.control.cost.usage_quotas",
+            "vibecheck.control.data.safe_prod_migrations",
+            "vibecheck.control.data.tested_backups",
+            "vibecheck.control.deploy.cors_restricted",
+            "vibecheck.control.deploy.debug_disabled",
+            "vibecheck.control.deploy.env_separation",
+            "vibecheck.control.input.output_encoding",
+            "vibecheck.control.input.server_side_validation",
+            "vibecheck.control.input.sql_parameterized",
+            "vibecheck.control.integ.idempotent_handlers",
+            "vibecheck.control.integ.webhook_signatures",
+            "vibecheck.control.llm.no_output_to_exec",
+            "vibecheck.control.llm.tool_call_authorization",
+            "vibecheck.control.llm.untrusted_content_isolation",
+            "vibecheck.control.logic.concurrency_safety",
+            "vibecheck.control.logic.invariant_enforcement",
+            "vibecheck.control.logic.money_math",
+            "vibecheck.control.obs.no_leaked_internals",
+            "vibecheck.control.privacy.no_pii_leakage",
+            "vibecheck.control.privacy.password_hashing",
+            "vibecheck.control.product.data_persistence",
+            "vibecheck.control.product.no_mocked_output",
+            "vibecheck.control.product.payment_mode_match",
+            "vibecheck.control.secrets.leak_incident_response",
+            "vibecheck.control.secrets.no_client_provider_keys",
+            "vibecheck.control.secrets.no_frontend_literals",
+            "vibecheck.control.secrets.no_repo_history_leaks",
+            "vibecheck.control.secrets.secure_runtime_injection",
+            "vibecheck.control.testing.authz_tests",
+            "vibecheck.control.testing.core_flow_tests"
+          ],
+          "description": "41 applicable Critical or High control(s) have no current assessment. An unreviewed control is not a passing one.",
+          "material": true,
+          "unknown_id": "unk-public_release.public_product-controls.unassessed_critical_high"
+        }
+      ],
+      "valid_until": "2026-09-13T00:00:00Z"
+    }
+  ],
+  "report": {
+    "appendix": {
+      "action_refs": [
+        "act-authz-coverage-obj-invitations-anonymous",
+        "act-authz-coverage-obj-invitations-other-account",
+        "act-authz-coverage-obj-orders-anonymous",
+        "act-authz-coverage-obj-orders-other-account",
+        "act-deny-anon-order-writes-v1",
+        "act-enforce-order-read-access-v1",
+        "act-probe-anon-write-v1"
+      ],
+      "action_registry": {
+        "name": "vibecheck.action_registry",
+        "version": "1.0.0"
+      },
+      "assessment_refs": [
+        "asm-anon-access-1",
+        "asm-anon-access-2",
+        "asm-anon-access-3",
+        "asm-object-level-1",
+        "asm-object-level-2"
+      ],
+      "attempt_refs": [
+        "att-anon-write-probe-1",
+        "att-orders-rls-deploy-1",
+        "att-orders-rls-patch-1",
+        "att-orders-rls-verify-1"
+      ],
+      "control_registry": {
+        "name": "vibecheck.controls",
+        "version": "1.0.0"
+      },
+      "evidence_refs": [
+        "ev-anon-read-invitations-empty",
+        "ev-anon-read-orders-denied",
+        "ev-anon-read-orders-open",
+        "ev-anon-write-orders-open",
+        "ev-idor-orders-denied",
+        "ev-idor-orders-open",
+        "ev-rls-deployment-record",
+        "ev-rls-migration-diff",
+        "ev-rls-static-missing"
+      ],
+      "framework": "vibecheck_v1",
+      "framework_version": "2026.08",
+      "item_count": 89,
+      "legacy_action_view": {
+        "actions": [
+          {
+            "action_ref": "act-authz-coverage-obj-invitations-anonymous",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-authz-coverage-obj-invitations-other-account",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-authz-coverage-obj-orders-anonymous",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-authz-coverage-obj-orders-other-account",
+            "classification": "ADVISORY",
+            "procedure_views": []
+          },
+          {
+            "action_ref": "act-deny-anon-order-writes-v1",
+            "classification": "AUTO",
+            "procedure_views": [
+              {
+                "classification": "PROPOSE",
+                "consent": "explicit_consent",
+                "execution_mode": "guided",
+                "executor_role": "developer",
+                "procedure_ref": "prc-anon-write-policy-migration-v1"
+              },
+              {
+                "classification": "ADVISORY",
+                "consent": "explicit_consent_per_run",
+                "execution_mode": "manual",
+                "executor_role": "developer",
+                "procedure_ref": "prc-pilot-migration-deploy-v1"
+              },
+              {
+                "classification": "AUTO",
+                "consent": "explicit_consent_per_run",
+                "execution_mode": "automated",
+                "executor_role": "vibecheck_agent",
+                "procedure_ref": "prc-anon-write-probe-v1"
+              }
+            ]
+          },
+          {
+            "action_ref": "act-enforce-order-read-access-v1",
+            "classification": "AUTO",
+            "procedure_views": [
+              {
+                "classification": "PROPOSE",
+                "consent": "explicit_consent",
+                "execution_mode": "guided",
+                "executor_role": "developer",
+                "procedure_ref": "prc-orders-rls-migration-v1"
+              },
+              {
+                "classification": "ADVISORY",
+                "consent": "explicit_consent_per_run",
+                "execution_mode": "manual",
+                "executor_role": "developer",
+                "procedure_ref": "prc-pilot-migration-deploy-v1"
+              },
+              {
+                "classification": "AUTO",
+                "consent": "explicit_consent",
+                "execution_mode": "automated",
+                "executor_role": "vibecheck_agent",
+                "procedure_ref": "prc-anon-read-reprobe-v1"
+              }
+            ]
+          },
+          {
+            "action_ref": "act-probe-anon-write-v1",
+            "classification": "AUTO",
+            "procedure_views": [
+              {
+                "classification": "AUTO",
+                "consent": "explicit_consent_per_run",
+                "execution_mode": "automated",
+                "executor_role": "vibecheck_agent",
+                "procedure_ref": "prc-anon-write-probe-v1"
+              }
+            ]
+          }
+        ],
+        "derived_from": {
+          "action_registry": {
+            "name": "vibecheck.action_registry",
+            "version": "1.0.0"
+          },
+          "assessment_id": "va-acme-orders-authz",
+          "assessment_revision": 3
+        },
+        "lossy": true,
+        "schema": "vibecheck.action_legacy_view",
+        "schema_version": "1.0.0",
+        "warning": "AUTO describes an automated method, not permission to run it. PROPOSE describes a guided method, not an approval requirement. ADVISORY is the fallback for manual work or an Action with no executable Procedure. Read the canonical executor, effects and consent fields before acting."
+      },
+      "procedure_refs": [
+        "prc-anon-read-reprobe-v1",
+        "prc-anon-write-policy-migration-v1",
+        "prc-anon-write-probe-v1",
+        "prc-orders-rls-migration-v1",
+        "prc-pilot-migration-deploy-v1"
+      ],
+      "risk_refs": [
+        "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1",
+        "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+        "rsk-authz.object_level-private_test.invite_only_pilot-current-r1",
+        "rsk-authz.object_level-public_release.public_product-event_triggered-r1"
+      ],
+      "scenario_refs": [
+        "scn-unauthorised_data_access"
+      ]
+    },
+    "audience": "founder",
+    "context_summary": {
+      "application": {
+        "description": "Lovable + Supabase order tracker piloted with twelve named testers before a public launch decision.",
+        "name": "Acme Orders",
+        "platform": "lovable+supabase",
+        "repo_ref": "github.com/acme/orders"
+      },
+      "confirmation_state": "human_reviewed",
+      "context_fingerprint": "sha256:f3fdddaa4ff5430f45e761399ed00917df73f050d6583f68aacddd30bd9a9c57",
+      "context_id": "ctx-acme-orders-authz",
+      "current_scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      },
+      "data_summary": "Customer names, emails, delivery addresses, order lines, and the invitation tokens that let a tester create an account. No card data (hosted checkout).",
+      "revision": 1,
+      "source_fingerprint": "sha256:2f7c1a44b0e9d3aa61c5f0b8e2d94c7a913e5b6f8d0a2c4e6b8d0f2a4c6e8b0d",
+      "target_scopes": [
+        {
+          "environment": "private_test",
+          "intended_use": "invite_only_pilot"
+        },
+        {
+          "environment": "public_release",
+          "intended_use": "public_product"
+        }
+      ],
+      "valid_until": "2026-11-12T00:00:00Z"
+    },
+    "derivation": {
+      "context_revision": 1,
+      "policy": {
+        "name": "vibecheck.report",
+        "version": "1.1.0"
+      },
+      "rules_applied": [
+        "report.headline_cap.5",
+        "report.mandatory.deadline_blocking_action_refs",
+        "report.mandatory.readiness_blocking_unknown_refs",
+        "report.mandatory.unresolved_critical_high_refs"
+      ]
+    },
+    "disclosure_placement": [
+      {
+        "categories": [
+          "unresolved_critical_high_refs"
+        ],
+        "category": "unresolved_critical_high_refs",
+        "ref": "asm-anon-access-3",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "unresolved_critical_high_refs"
+        ],
+        "category": "unresolved_critical_high_refs",
+        "ref": "asm-object-level-2",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-private_test.invite_only_pilot-authz_coverage.authz.object_level",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-private_test.invite_only_pilot-controls.unassessed_critical_high",
+        "rendered_in": "mandatory_section"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-public_release.public_product-authz_coverage.authz.object_level",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      },
+      {
+        "categories": [
+          "readiness_blocking_unknown_refs"
+        ],
+        "category": "readiness_blocking_unknown_refs",
+        "ref": "unk-public_release.public_product-controls.unassessed_critical_high",
+        "rendered_in": "mandatory_section"
+      },
+      {
+        "categories": [
+          "deadline_blocking_action_refs"
+        ],
+        "category": "deadline_blocking_action_refs",
+        "ref": "act-deny-anon-order-writes-v1",
+        "rendered_in": "headline",
+        "scenario_ref": "scn-unauthorised_data_access"
+      }
+    ],
+    "generated_at": "2026-08-16T12:00:00Z",
+    "headline_scenario_refs": [
+      "scn-unauthorised_data_access"
+    ],
+    "language": "en",
+    "mandatory_disclosures": {
+      "deadline_blocking_action_refs": [
+        "act-deny-anon-order-writes-v1"
+      ],
+      "incident_response_action_refs": [],
+      "readiness_blocking_unknown_refs": [
+        "unk-private_test.invite_only_pilot-authz_coverage.authz.object_level",
+        "unk-private_test.invite_only_pilot-controls.unassessed_critical_high",
+        "unk-public_release.public_product-authz_coverage.authz.object_level",
+        "unk-public_release.public_product-controls.unassessed_critical_high"
+      ],
+      "specialist_assessment_refs": [],
+      "specialist_escalation_refs": [],
+      "unresolved_critical_high_refs": [
+        "asm-anon-access-3",
+        "asm-object-level-2"
+      ]
+    },
+    "readiness_refs": [
+      "rdy-private_test.invite_only_pilot",
+      "rdy-public_release.public_product"
+    ],
+    "scenario_ranking": [
+      {
+        "headline": true,
+        "inputs": {
+          "current_level": "high",
+          "derived_by_policy": true,
+          "domain_rank": 0,
+          "future_level": "critical",
+          "max_control_severity_rank": 4,
+          "unresolved_control_count": 2
+        },
+        "rank": 1,
+        "scenario_ref": "scn-unauthorised_data_access"
+      }
+    ],
+    "sections": {
+      "can_wait": [],
+      "needs_developer_or_specialist": [],
+      "vibecheck_can_do_now": [
+        "act-deny-anon-order-writes-v1"
+      ],
+      "you_need_to_do": [
+        "act-authz-coverage-obj-invitations-anonymous",
+        "act-authz-coverage-obj-invitations-other-account",
+        "act-authz-coverage-obj-orders-anonymous",
+        "act-authz-coverage-obj-orders-other-account"
+      ]
+    }
+  },
+  "revision": 3,
+  "risks": [
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.private_test"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-anon-write-orders-open"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: unlisted_public_url (On the public internet but not advertised or indexed. Unlisted is not access control), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: named_handful (Up to roughly 20 named individuals who can each be contacted directly). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "plausible",
+        "impact": "major",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "high",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-13T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies audience_scale of at least 'open_small'; authentication of at least 'open_signup'; network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.use.public_product",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.public_release"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-anon-write-orders-open"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication open_signup (Anyone can create an account, with or without email verification).",
+        "affected": "No data readable/writable by an unauthenticated/anon caller unless intended public. Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: open_small (Open to anyone, currently in the hundreds). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-13T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Assessment asm-object-level-2 is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.private_test"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-rls-migration-diff",
+        "ev-idor-orders-denied"
+      ],
+      "horizon": {
+        "kind": "current"
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: unlisted_public_url (On the public internet but not advertised or indexed. Unlisted is not access control), authentication invite_only_accounts (Individual accounts created only by invitation or allowlist).",
+        "affected": "Object-level authorization: users cannot reach records they don't own (IDOR). Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: named_handful (Up to roughly 20 named individuals who can each be contacted directly). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "plausible",
+        "impact": "major",
+        "plausibility_rationale": "Exposure starts at 'plausible' for environment 'private_test': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "high",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-13T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        },
+        {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      ],
+      "risk_id": "rsk-authz.object_level-private_test.invite_only_pilot-current-r1",
+      "scope": {
+        "environment": "private_test",
+        "intended_use": "invite_only_pilot"
+      }
+    },
+    {
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assumptions": [
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies audience_scale of at least 'open_small'; authentication of at least 'open_signup'; network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "Assessment asm-object-level-2 is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.object_level"
+      ],
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.risk_derivation",
+          "version": "1.0.0"
+        },
+        "rules_applied": [
+          "impact.base.severity.Critical",
+          "impact.use.public_product",
+          "impact.audience.named_handful",
+          "impact.data.personal_data",
+          "exposure.base.environment.public_release"
+        ]
+      },
+      "domain": "security",
+      "evidence_refs": [
+        "ev-rls-migration-diff",
+        "ev-idor-orders-denied"
+      ],
+      "horizon": {
+        "kind": "event_triggered",
+        "trigger": {
+          "kind": "before_environment",
+          "value": "public_release"
+        }
+      },
+      "inputs": {
+        "actor": "Anyone who can reach the application in this scope: public_internet (Publicly reachable and discoverable), authentication open_signup (Anyone can create an account, with or without email verification).",
+        "affected": "Object-level authorization: users cannot reach records they don't own (IDOR). Data at stake: personal_data (Personal data of identifiable people (names, emails, addresses, usage tied to a person)). Business criticality: supporting (Useful, but the work can continue another way). Risk domain: security.",
+        "blast_radius": "Audience reached: open_small (Open to anyone, currently in the hundreds). Tenancy: multi_tenant_shared_store (Many customers' rows in the same tables, separated by application or policy logic). Privileged operations available: internal_admin_actions (Has administrative operations over its own users or content). Money movement: none (No payments, payouts, credits, or metered spend on the user's behalf).",
+        "compensating_controls": [],
+        "exposure": "expected",
+        "impact": "severe",
+        "plausibility_rationale": "Exposure starts at 'expected' for environment 'public_release': where the application runs decides who can reach a weakness at all."
+      },
+      "level": "critical",
+      "method": {
+        "name": "vibecheck.risk_matrix",
+        "version": "1.0.0"
+      },
+      "reassess_by": "2026-09-13T00:00:00Z",
+      "reassess_triggers": [
+        {
+          "kind": "context_change"
+        }
+      ],
+      "risk_id": "rsk-authz.object_level-public_release.public_product-event_triggered-r1",
+      "scope": {
+        "environment": "public_release",
+        "intended_use": "public_product"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "action_refs": [
+        "act-authz-coverage-obj-invitations-anonymous",
+        "act-authz-coverage-obj-invitations-other-account",
+        "act-authz-coverage-obj-orders-anonymous",
+        "act-authz-coverage-obj-orders-other-account",
+        "act-deny-anon-order-writes-v1",
+        "act-enforce-order-read-access-v1",
+        "act-probe-anon-write-v1"
+      ],
+      "assessed_at": "2026-08-16T12:00:00Z",
+      "assessment_refs": [
+        "asm-anon-access-3",
+        "asm-object-level-2"
+      ],
+      "assumptions": [
+        "Customers share one datastore, so a single authorization defect can cross tenants; context model v1 counts that blast radius through audience_scale only.",
+        "This scope is not the one the application is in today, so this level is a floor for the move to public_release, not a measurement of it.",
+        "Entering that scope implies audience_scale of at least 'open_small'; authentication of at least 'open_signup'; network_exposure of at least 'public_internet'; the captured values are lower and the higher reading was used.",
+        "Assessment asm-object-level-2 is partial: the unmet aspect is treated as not met, which is what 'partial' says."
+      ],
+      "confidence": "high",
+      "control_refs": [
+        "vibecheck.control.authz.anon_data_access",
+        "vibecheck.control.authz.object_level"
+      ],
+      "current_level": "high",
+      "derivation": {
+        "context_revision": 1,
+        "policy": {
+          "name": "vibecheck.report_derivation",
+          "version": "1.1.0"
+        },
+        "rules_applied": [
+          "scenario.control.vibecheck.control.authz.anon_data_access",
+          "scenario.control.vibecheck.control.authz.object_level",
+          "scenario.group.unauthorised_data_access"
+        ]
+      },
+      "domains": [
+        "security"
+      ],
+      "evidence_refs": [
+        "ev-anon-write-orders-open",
+        "ev-idor-orders-denied",
+        "ev-idor-orders-open",
+        "ev-rls-migration-diff"
+      ],
+      "future_level": "critical",
+      "group_id": "unauthorised_data_access",
+      "narrative": "Server-side authorization is the only thing standing between one user's records and everybody else. Where it is not enforced, reading or changing someone else's data needs no exploit at all. At stake: personal data of identifiable people. Reachable by: up to about 20 named people. Risk today, for private test + invite-only pilot: high. Risk if this moves to public release + public product: critical.",
+      "procedure_refs": [
+        "prc-anon-read-reprobe-v1",
+        "prc-anon-write-policy-migration-v1",
+        "prc-anon-write-probe-v1",
+        "prc-orders-rls-migration-v1",
+        "prc-pilot-migration-deploy-v1"
+      ],
+      "risk_by_scope": [
+        {
+          "horizon": {
+            "kind": "current"
+          },
+          "level": "high",
+          "risk_refs": [
+            "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1",
+            "rsk-authz.object_level-private_test.invite_only_pilot-current-r1"
+          ],
+          "scope": {
+            "environment": "private_test",
+            "intended_use": "invite_only_pilot"
+          }
+        },
+        {
+          "horizon": {
+            "kind": "event_triggered",
+            "trigger": {
+              "kind": "before_environment",
+              "value": "public_release"
+            }
+          },
+          "level": "critical",
+          "risk_refs": [
+            "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+            "rsk-authz.object_level-public_release.public_product-event_triggered-r1"
+          ],
+          "scope": {
+            "environment": "public_release",
+            "intended_use": "public_product"
+          }
+        }
+      ],
+      "risk_refs": [
+        "rsk-authz.anon_data_access-private_test.invite_only_pilot-current-r1",
+        "rsk-authz.anon_data_access-public_release.public_product-event_triggered-r1",
+        "rsk-authz.object_level-private_test.invite_only_pilot-current-r1",
+        "rsk-authz.object_level-public_release.public_product-event_triggered-r1"
+      ],
+      "scenario_id": "scn-unauthorised_data_access",
+      "title": "Someone reaches data that is not theirs",
+      "wording": {
+        "narrative": {
+          "en": "Server-side authorization is the only thing standing between one user's records and everybody else. Where it is not enforced, reading or changing someone else's data needs no exploit at all. At stake: personal data of identifiable people. Reachable by: up to about 20 named people. Risk today, for private test + invite-only pilot: high. Risk if this moves to public release + public product: critical.",
+          "et": "Serveripoolne õiguste kontroll on ainus asi, mis eraldab ühe kasutaja kirjeid kõigist teistest. Seal, kus seda ei jõustata, ei ole teiste andmete lugemiseks või muutmiseks vaja mingit rünnakut. Kaalul: tuvastatavate inimeste isikuandmed. Kättesaadav: kuni umbes 20 nimeliselt teadaolevat inimest. Risk täna, ulatuses privaatne test + kutsepõhine pilootkasutus: kõrge. Risk pärast üleminekut ulatusse avalik väljalase + avalik toode: kriitiline."
+        },
+        "title": {
+          "en": "Someone reaches data that is not theirs",
+          "et": "Keegi pääseb ligi andmetele, mis ei ole tema omad"
+        }
+      }
+    }
+  ],
+  "schema": "vibecheck.assessment",
+  "schema_version": "1.4.0",
+  "signals": [
+    {
+      "environment": "developer_only",
+      "observed_at": "2026-08-12T11:02:14Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"missing_rls\":[\"public.orders\"],\"created\":[\"public.orders\",\"public.invitations\"],\"rls_enabled\":[\"public.invitations\"]}"
+      },
+      "signal_id": "sig-rls-static-1",
+      "source": {
+        "check_id": "missing_rls",
+        "provider_ref": "prov-migration-analysis",
+        "tool": "analyze_sql.py"
+      },
+      "subject": {
+        "kind": "file",
+        "locator": "supabase/migrations/20260801_orders.sql"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-12T11:40:31Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_select\",\"table\":\"public.orders\",\"http\":200,\"verdict\":\"REVIEW_rows_readable_by_anon\",\"rows_visible_to_anon\":1}"
+      },
+      "signal_id": "sig-probe-orders-read-1",
+      "source": {
+        "check_id": "anon_select",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-12T11:41:02Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_select\",\"table\":\"public.invitations\",\"http\":200,\"verdict\":\"NO_ROWS_VISIBLE_UNCONFIRMED\",\"rows_visible_to_anon\":0}"
+      },
+      "signal_id": "sig-probe-invitations-read-1",
+      "source": {
+        "check_id": "anon_select",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.invitations"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-12T11:44:10Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"idor\",\"table\":\"public.orders\",\"record_id\":\"ord-7c1a\",\"http\":200,\"verdict\":\"FAIL_cross_account_read\",\"rows_visible_to_b\":1}"
+      },
+      "signal_id": "sig-probe-idor-1",
+      "source": {
+        "check_id": "idor",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-14T08:55:10Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_select\",\"table\":\"public.orders\",\"http\":200,\"verdict\":\"PASS_no_anon_rows_on_non_empty_table\",\"rows_visible_to_anon\":0,\"rows_visible_to_test_account\":3}"
+      },
+      "signal_id": "sig-probe-orders-read-2",
+      "source": {
+        "check_id": "anon_select",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-14T08:57:40Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"idor\",\"table\":\"public.orders\",\"record_id\":\"ord-7c1a\",\"http\":200,\"verdict\":\"PASS_no_...[REDACTED 42 chars]\",\"rows_visible_to_b\":0}"
+      },
+      "signal_id": "sig-probe-idor-2",
+      "source": {
+        "check_id": "idor",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      }
+    },
+    {
+      "environment": "private_test",
+      "observed_at": "2026-08-15T10:02:00Z",
+      "raw_ref": {
+        "kind": "inline",
+        "value": "{\"check\":\"anon_insert_probe\",\"table\":\"public.orders\",\"http\":201,\"verdict\":\"FAIL_anon_write_succeeded\",\"target_environment\":\"private_test\",\"created_row_hint\":\"/orders?id=eq.90ab41c2\",\"cleanup\":{\"state\":\"pending\"}}"
+      },
+      "signal_id": "sig-probe-orders-write-1",
+      "source": {
+        "check_id": "anon_insert_probe",
+        "provider_ref": "prov-supabase-probe",
+        "tool": "supabase_probe.py"
+      },
+      "subject": {
+        "kind": "table",
+        "locator": "public.orders"
+      }
+    }
+  ],
+  "supersedes_revision": 2
+}

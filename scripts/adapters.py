@@ -5,13 +5,22 @@ Import (legacy tool output -> vibecheck.assessment envelope):
 
   import_scanner_jsonl(lines, ...)      vibecheck.sh JSONL stream  (§11.1)
   import_supabase_probe(probe, env, ..) supabase_probe.py JSON     (§11.2)
+  import_rls_analysis(analysis, ...)    analyze_sql.py JSON        (§11.2)
 
-Both importers produce Signals (raw archive), Evidence and Actions only —
+All importers produce Signals (raw archive), Evidence and Actions only —
 never Assessments: providers propose material, a human or accountable process
 decides (§6.3). NO_SIGNAL becomes neutral evidence, which can never support a
 pass (rule R3), and MANUAL/NOT_TESTED become open verify actions so nothing is
 silently skipped. Raw values are redacted and bounded before they enter the
 envelope; secret-bearing raw results are never copied in.
+
+Live probe results additionally carry the authorization coverage cell they
+establish — one object, one actor, one operation, one environment (rule R20).
+Probe output that predates those annotations is mapped from its check name and
+verdict through schema/authz-coverage.v1.json, so an archived CLI result stays
+importable without being re-run. Static migration analysis deliberately fills
+no cell: it is a signal about the source tree, never an observation of the
+deployed project.
 
 Export (envelope -> current output contracts):
 
@@ -30,6 +39,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
 import actions as actions_mod
+import authz as authz_mod
 import items
 from controls import (CONTROL_IDS, ITEM_NUMBERS, STATUS_MAP,
                       REGISTRY_NAME, REGISTRY_VERSION)
@@ -72,25 +82,30 @@ def _claim(item_numbers):
 
 
 def _envelope(assessment_id, context_id, app_name, description,
-              target_scopes, created_at):
+              target_scopes, created_at, authorization_objects=None):
+    context = {
+        "context_id": context_id,
+        "revision": 1,
+        "application": {"name": app_name, "description": description},
+        "target_scopes": target_scopes,
+        # draft until a human confirms the context; a draft confirmation
+        # caps readiness at incomplete (RFC §4.2), which is the honest
+        # default for an unattended import
+        "confirmation": {"state": "draft"},
+    }
+    if authorization_objects:
+        context["authorization_objects"] = [dict(obj) for obj
+                                            in authorization_objects]
     return {
         "schema": canonical.SCHEMA_NAME,
         "schema_version": canonical.SCHEMA_VERSION,
         "assessment_id": assessment_id,
         "revision": 1,
         "created_at": created_at,
-        "context": {
-            "context_id": context_id,
-            "revision": 1,
-            "application": {"name": app_name, "description": description},
-            "target_scopes": target_scopes,
-            # draft until a human confirms the context; a draft confirmation
-            # caps readiness at incomplete (RFC §4.2), which is the honest
-            # default for an unattended import
-            "confirmation": {"state": "draft"},
-        },
+        "context": context,
         "control_registry": {"name": REGISTRY_NAME, "version": REGISTRY_VERSION},
         "action_registry": actions_mod.registry_ref(),
+        "coverage_model": authz_mod.model_ref(),
         "signals": [],
         "evidence": [],
         "actions": [],
@@ -249,6 +264,22 @@ def _probe_evidence(finding, verdict):
     the finding maps to an action / signal only."""
     table = finding.get("table", "?")
     note = finding.get("note") or ""
+    if verdict.startswith("PASS_no_anon_rows_on_non_empty_table"):
+        return ("supports", "decisive",
+                "Anon read of %r returned nothing while an authenticated test "
+                "account saw %s row(s), so the table is not empty and the "
+                "filtering is real. Covers reading this one table as an "
+                "anonymous caller in this environment: not writing it, not "
+                "another table, not another actor."
+                % (table, finding.get("rows_visible_to_test_account")))
+    if verdict.startswith("BLOCKED_OR_KEY_INVALID") and finding.get("key_validated"):
+        return ("supports", "indicative",
+                "The request against %r was refused while the same key was "
+                "accepted elsewhere in this run, so the refusal is the "
+                "project's policy rather than a wrong key. Indicative only: "
+                "the response does not distinguish a denying policy from a "
+                "missing grant, and it covers this one object and operation. %s"
+                % (table, note))
     if verdict.startswith("REVIEW_rows_readable_by_anon"):
         return ("refutes", "decisive",
                 "Observed behavior: %s row(s) in %r returned to an "
@@ -306,7 +337,8 @@ _PROBE_OPERATION = {"anon_select": "http_select_anon_head",
 
 def import_supabase_probe(probe, environment, now=None, app_name=None,
                           authorized_by=None,
-                          assessment_id="va-supabase-probe-import"):
+                          assessment_id="va-supabase-probe-import",
+                          authorization_objects=None):
     """Map supabase_probe.py JSON to a canonical envelope.
 
     Every probe result becomes scoped evidence about one table (or one
@@ -314,31 +346,47 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
     verify action; the derivable summary block (probe_complete, counters) is
     dropped, not stored. `environment` must be stated explicitly by the
     caller: the adapter cannot know whether the probed deployment is a
-    sandbox or production.
+    sandbox or production, and a probe that recorded its own environment must
+    agree with it rather than being relabelled on import.
+
+    Each mapped finding carries the coverage cell it establishes. Probe output
+    from before those annotations is mapped through the shared coverage model,
+    so archived CLI results import unchanged. Passing the application's
+    representative objects (`authorization_objects`) additionally turns the
+    still-untested cells into open verify Actions instead of silence.
     """
     now_dt = _parse_now(now)
     observed_at = _iso(now_dt)
     valid_until = _iso(now_dt + datetime.timedelta(days=EVIDENCE_VALIDITY_DAYS))
     url = probe.get("url", "unknown")
 
+    recorded_environment = probe.get("environment")
+    if recorded_environment and recorded_environment != environment:
+        raise ValueError(
+            "the probe recorded environment %r; importing it as %r would "
+            "relabel where the observation was made"
+            % (recorded_environment, environment))
+
     env = _envelope(
         assessment_id, "ctx-supabase-probe-import",
         app_name or ("Supabase project %s" % url),
         "Imported from the vibecheck Supabase live probe output.",
         [{"environment": environment, "intended_use": "prototype_demo"}],
-        observed_at)
+        observed_at, authorization_objects)
 
     write_probe = bool(probe.get("write_probe_enabled"))
+    recorded_authorization = probe.get("authorization") or {}
     authorization = {
-        "authorized_by": authorized_by or
-        "unrecorded — the probe runs only against a project the user "
-        "supplied the URL and anon key for",
-        "granted_at": observed_at,
-        "scope": ("anon-key probe of %s%s" %
-                  (url, " including opt-in write probe" if write_probe
-                   else ", read-only (no write probe)")),
+        "authorized_by": (authorized_by
+                          or recorded_authorization.get("authorized_by")
+                          or "unrecorded — the probe runs only against a "
+                             "project the user supplied the URL and anon key for"),
+        "granted_at": recorded_authorization.get("granted_at") or observed_at,
+        "scope": recorded_authorization.get("scope") or (
+            "anon-key probe of %s%s" %
+            (url, " including opt-in write probe" if write_probe
+             else ", read-only (no write probe)")),
     }
-
     seq = 0
     for finding in probe.get("findings") or []:
         seq += 1
@@ -410,6 +458,21 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
             continue
         direction, strength, scope = mapped
         wrote = verdict.startswith("FAIL_anon_write_succeeded")
+        cleanup = finding.get("cleanup") or {}
+        known_object = authz_mod.inventory_object_for_locator(env, table)
+        cells = authz_mod.cells_from_probe_finding(
+            finding,
+            object_class=(known_object or {}).get("object_class"),
+            object_ref=(known_object or {}).get("locator"))
+        for cell in cells:
+            cell.setdefault("environment", environment)
+            if known_object:
+                cell.setdefault("object_id", known_object.get("object_id"))
+                if cell.get("object_class") in (None, "unclassified"):
+                    # The probe sees a table name; the review knows what kind of
+                    # object it is. Classifying it here is what lets the cell
+                    # count toward a requirement.
+                    cell["object_class"] = known_object.get("object_class")
         evidence_id = "ev-probe-%04d" % seq
         env["evidence"].append({
             "evidence_id": evidence_id,
@@ -433,11 +496,49 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
                 "destructive": False,
                 "external_accounts": False,
                 "data_egress": False,
-                **({"details": "the write probe very likely created a row in "
-                               "%r; clean it up" % table} if wrote else {}),
+                **({"details":
+                    "the write probe very likely created a row in %r "
+                    "(%s); cleanup state is %r"
+                    % (table,
+                       cleanup.get("target") or "row identifier not returned",
+                       cleanup.get("state") or "unrecorded")} if wrote else {}),
             },
             "redaction": "probe masks the anon key; notes bounded at import",
+            **({"coverage": cells} if cells else {}),
         })
+
+        if wrote:
+            env["actions"].append({
+                "action_id": "act-probe-cleanup-%04d" % seq,
+                "action_key": "probe-cleanup-%04d" % seq,
+                "revision": 1,
+                "created_at": observed_at,
+                "kind": "remediate",
+                "outcome": ("The row the anon write probe created in %r (%s) is "
+                            "deleted, and its absence is recorded."
+                            % (table,
+                               cleanup.get("target") or "identifier not returned")),
+                "reason": ("The opt-in write probe succeeded against %s, which "
+                           "means real data was created in %s. A probe that "
+                           "writes owns its cleanup." % (table, environment)),
+                "priority": "high",
+                "urgency": "immediate",
+                "deadline": {
+                    "kind": "immediate",
+                    "rationale": ("Probe-created rows are indistinguishable "
+                                  "from real ones once they age."),
+                    "reassess_trigger": {"kind": "context_change"},
+                },
+                "blocking_scope": [],
+                "owner": {"role": "founder"},
+                "state": "open",
+                "state_history": [{"state": "open", "at": observed_at,
+                                   "by": "vibecheck supabase-probe import adapter"}],
+                "control_refs": claim["control_ids"],
+                "success_evidence": ("A recorded check that the created row is "
+                                     "gone, by identifier."),
+                "reassess_control_ids": claim["control_ids"],
+            })
 
         if verdict.startswith("REVIEW_rows_readable_by_anon"):
             env["actions"].append({
@@ -472,6 +573,141 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
                                      "when access was tightened."),
                 "reassess_control_ids": claim["control_ids"],
             })
+    if authorization_objects:
+        env = authz_mod.materialize_coverage_actions(env, observed_at,
+                                                     environment)
+    return env
+
+
+# ------------------------------------------------------- static RLS (§11.2)
+
+_RLS_ANALYSIS_TOOL = "analyze_sql.py"
+
+
+def import_rls_analysis(analysis, now=None, app_name=None,
+                        environment="developer_only",
+                        assessment_id="va-rls-analysis-import"):
+    """Map analyze_sql.py output (migration RLS signals) to an envelope.
+
+    Migrations are the source of truth for what the project *intends*, not for
+    what the deployed project does: a migration can be unapplied, superseded in
+    the dashboard, or contradicted by a policy nobody committed. Everything
+    here is therefore indicative, none of it fills an authorization coverage
+    cell, and the import always emits the open verify Action that says the live
+    behaviour still has to be observed.
+    """
+    now_dt = _parse_now(now)
+    observed_at = _iso(now_dt)
+    valid_until = _iso(now_dt + datetime.timedelta(days=EVIDENCE_VALIDITY_DAYS))
+
+    env = _envelope(
+        assessment_id, "ctx-rls-analysis-import",
+        app_name or "unknown application",
+        "Imported from the vibecheck SQL migration analysis.",
+        [{"environment": environment, "intended_use": "prototype_demo"}],
+        observed_at)
+
+    scope_note = ("Recognized CREATE TABLE / RLS statements in the scanned "
+                  "migration files only. It observes the source tree, never "
+                  "the deployed project: an unapplied or overridden migration "
+                  "looks identical here.")
+    seq = 0
+
+    def add(subject, items_found, item_numbers, aspect, direction, detail):
+        nonlocal seq
+        seq += 1
+        signal_id = "sig-rls-%04d" % seq
+        env["signals"].append({
+            "signal_id": signal_id,
+            "source": {"tool": _RLS_ANALYSIS_TOOL, "check_id": aspect},
+            "subject": subject,
+            "environment": environment,
+            "observed_at": observed_at,
+            "raw_ref": {"kind": "inline",
+                        "value": canonical.bound_raw(
+                            json.dumps(items_found, ensure_ascii=False,
+                                       sort_keys=True),
+                            canonical.MAX_RAW_EVIDENCE)},
+        })
+        claim = _claim(item_numbers)
+        claim["aspect"] = aspect
+        env["evidence"].append({
+            "evidence_id": "ev-rls-%04d" % seq,
+            "provider": {"name": "vibecheck SQL migration analysis"},
+            "subject": subject,
+            "environment": environment,
+            "operation": "migration_analysis",
+            "scope": "%s %s" % (scope_note, detail),
+            "claim": claim,
+            "direction": direction,
+            "strength": "indicative",
+            "observed_at": observed_at,
+            "valid_until": valid_until,
+            "signal_refs": [signal_id],
+            "raw_result_ref": {"kind": "inline",
+                               "value": canonical.bound_raw(
+                                   "; ".join(str(i) for i in items_found)
+                                   or "no matches")},
+            "side_effects": {"writes": False, "destructive": False,
+                             "external_accounts": False, "data_egress": False},
+        })
+
+    repo_subject = {"kind": "repo", "locator": "supabase/migrations"}
+    for table in analysis.get("missing_rls") or []:
+        add({"kind": "table", "locator": str(table)}, [table], [12, 14],
+            "row level security enabled in the creating migration", "refutes",
+            "The migration creating %r has no matching ENABLE ROW LEVEL "
+            "SECURITY statement." % table)
+    if analysis.get("created") and not analysis.get("missing_rls"):
+        add(repo_subject, sorted(analysis.get("rls_enabled") or []), [12, 14],
+            "row level security enabled in the creating migration", "neutral",
+            "Every recognized created table has an enable statement in the "
+            "source. That is the absence of one signal, not evidence that the "
+            "deployed project denies anonymous access.")
+    if analysis.get("permissive"):
+        add(repo_subject, analysis["permissive"][:20], [13, 14],
+            "policy expressions that match every row", "refutes",
+            "Unconditional using(true) / with check(true) expressions were "
+            "found; whether that is intended is a decision, not a signal.")
+    if analysis.get("anon_write"):
+        add(repo_subject, analysis["anon_write"][:20], [14],
+            "write access granted to the anon role", "refutes",
+            "Policies or grants give the anon role write access in the source.")
+
+    control_ids = _claim([12, 13, 14])["control_ids"]
+    env["actions"].append({
+        "action_id": "act-rls-live-verification",
+        "action_key": "rls-live-verification",
+        "revision": 1,
+        "created_at": observed_at,
+        "kind": "verify",
+        "outcome": ("The deployed project's authorization behaviour is "
+                    "observed directly — anonymous and cross-account access, "
+                    "per object and per operation — and each observation is "
+                    "recorded with the cell it covers."),
+        "reason": ("Migration analysis reports what the source says. Only a "
+                   "live observation says what the running project does, and "
+                   "no static reading of a migration can fill a coverage "
+                   "cell."),
+        "priority": "high",
+        "urgency": "next",
+        "deadline": {
+            "kind": "unknown",
+            "rationale": ("The deadline depends on the confirmed target "
+                          "environment and intended use; set it during review."),
+            "reassess_trigger": {"kind": "context_change"},
+        },
+        "blocking_scope": [],
+        "owner": {"role": "developer"},
+        "state": "open",
+        "state_history": [{"state": "open", "at": observed_at,
+                           "by": "vibecheck rls-analysis import adapter"}],
+        "control_refs": control_ids,
+        "success_evidence": ("Live probe evidence per object, actor and "
+                             "operation. A migration diff is never the "
+                             "verification of a deployment."),
+        "reassess_control_ids": control_ids,
+    })
     return env
 
 

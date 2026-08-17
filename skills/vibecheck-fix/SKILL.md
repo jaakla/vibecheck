@@ -21,6 +21,16 @@ Do not classify work canonically as AUTO, PROPOSE, or ADVISORY. Create:
 
 One Action may offer automated, guided, and specialist Procedures. Automation is not authorization. Approval is a consent policy, not a mechanism. Specialist is an executor role, not a mechanism. Destructiveness is an effect property, not an effect target.
 
+## Remediation checkpoints
+
+A fix that touches a running system is three decisions, not one. Set `required_stages` on the Action and `stage` on each Procedure:
+
+- `repository_patch` — writes the source, never deploys. The attempt records the exact diff that was shown, the branch, and who approved it before it ran. An approval timestamped after the change is not diff-first.
+- `deployment` — a separate consent, asked for per run. The attempt names the environment it changed and the exact revision now live, and it does not run from a plain local context.
+- `live_verification` — an observation of the deployed behaviour, made after the deploy, by someone or something other than whoever wrote and deployed it.
+
+The Action completes only when each checkpoint has its own succeeded attempt with produced evidence, in that order. **A committed migration that was never deployed does not fix anything**, and verification evidence observed before the deploy verifies the old state.
+
 AUTO / PROPOSE / ADVISORY may be shown only through the derived `vibecheck.action_legacy_view` compatibility view. Never read that view to decide whether execution is allowed.
 
 ## Procedure patterns
@@ -48,6 +58,7 @@ Represent current fixes without overloading their meaning:
    Lockfile generation also needs approved network access and `--allow-network-lockfile`; lifecycle scripts and implicit audit remain disabled. The helper never rotates secrets or rewrites history.
 6. Record actual side effects, result, rollback state, and evidence. A failed, partial, or aborted attempt leaves the Action open/in progress/blocked.
 7. Verify independently and create a superseding Assessment from fresh evidence. A cleared regex warning is not proof. Mark the Action `done` only when a succeeded attempt produced the defined evidence and a reassessment cites it.
+   For authorization fixes, verification is per cell: object, actor, operation, environment. A denied read is not a denied write, and a fixed table is not a fixed database. Record what you observed and leave the rest as named gaps — `partial` with untested operations listed is the honest reassessment.
 8. Report the Action state, every attempt result, remaining blockers, and which Procedures still need owner/developer/specialist action.
 
 ## Hard rules
@@ -58,4 +69,6 @@ Represent current fixes without overloading their meaning:
 - Never weaken a control to make a check pass.
 - Never store secret input values in an attempt record.
 - Never fabricate rotation, deployment, rollback, history purge, evidence, or reassessment.
+- Never treat editing the repository as deploying it, or one denied request as a closed control.
+- Never decide on the owner's behalf that an anonymous write is intended, and never treat a confirmed one as finished: it needs the read path denied and an observed limit on the write path before the control can close.
 - One failed or partial attempt never completes the Action; a disappeared warning is never success evidence.

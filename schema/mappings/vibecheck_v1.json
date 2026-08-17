@@ -535,6 +535,10 @@
           "tier": "EVIDENCE"
         },
         {
+          "check_id": "authz.backend_target",
+          "tier": "MANUAL"
+        },
+        {
           "check_id": "authz.idor",
           "tier": "MANUAL"
         }
@@ -582,6 +586,10 @@
         {
           "check_id": "rls.anon_write",
           "tier": "EVIDENCE"
+        },
+        {
+          "check_id": "authz.backend_target",
+          "tier": "MANUAL"
         }
       ],
       "workbook_profiles": [
@@ -1020,6 +1028,10 @@
       "scanner_checks": [
         {
           "check_id": "cost.client_llm",
+          "tier": "EVIDENCE"
+        },
+        {
+          "check_id": "cost.public_write_abuse",
           "tier": "EVIDENCE"
         }
       ],

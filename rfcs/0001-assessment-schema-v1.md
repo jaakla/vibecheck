@@ -2,15 +2,16 @@
 
 | | |
 |---|---|
-| Status | Accepted; implemented through Increment 4 |
+| Status | Accepted; implemented through Increment 5 |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
 | Context model | [`schema/vibecheck.context.v1.json`](../schema/vibecheck.context.v1.json) |
 | Report policy and wording | [`schema/report-derivation.v1.json`](../schema/report-derivation.v1.json) + [`schema/report-wording.v1.json`](../schema/report-wording.v1.json) |
 | Action policy | [`schema/action-policy.v1.json`](../schema/action-policy.v1.json) |
+| Authorization coverage | [`schema/authz-coverage.v1.json`](../schema/authz-coverage.v1.json) |
 | Examples | [`schema/examples/`](../schema/examples/), [`tests/golden/`](../tests/golden/) |
-| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py) |
+| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py), [`tests/test_authz.py`](../tests/test_authz.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
 Vibecheck assessments. It is the normative design dependency for every implementation
@@ -22,8 +23,11 @@ derivation and environment-scoped readiness. Increment 3 (#5) shipped determinis
 founder scenarios, completeness-safe mandatory placement, the full reviewer appendix, and
 founder/reviewer EN/ET rendering. Increment 4 (#6) shipped the versioned Action/Procedure
 registry, exact-scope attempts, consent and completion guards, and deterministic deadline
-labels. Sections 4.3, 5.3, 7, and 9 are normative for the shipped code (schema version 1.3.0,
-additive).
+labels. Increment 5 (#7) shipped the Supabase authorization slice end to end: per-cell
+authorization coverage, the representative-object inventory, staged remediation with a
+separate deployment checkpoint, and write-probe accountability. Sections 4.3, 5.3, 6.4, 6.5,
+7, 7.5, and 9 are normative for the shipped code (schema version 1.4.0, additive;
+coverage model 1.1.0).
 
 ## 1. Invariants this design preserves
 
@@ -417,6 +421,89 @@ stateDiagram-v2
 "the warning went away" is structurally not enough, and the test
 `test_failed_control_remains_failed_until_new_evidence` pins it.
 
+### 6.4 Coverage: what one observation is worth
+
+An authorization observation is small, and the control it belongs to is not. A probe that
+reads one row of one table as one actor establishes one **cell**: an (object, actor,
+operation) triple, in one environment. "Users cannot reach records they don't own" is a
+statement about every private object type and every operation, so it cannot close on the
+cell that happened to be easiest to run. Increment 5 makes that difference data rather than
+a caveat in prose ([`schema/authz-coverage.v1.json`](../schema/authz-coverage.v1.json),
+`scripts/authz.py`).
+
+- **Cells.** Evidence carries `coverage`: object (`object_ref`, resolved to an inventory
+  `object_id` and class), `actor` ∈ `anonymous` / `other_account` / `other_tenant_member` /
+  `unprivileged_account`, `operation` ∈ `read` / `create` / `update` / `delete`, and
+  `observed` ∈ `denied` / `allowed` / `inconclusive`. `observed` records what the request
+  did, never what it means: a cell is an observation, so evidence still carries no status.
+- **The requirement comes from the application.** `context.authorization_objects` lists the
+  representative private object types (a user-owned record, a tenant-scoped record, an
+  invitation token, a storage object …), each with a locator, an intent and its own
+  provenance state. Required cells are the model's actors × operations over those objects.
+  With no inventory, coverage is `unestablished` — a gap, never a met requirement, because
+  an empty requirement set is not a satisfied one.
+- **Intent is a decision, not a default.** An object leaves the requirement only through a
+  *confirmed* `intended_public` entry. `unknown` intent stays in, for the same reason
+  unknown never resolves toward the benign answer anywhere else in this model.
+- **Inconclusive is not denied.** An unproven key, an expired token, a network failure, a
+  non-200 that may not be policy, and an empty table all record `inconclusive`. Such an
+  observation may still *refute* (a write that reached validation shows authorization did
+  not stop it), but it can never support a claim (rule R20).
+- **Static analysis fills no cell.** A migration says what the source intends; an unapplied
+  or dashboard-overridden migration looks identical. Source evidence stays indicative and
+  is structurally refused a coverage cell.
+- **Environments do not share cells.** A denial observed in `private_test` says nothing
+  about `public_release`; the coverage state is computed per environment, so the pilot can
+  be `partial` while the public scope is still `open`.
+- **Consequences.** A `pass` on a coverage-tracked control whose basis cites coverage
+  evidence requires the whole matrix closed for that environment (R20). Gaps become
+  material readiness unknowns for the scope, and one open `verify` Action per (object,
+  actor) group, so an untested operation is scheduled work rather than silence.
+
+### 6.5 Intended exposures: confirm, then bound
+
+Some unauthenticated writes are the product working. A contact form, a booking request or
+a lead capture has to accept an insert from a browser with no account behind it, and the
+control text says so: *unless intended public*. Two failure modes sit either side of that,
+and the model refuses both.
+
+**Nothing is blessed by inference.** An observed write the inventory does not cover becomes
+a `decide` Action for the owner — "is anonymous insert into `public.bookings` meant to be
+possible, and if so under what bounds?" — and stays a violation until answered. Only a
+`confirmed` entry in `intended_operations` (actor, operation, source, rationale) turns the
+cell into an exception; `inferred` or `unknown` leaves it a required denial, because
+guessing that an exposure was deliberate is the mistake this whole model exists to prevent.
+An assessment already reading `fail` or `risk_accepted` counts as the decision, so the tool
+does not ask a question a human already answered.
+
+**Confirmation is not absolution.** An unauthenticated write path is reachable by
+automation as well as by customers: the same form that takes one enquiry takes ten
+thousand, which fills the table, sends the mail, spends the quota and buries the real
+submissions. A confirmed exception therefore carries required bounds (rule R23):
+
+| Bound | Met when |
+|---|---|
+| `no_read_back` | the same actor's **read** of the same object is observed denied — write plus read is a full dump with extra steps, and the matrix already measures it |
+| `bounded_public_write` | `vibecheck.control.cost.expensive_endpoints_auth` reads `pass`: a per-source throttle, a bot-defence challenge, or a queue a human releases. Which mechanism is the owner's choice; having none is not |
+
+Recommended alongside them: `cost.abuse_limits` (body size, mail volume),
+`input.server_side_validation` (junk rows at scale) and `cost.usage_quotas` (a ceiling with
+an alert before it). An unbounded intended exposure keeps the control open exactly like an
+unintended one: it produces an immediate `remediate` Action naming the missing bound and the
+mechanisms that would satisfy it, a material readiness unknown for the scope, and a refusal
+of any `pass` that tries to ride over it. Its success evidence is an observation of the
+bound refusing a repeated automated submission — a configuration screenshot is not a bound.
+
+Because the requirement is expressed as *another control* rather than as prose, the abuse
+risk lands in the domain it belongs to: the financial and reliability reading of an
+unbounded public form comes out of the ordinary risk derivation for
+`cost.expensive_endpoints_auth`, not from a special case. `scripts/vibecheck.sh` reports the
+static half as `cost.public_write_abuse` (a client-side insert or an anon write grant with
+no throttle or challenge pattern anywhere), and
+[`schema/examples/intended-anon-write.json`](../schema/examples/intended-anon-write.json) is
+the worked case: a published marketing site whose booking form is confirmed as intended,
+whose reads are denied, and whose write nothing bounds.
+
 ## 7. Actions, procedures, deadlines, execution
 
 Three objects, deliberately separate:
@@ -513,6 +600,32 @@ booleans and data-egress destinations are not hierarchical: a boolean must alrea
 one level out, and a destination must match exactly, because a hostname that merely starts
 with an approved one is a different host.
 
+### 7.5 Staged remediation: patch, deploy, verify
+
+Fixing a running system is three decisions, not one. Editing the repository changes nothing
+a user can reach; deploying is a second decision with its own blast radius; and only an
+observation of the deployed behaviour, made after the deploy, is verification. An Action
+names the checkpoints it needs in `required_stages`, and each Procedure declares the `stage`
+it performs (policy: `remediation_stages` in
+[`schema/action-policy.v1.json`](../schema/action-policy.v1.json)).
+
+| Stage | Must declare | Attempt must record |
+|---|---|---|
+| `repository_patch` | `write`, never `deployment`; explicit consent | `change_control`: the exact diff shown, the branch written to, who approved it and when — an approval later than the attempt start is not diff-first |
+| `deployment` | `deployment`; explicit consent, per run in practice | an `execution_context` that is not `local`, with the exact revision deployed, and an observed deployment effect |
+| `live_verification` | never `deployment`; independent verification | evidence observed *after* the deployment finished |
+
+Completion (rule R21) is per checkpoint: a `done` Action with required stages needs one
+succeeded attempt per stage, with produced evidence, in the declared order. **A repository
+patch that was never deployed leaves the Action incomplete** however good the diff looks,
+and verification evidence that predates the deploy verifies the previous state. R19 still
+applies on top: the fresh evidence has to reach a superseding assessment that cites it.
+
+Anything that touched a live system records how it was accounted for (rule R22): the consent
+record, the target environment, the result, and the cleanup or rollback state of whatever it
+created. Read-only remains the default; a data-writing probe is opt-in per run, and a
+procedure that writes data cannot carry `consent: not_required`.
+
 ## 8. Verification providers
 
 A `provider_capability` record makes provider selection explicit and safe. Per provider:
@@ -585,6 +698,10 @@ validator (several already have structural halves in the schema and tests today)
 | R17 | Deadlines are parseable, carry reassessment triggers, and parameterized blocking deadlines agree with `blocking_scope`. |
 | R18 | Attempt authorization is bound to one attempt; authorized effects fit the Procedure and observed effects fit the authorization, with targets narrowing but never widening; inputs are references and rollback state is recorded. |
 | R19 | `done` requires a succeeded attempt with produced evidence and reassessment; failed/partial/aborted attempts never complete an Action. |
+| R20 | One observation covers one (object, actor, operation) cell in one environment; inconclusive never supports; static analysis fills no cell; a coverage-backed `pass` needs the whole required matrix, and with no declared objects coverage is unestablished rather than met. |
+| R21 | Staged remediation: repository patch, deployment and live verification are authorized, ordered and evidenced separately; patches are diff-first and branch-first, deployments name their target and revision, and verification watches the deployed behaviour. |
+| R22 | Anything that wrote to a live system records its consent provenance, target environment, result and cleanup/rollback state; data-writing procedures cannot be consent-free. |
+| R23 | An intended exposure is a confirmed decision with a source and a reason, never an inference; it may not be read as supporting the control; and it stays open until its bounds — no read-back, plus an evidenced limit on the unauthenticated write path — are in place. |
 
 ## 11. Legacy mapping and migration
 
@@ -606,16 +723,30 @@ check IDs and tiers survive inside the mapping entries (`scanner_checks`), so
 
 ### 11.2 Supabase probe → canonical
 
-| Probe verdict | Maps to |
-|---|---|
-| `FAIL_*` (e.g. `FAIL_anon_write_succeeded`, `FAIL_cross_account_read`) | Evidence `refutes`, `decisive` (observed behavior), with authorization + side-effect record |
-| `REVIEW_rows_readable_by_anon` | Evidence `refutes` with `scope` noting intent is unestablished, plus a `decide` action for the owner (is this table meant to be public?) |
-| `NO_ROWS_VISIBLE_UNCONFIRMED` | Evidence `neutral` — zero rows may mean RLS **or** an empty table; upgrade to `supports`/`decisive` only when non-emptiness is separately established (as in the end-to-end example) |
-| `UNKNOWN_*` | Evidence `neutral` with the failure in `scope`; keeps the aspect unknown |
-| `NOT_TESTED` | No evidence + open verify action (write probe / IDOR needs explicit consent and inputs) |
+| Probe verdict | Maps to | Cell |
+|---|---|---|
+| `FAIL_*` (e.g. `FAIL_anon_write_succeeded`, `FAIL_cross_account_read`) | Evidence `refutes`, `decisive` (observed behavior), with authorization + side-effect record | `allowed` |
+| `REVIEW_rows_readable_by_anon` | Evidence `refutes` with `scope` noting intent is unestablished, plus a `decide` action for the owner (is this table meant to be public?) | `allowed` |
+| `PASS_no_cross_account_read_of_known_private_record` | Evidence `supports`, `decisive`, for that one record and operation | `denied` |
+| `PASS_no_anon_rows_on_non_empty_table` | Evidence `supports`, `decisive` — zero rows to anon *while a test account sees rows in the same window*, so emptiness is ruled out by observation rather than assumed | `denied` |
+| `NO_ROWS_VISIBLE_UNCONFIRMED` | Evidence `neutral` — zero rows may mean RLS **or** an empty table | `inconclusive` |
+| `BLOCKED_OR_KEY_INVALID` | Evidence `neutral`; `supports`/`indicative` only when the same key was accepted elsewhere in the run, which is what separates a denying policy from a wrong key | `inconclusive`, or `denied` when the key is proven |
+| `UNKNOWN_*` | Evidence `neutral` with the failure in `scope`; keeps the aspect unknown | `inconclusive` |
+| `NOT_TESTED` | No evidence + open verify action (write probe / IDOR needs explicit consent and inputs) | none |
 
 The probe's summary block (`probe_complete`, counters) becomes derivable and is dropped in
 migration, not stored.
+
+Current probe output carries its cells directly; output from before the coverage
+annotations is mapped by check name and verdict through `probe_mapping` in the coverage
+model, so an archived CLI result stays importable without being re-run. A successful write
+probe additionally carries the row it created and the cleanup state, which the adapter turns
+into an immediate cleanup Action — a probe that writes owns its cleanup.
+
+Static migration analysis (`analyze_sql.py`) imports through `import_rls_analysis`:
+`missing_rls`, permissive expressions and anon write grants become indicative refuting
+evidence about the *source*, no coverage cells at all, and one open verify Action stating
+that the deployed behaviour still has to be observed.
 
 ### 11.3 Workbook rows → canonical
 ([`legacy-workbook-row.json`](../schema/examples/legacy-workbook-row.json))
@@ -649,10 +780,39 @@ with the workspace fingerprint stored in `confirmation.source_fingerprint`. A `d
 confirmation caps readiness at `incomplete` (§4.2); `review_bypassed` stays visible as an
 evidence gap, exactly as today.
 
-## 12. End-to-end example
+## 12. End-to-end examples
 
-[`schema/examples/end-to-end.json`](../schema/examples/end-to-end.json) walks the epic's
-Increment-5 vertical slice through every object type, at envelope revision 2:
+Two files, deliberately different in kind.
+[`schema/examples/supabase-authz-lifecycle.json`](../schema/examples/supabase-authz-lifecycle.json)
+is the shipped Increment-5 slice: hand-written record, *derived* risks, readiness,
+scenarios, coverage Actions and report, regenerated by `scripts/gen_authz_fixture.py` and
+pinned by `tests/test_authz.py`. It walks the whole loop at envelope revision 3:
+
+1. Migration analysis reports no RLS on `public.orders` → indicative refuting evidence about
+   the source, and no coverage cell.
+2. Authorized read-only probe: anon reads an order (`allowed`), account B reads account A's
+   order (`allowed`), `public.invitations` returns nothing and stays `inconclusive` because
+   empty and filtered are indistinguishable without a second reader.
+3. Human assessments: **fail** on `authz.anon_data_access` and `authz.object_level`.
+4. Derived contextual risk, same controls, two scopes: **high** in the pilot, **critical**
+   event-triggered at public launch.
+5. One remediation Action with three checkpoints, each its own consent and its own attempt:
+   the diff-first patch on a branch, the deployment naming the pilot project and the exact
+   revision, and an independent re-probe run afterwards by the probe rather than by the
+   developer who deployed it.
+6. Superseding assessments: **partial**, not pass. The read cells are denied; create, update
+   and delete over two representative object types are untested, and the old decisive
+   refutations are resolved in `conflicts`.
+7. An opt-in write probe, authorized per run, then creates a row with nothing but the public
+   key: cell `allowed`, the created row and its deletion recorded, the control back to
+   **fail**, and a new remediation Action blocking both scopes.
+8. Readiness: both scopes **blocked**, with the coverage gap listed as a material unknown —
+   1 of 8 required cells observed in the pilot, 0 of 8 in the public scope, because
+   observations do not travel between environments.
+
+[`schema/examples/end-to-end.json`](../schema/examples/end-to-end.json) is the original
+schema-1.0 illustration of the same story, kept as the compatibility example that a reader
+of an older envelope should still be able to validate:
 
 1. Static scanner emits `rls.missing` (WARN) → signal + indicative refuting evidence.
 2. Authorized read-only probe sees an order row with the anon key → decisive refuting
@@ -683,12 +843,14 @@ Increment-5 vertical slice through every object type, at envelope revision 2:
 | `schema/risk-matrix.v1.json` | The deterministic risk method as data |
 | `schema/vibecheck.context.v1.json` | The context dimensions, values and field states as data |
 | `schema/risk-derivation.v1.json` | How context and severity choose the matrix inputs, as data |
-| `schema/action-policy.v1.json` | Action lifecycle, effect-scope, founder deadline-label, and derived legacy-view rules |
+| `schema/action-policy.v1.json` | Action lifecycle, remediation checkpoints, effect-scope, founder deadline-label, and derived legacy-view rules |
+| `schema/authz-coverage.v1.json` | Object classes, actors, operations, per-control requirement sets, the closure rule and the legacy probe-verdict mapping, as data |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
 | `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
 | `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
 | `tests/test_actions.py` | Increment-4 tests pinning multi-procedure Actions, exact consent scope, attempt effects/rollback, lifecycle completion, deadline labels, and the derived legacy view |
+| `tests/test_authz.py` | Increment-5 tests pinning the whole lifecycle fixture, the deployment checkpoint, per-cell coverage, inconclusive results, legacy probe import, write accountability, and the confirm-then-bound treatment of intended exposures |
 
 Acceptance criteria → verification:
 
@@ -702,6 +864,12 @@ Acceptance criteria → verification:
 | Procedure authorization/side effects unambiguous | required effect booleans + R11 conditional, `test_effectful_procedure_requires_explicit_consent` |
 | Mandatory items visible outside headline cap | R12, required disclosure sets, `test_report_requires_all_mandatory_disclosure_sets` |
 | 89-item + workbook round-trip | §3.4/§11, `VibecheckV1RoundTrip` |
+| One record/read test proves only its own scope (issue #7) | §6.4, R20, `TestCoverageIsPerCell` |
+| Missing deployment evidence keeps the Action incomplete (issue #7) | §7.5, R21, `TestDeploymentCheckpoint` |
+| Invalid tokens, failures, empty tables stay unknown (issue #7) | §6.4, §11.2, `TestInconclusiveResults` |
+| Existing probe CLI output still imports (issue #7) | §11.2, `TestLegacyProbeOutput` |
+| Every attempted write records consent, environment, result, cleanup (issue #7) | §7.5, R22, `TestWriteAccountability` |
+| An intended public write is confirmed by the owner and then bounded | §6.5, R23, `TestIntendedExposure` |
 
 ## 14. Rejected alternatives
 
@@ -754,9 +922,10 @@ Acceptance criteria → verification:
 7. **Standardized redaction levels** on evidence (`redaction` is free text in v1).
 8. **Multi-language founder output beyond EN/ET** — the status/wording maps support more
    languages structurally; no commitment yet.
-9. **A `partial`-evidence calculus** (aspect coverage accounting per control) — v1 records
-   `aspect` free-text; a structured aspect registry may follow once increments 5–7 show
-   which aspects recur.
+9. **A `partial`-evidence calculus** (aspect coverage accounting per control) — answered for
+   authorization by §6.4: the object/actor/operation matrix is the aspect registry for the
+   `authz` namespace. Other namespaces still record `aspect` as free text; whether secrets,
+   input handling or observability deserve their own matrices is Increment 6–7 work.
 10. **Per-scope context profiles.** §5.3 projects the dimensions a transition necessarily
     changes and takes the higher reading. Letting an owner state the expected audience,
     exposure and authentication *for a future scope* directly would be more precise; it

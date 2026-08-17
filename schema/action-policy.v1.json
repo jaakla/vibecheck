@@ -1,7 +1,7 @@
 {
   "schema": "vibecheck.action_policy",
-  "schema_version": "1.0.0",
-  "description": "Normative lifecycle, deadline-label and legacy-display policy for Action, Procedure and ProcedureAttempt records (gh issue #6, epic #1). AUTO/PROPOSE/ADVISORY exists only in the derived legacy view. It never grants authorization and it never replaces executor_role, execution_mode, effects or consent.",
+  "schema_version": "1.1.0",
+  "description": "Normative lifecycle, staged-remediation, deadline-label and legacy-display policy for Action, Procedure and ProcedureAttempt records (gh issues #6 and #7, epic #1). AUTO/PROPOSE/ADVISORY exists only in the derived legacy view. It never grants authorization and it never replaces executor_role, execution_mode, effects or consent.",
   "registry": {
     "name": "vibecheck.action_registry",
     "version": "1.0.0"
@@ -32,6 +32,40 @@
   "effect_target_refinement": {
     "rule": "Effect targets are hierarchical. An inner target is inside an outer target when it is the same string, or when it names a part of it, written as the outer target followed by a separator and the narrower name. A Procedure therefore declares the target scope it may touch, an authorization narrows that to the exact targets it grants, and an attempt reports targets no wider than what it was granted. Anything that is not a refinement of a declared target is outside the scope, whatever it is named. Data-egress destinations are deliberately excluded: a destination must match exactly, because a hostname that merely starts with an approved one is a different host.",
     "separators": ["/", ":", " > "]
+  },
+  "remediation_stages": {
+    "rule": "A remediation that touches a running system passes checkpoints that are authorized separately and evidenced separately. Editing the repository changes nothing in the reviewed environment; deploying is a second decision with its own consent and its own blast radius; and only an observation of the deployed behaviour, made after the deploy, is verification. An Action names the checkpoints it requires in required_stages, and completes only when each of them has its own succeeded attempt with produced evidence.",
+    "order": ["repository_patch", "deployment", "live_verification"],
+    "stages": {
+      "repository_patch": {
+        "description": "Change the source of truth: a migration, a policy file, application code. It is a proposal about the running system, never a change to it.",
+        "required_effects": ["write"],
+        "forbidden_effects": ["deployment"],
+        "consent": ["explicit_consent", "explicit_consent_per_run"],
+        "requires_change_control": true,
+        "change_control_rule": "Diff-first and branch-first: the attempt records the exact diff that was shown, the branch it was written to, and who approved it before it ran. An approval timestamp later than the attempt start is not diff-first.",
+        "expected_evidence": "The reviewed diff on the authorized branch. A committed migration is evidence about the repository only."
+      },
+      "deployment": {
+        "description": "Apply the patch to a running environment, whether by a human, a platform pipeline, or an orchestrated run. Approving a diff is not approving a deploy.",
+        "required_effects": ["deployment"],
+        "consent": ["explicit_consent", "explicit_consent_per_run"],
+        "requires_execution_context": true,
+        "forbidden_execution_context_kinds": ["local"],
+        "expected_evidence": "A deployment record naming the environment and the exact revision that is now live."
+      },
+      "live_verification": {
+        "description": "Observe the deployed behaviour, independently of whoever wrote and deployed the change.",
+        "forbidden_effects": ["deployment"],
+        "forbidden_evidence_operations": ["static_pattern_scan", "code_review_of_diff", "migration_analysis", "policy_source_review"],
+        "evidence_environment_must_match_previous": true,
+        "evidence_provider_must_match_procedure": true,
+        "requires_independent_verification": true,
+        "must_follow": "deployment",
+        "expected_evidence": "Fresh observations of the live system, produced after the deployment finished. A disappeared warning is never verification."
+      }
+    },
+    "completion_rule": "For a done Action, every required stage has a succeeded attempt of a Procedure carrying that stage, the attempts happened in the declared order, and the live verification produced evidence observed after the deployment finished. A missing deployment attempt leaves the Action incomplete however good the patch looks."
   },
   "deadline_labels": {
     "rule": "Founder labels are a deterministic display view. The first matching rule wins; labels are never stored on an Action.",

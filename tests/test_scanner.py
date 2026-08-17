@@ -197,6 +197,53 @@ class TestDocsOnly(ScannerTestCase):
         self.assertStatus(self.f, "errors.tracking", "WARN")
 
 
+class TestPlatformBackendTarget(ScannerTestCase):
+    """The live authorization surface must be locatable, not asked for.
+
+    Platform builders (Lovable Cloud, Bolt, v0) commit the project URL and the
+    publishable key, because both are public by construction. Finding them is
+    what lets #13/#14 be tested against the deployment instead of guessed from
+    migrations, so the check is a to-do with a target, never a leak report.
+    """
+
+    ANON_JWT = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+                + "a" * 44 + "." + "b" * 43)
+
+    def test_lovable_style_tree_locates_url_key_and_client(self):
+        def add_lovable_backend(work):
+            with open(os.path.join(work, ".env"), "w") as fh:
+                fh.write('SUPABASE_PROJECT_ID="abcdefghijklmnopqrst"\n'
+                         'VITE_SUPABASE_URL='
+                         '"https://abcdefghijklmnopqrst.supabase.co"\n'
+                         'VITE_SUPABASE_PUBLISHABLE_KEY="%s"\n' % self.ANON_JWT)
+            path = os.path.join(work, "src", "integrations", "supabase", "client.ts")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write("export const supabase = createClient(\n"
+                         "  import.meta.env.VITE_SUPABASE_URL,\n"
+                         "  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);\n")
+
+        findings, proc = scan("clean-app", extra_setup=add_lovable_backend)
+        self.assertStatus(findings, "authz.backend_target", "MANUAL")
+        evidence = findings["authz.backend_target"]["evidence"]
+        self.assertIn("abcdefghijklmnopqrst.supabase.co", evidence)
+        self.assertIn("integrations/supabase/client.ts", evidence)
+        # public by design, still not pasted into a report at full length
+        self.assertNotIn(self.ANON_JWT, proc.stdout)
+        self.assertIn("REDACTED", evidence)
+
+    def test_a_bare_env_example_is_still_a_target(self):
+        findings, _ = scan("clean-app")
+        self.assertStatus(findings, "authz.backend_target", "MANUAL")
+        self.assertIn("SUPABASE_URL", findings["authz.backend_target"]["evidence"])
+
+    def test_no_backend_in_the_tree_says_so_instead_of_staying_silent(self):
+        findings, _ = scan("docs-only")
+        self.assertStatus(findings, "authz.backend_target", "MANUAL")
+        self.assertIn("No Supabase project URL",
+                      findings["authz.backend_target"]["title"])
+
+
 class TestGitHistory(ScannerTestCase):
     def test_env_in_history_is_detected_after_deletion(self):
         """A .env deleted from the tree is still a leak in history."""

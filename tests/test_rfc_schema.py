@@ -84,7 +84,9 @@ class SchemaAndExamples(unittest.TestCase):
         for required in ("end-to-end.json", "legacy-scanner-mapping.json",
                          "legacy-workbook-row.json",
                          "vibecheck-v1-framework-mapping.json",
-                         "action-procedure-registry.json"):
+                         "action-procedure-registry.json",
+                         "supabase-authz-lifecycle.json",
+                         "intended-anon-write.json"):
             self.assertIn(required, names)
 
 

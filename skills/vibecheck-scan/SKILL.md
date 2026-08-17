@@ -97,6 +97,8 @@ Percentages are prioritisation data, not release gates. There is no "secure" or 
 
 If the user wants the scored workbook filled or a client-ready document, hand off to `vibecheck-report`. If Supabase credentials are available for live probing, hand off to `vibecheck-supabase`.
 
+When `authz.backend_target` reports a located project URL or publishable key, there is a live authorization surface and items #13/#14 cannot be closed from the source: hand off to `vibecheck-supabase` rather than reading migrations harder. The key it found is public by design — report it as a probe target, not as a leak.
+
 ## Constraints
 
 - Never print full secret values. The scanner redacts its own output; keep it that way in the report.
