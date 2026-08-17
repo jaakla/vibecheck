@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted; implemented through Increment 5 |
+| Status | Accepted; implemented through Increment 6 |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
@@ -10,8 +10,9 @@
 | Report policy and wording | [`schema/report-derivation.v1.json`](../schema/report-derivation.v1.json) + [`schema/report-wording.v1.json`](../schema/report-wording.v1.json) |
 | Action policy | [`schema/action-policy.v1.json`](../schema/action-policy.v1.json) |
 | Authorization coverage | [`schema/authz-coverage.v1.json`](../schema/authz-coverage.v1.json) |
+| Provider registry and selection | [`schema/provider-registry.v1.json`](../schema/provider-registry.v1.json) |
 | Examples | [`schema/examples/`](../schema/examples/), [`tests/golden/`](../tests/golden/) |
-| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py), [`tests/test_authz.py`](../tests/test_authz.py) |
+| Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py), [`tests/test_authz.py`](../tests/test_authz.py), [`tests/test_providers.py`](../tests/test_providers.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
 Vibecheck assessments. It is the normative design dependency for every implementation
@@ -25,9 +26,12 @@ founder/reviewer EN/ET rendering. Increment 4 (#6) shipped the versioned Action/
 registry, exact-scope attempts, consent and completion guards, and deterministic deadline
 labels. Increment 5 (#7) shipped the Supabase authorization slice end to end: per-cell
 authorization coverage, the representative-object inventory, staged remediation with a
-separate deployment checkpoint, and write-probe accountability. Sections 4.3, 5.3, 6.4, 6.5,
-7, 7.5, and 9 are normative for the shipped code (schema version 1.4.0, additive;
-coverage model 1.1.0).
+separate deployment checkpoint, and write-probe accountability. Increment 6 (#8) shipped the
+verification-provider registry, deterministic capability matching and the explainable
+fallback chain, and moved the bundled scanner, migration analysis and Supabase probe behind
+the provider contract. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are normative for the
+shipped code (schema version 1.5.0, additive; coverage model 1.1.0; provider registry
+1.0.0).
 
 ## 1. Invariants this design preserves
 
@@ -628,20 +632,90 @@ procedure that writes data cannot carry `consent: not_required`.
 
 ## 8. Verification providers
 
-A `provider_capability` record makes provider selection explicit and safe. Per provider:
-coverage entries (control ID, operations, `max_strength` — a provider can never claim more
-than `decisive`-within-scope, and never a control-wide conclusion — and a
-`closure_threshold` stating what result would let an assessor close that aspect),
-authorization requirements and credentials, supported environments, monetary/compute cost,
-data-egress behavior and destinations, side-effect booleans with `opt_in_flags` for
-anything beyond read, prerequisites, false-positive/false-negative confidence, typical
-evidence validity, and `fallback_order`.
+A provider is a way of finding something out, never a way of deciding something. Increment
+6 makes that a contract: the bundled capabilities, the ranking keys, the constraint
+vocabulary and the prose behind each rule are reviewable data in
+[`schema/provider-registry.v1.json`](../schema/provider-registry.v1.json), and
+`scripts/providers.py` reads them.
 
-Selection policy (consumed by Increment 6): prefer the provider that covers the aspect with
-the highest strength whose authorization, environment, cost, and egress constraints the
-user has actually accepted; fall back down `fallback_order`; and record the *rejection* of
-a provider that would have needed unaccepted authorization as a coverage gap, not as a
-silent skip.
+### 8.1 What a capability states
+
+A `provider_capability` record answers, per provider: which controls, subjects, evidence
+operations and coverage cells it covers, and the `closure_threshold` of each — what result,
+in what scope, would let an assessor close that aspect. `max_strength` bounds what it may
+claim; `fills_coverage_cell` says whether an observation of that aspect fills an
+authorization cell at all. Alongside that it states its executor role, availability and
+required tools, required inputs and data fixtures, authorization and credentials, supported
+environments, monetary/compute/human cost, network behaviour separately from data egress
+and its destinations, read/write/destructive/deployment/external-account side effects with
+`opt_in_flags`, prerequisites, false-positive/false-negative confidence with its known
+limitations, typical evidence validity, and `fallback_order`.
+
+Two operation vocabularies deliberately coexist. `coverage[].operations` is how the
+observation is made (`http_select_anon_head`, `static_pattern_scan`); `coverage[].cells`
+carries the authorization matrix's `read` / `create` / `update` / `delete`, which is what
+the observed actor tried to do. The registry classifies each evidence operation as `live`
+or `source`, and the `source` set is exactly the set `scripts/authz.py` refuses a coverage
+cell — so a provider that reads the repository is structurally unable to claim it observed
+the deployment, rather than being trusted not to.
+
+### 8.2 Selection
+
+Prefer the strongest applicable method whose authorization, environment, credential, input,
+cost, egress and side-effect requirements have actually been accepted for this run. Rank
+every applicable provider by a total order — fills a coverage cell, then strength, then
+`fallback_order`, then provider ID — walk it once, and add a provider while it still
+contributes a requested cell nothing earlier covers. When cells remain, or the requirement
+names none, the strongest eligible provider that produces material without closing anything
+is added last, so the plan is never empty while the source and a reader exist. The declared
+chain for authorization is: Supabase two-account probe → Playwright two-account flow →
+guided browser test → code/policy review.
+
+The order is total, so the same requirement and the same available capabilities produce the
+same plan, in the same order, with the same explanation, whatever order the capabilities
+were loaded in.
+
+Two properties matter more than the ranking. **Nothing disappears**: a provider excluded
+because it needed a credential, an install, a network grant, a write, or money that was not
+offered is reported as a coverage gap naming the exact grant that would have enabled it. A
+provider that simply has nothing to observe here — no Supabase project, no deployed URL —
+is *inapplicable*, which is reported and is not a gap, because there is no work to schedule.
+**A plan is not a closure**: covering every requested cell establishes the requirement it
+was given, and whether the control closes is decided by the coverage model and the
+assessment rules against evidence that actually exists (R3, R4, R20).
+
+Effects that require authorization — network, data egress, credentials, write, destructive,
+deployment, external accounts, metered cost — turn a plan step into a request rather than an
+instruction. The request names the provider, the effects, the destinations and the
+credentials, and the run may not start until that exact request is granted. Effects are
+checked per coverage entry as well as per provider, so a read-only grant selects the probe's
+read cells and reports its insert cell as a gap: a side effect excludes the aspect that
+needs it, not the whole provider.
+
+**Authorization is scoped to one environment.** When the offer names a different environment
+from the requirement, every provider that acts on a live system — one that requires
+authorization, reaches the network, or has an effect beyond reading — is excluded with an
+`authorization_scope_mismatch`, and the gap asks for the grant it would actually need.
+Permission to probe the pilot is not permission to probe production, and an observation made
+in the pilot would not have answered the production question either (§6.4); both halves fail
+at once, so the provider is refused rather than quietly re-pointed. A provider that only
+reads the source the review was already given is not acting in an environment at all, so it
+survives the mismatch and remains the last resort of the chain.
+
+Worked plans for six offers — nothing authorized, the probe authorized read-only, the same
+requirement one write grant later, and a review where the strongest method is missing for a
+reason the user could fix — are pinned in
+[`tests/golden/providers/selection.md`](../tests/golden/providers/selection.md).
+
+### 8.3 The bundled tools
+
+`vibecheck.sh`, `analyze_sql.py` and `supabase_probe.py` are registry providers. Their CLI
+contracts are unchanged and `export_scanner_jsonl` still reconstructs the scanner stream
+byte-for-byte; what changed is that the adapters stamp `provider_ref` on signals and
+evidence and attach the capability *as exercised* — narrowed to the controls the run
+actually claimed — to the envelope, so a result stays readable after the bundled registry
+has moved on. Both tools answer `--capability` with their own record, so a caller can decide
+whether to run one before running it.
 
 ## 9. Completeness and presentation invariants
 
@@ -702,6 +776,7 @@ validator (several already have structural halves in the schema and tests today)
 | R21 | Staged remediation: repository patch, deployment and live verification are authorized, ordered and evidenced separately; patches are diff-first and branch-first, deployments name their target and revision, and verification watches the deployed behaviour. |
 | R22 | Anything that wrote to a live system records its consent provenance, target environment, result and cleanup/rollback state; data-writing procedures cannot be consent-free. |
 | R23 | An intended exposure is a confirmed decision with a source and a reason, never an inference; it may not be read as supporting the control; and it stays open until its bounds — no read-back, plus an evidenced limit on the unauthenticated write path — are in place. |
+| R24 | Provider evidence stays inside the declared capability, checked per claimed control rather than pooled across them: the evidence operation, strength and coverage cells must be ones that control's own coverage entries allow, the environment must be one the provider can observe, an effect beyond reading needs an explicit declaration or a coverage entry that names it in `requires_effects`, only a provider that can observe the deployment may carry a coverage cell, and every coverage entry states a closure threshold. |
 
 ## 11. Legacy mapping and migration
 
@@ -845,12 +920,15 @@ of an older envelope should still be able to validate:
 | `schema/risk-derivation.v1.json` | How context and severity choose the matrix inputs, as data |
 | `schema/action-policy.v1.json` | Action lifecycle, remediation checkpoints, effect-scope, founder deadline-label, and derived legacy-view rules |
 | `schema/authz-coverage.v1.json` | Object classes, actors, operations, per-control requirement sets, the closure rule and the legacy probe-verdict mapping, as data |
+| `schema/provider-registry.v1.json` | The bundled capabilities, the evidence-operation vocabulary, the effects that need authorization, the constraint vocabulary and the deterministic ranking policy, as data |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
 | `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
+| `tests/golden/providers/selection.md` | Seven worked selection plans, committed: the same requirement and capabilities must keep producing the same plan and the same refusals |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
 | `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
 | `tests/test_actions.py` | Increment-4 tests pinning multi-procedure Actions, exact consent scope, attempt effects/rollback, lifecycle completion, deadline labels, and the derived legacy view |
 | `tests/test_authz.py` | Increment-5 tests pinning the whole lifecycle fixture, the deployment checkpoint, per-cell coverage, inconclusive results, legacy probe import, write accountability, and the confirm-then-bound treatment of intended exposures |
+| `tests/test_providers.py` | Increment-6 tests pinning registry coherence, selection determinism under shuffled load order, explained refusals, per-cell requirements, each constraint that can exclude a provider, rule R24, and the bundled tools' compatibility behind the provider contract |
 
 Acceptance criteria → verification:
 
@@ -870,6 +948,13 @@ Acceptance criteria → verification:
 | Existing probe CLI output still imports (issue #7) | §11.2, `TestLegacyProbeOutput` |
 | Every attempted write records consent, environment, result, cleanup (issue #7) | §7.5, R22, `TestWriteAccountability` |
 | An intended public write is confirmed by the owner and then bounded | §6.5, R23, `TestIntendedExposure` |
+| Selection is deterministic for the same requirements and capabilities (issue #8) | §8.2, `TestDeterministicSelection`, `tests/golden/providers/selection.md` |
+| An authorization granted for one environment never runs against another (issue #8) | §8.2, `authorization_scope_mismatch`, `TestConstraintsExclude` |
+| Higher-ranked providers that were unavailable or unsafe are explained (issue #8) | §8.2, `TestRefusalsAreExplained` |
+| Cost, egress, credentials, environment and side effects can exclude a provider (issue #8) | §8.1, `TestConstraintsExclude` |
+| Provider results create normalized Evidence only (issue #8) | §8.1, R24, `TestProvidersOnlyMakeEvidence` |
+| Partial coverage cannot close a broader control (issue #8) | §6.4, §8.2, R20/R24, `TestCoverageIsPerCell` |
+| Scanner and Supabase compatibility survive the provider contract (issue #8) | §8.3, `TestBundledToolsAreProviders` |
 
 ## 14. Rejected alternatives
 
@@ -905,6 +990,21 @@ Acceptance criteria → verification:
     keep it pinned historically.
 11. **YAML as the canonical serialization.** JSON is what the scanner, probe, and adapters
     already speak, and has a single parse. YAML may be authored, but the envelope is JSON.
+12. **Ranking providers by how many requested cells they cover.** It sounds obviously right
+    and it silently overrides the declared preference: a broad method would displace a
+    cheaper, less intrusive one that covers the cell in hand. Selection builds a *plan*
+    instead — the ranking is fixed, and a second provider joins it only for the cells
+    nothing before it reached — so breadth is expressed as more steps rather than as a
+    reordering nobody asked for.
+13. **Letting a provider report a control status.** A provider that could conclude could be
+    pointed at a control and asked for a pass; every failure mode this model exists to
+    prevent starts there. Providers produce Evidence with a direction, a strength and a
+    stated scope, and rule R24 checks that the evidence stayed inside what the capability
+    said it could see.
+14. **Auto-authorizing a provider because it is "read-only".** Reading a deployed system is
+    a network request carrying a credential to somebody else's host, which is not free
+    merely because nothing was written. The offer starts with nothing granted and every
+    effect that leaves the machine is asked for by name.
 
 ## 15. Deferred questions
 
@@ -916,7 +1016,8 @@ Acceptance criteria → verification:
    envelopes travel between parties; out of scope for v1.
 4. **Portfolio aggregation** (many apps, one owner) — readiness roll-ups across envelopes.
 5. **Normalized cost units** for procedures/providers (currency, token budgets) — free-text
-   + coarse enums for now.
+   + coarse enums for now. §8 adds `cost.human_effort` on the same coarse footing, which is
+   the cost that actually decides whether a manual method survives the next deploy.
 6. **Whether `product`-domain risks may ever block readiness** or only inform it — v1
    allows blocking via `blocking_scope` but ships no product-domain blocking defaults.
 7. **Standardized redaction levels** on evidence (`redaction` is free text in v1).
@@ -925,7 +1026,9 @@ Acceptance criteria → verification:
 9. **A `partial`-evidence calculus** (aspect coverage accounting per control) — answered for
    authorization by §6.4: the object/actor/operation matrix is the aspect registry for the
    `authz` namespace. Other namespaces still record `aspect` as free text; whether secrets,
-   input handling or observability deserve their own matrices is Increment 6–7 work.
+   input handling or observability deserve their own matrices is Increment 7 work, and
+   §8 is built to take them: a coverage entry names its cells, and a namespace with no
+   matrix simply has none to name.
 10. **Per-scope context profiles.** §5.3 projects the dimensions a transition necessarily
     changes and takes the higher reading. Letting an owner state the expected audience,
     exposure and authentication *for a future scope* directly would be more precise; it
@@ -934,6 +1037,16 @@ Acceptance criteria → verification:
 11. **Estonian wording for the context dimensions.** The model ships English labels only;
     founder-facing EN/ET wording lands with the founder report (#5), alongside the rest of
     the founder vocabulary.
+12. **Detecting provider availability rather than being told it.**
+    `availability.requires_tools` and `required_targets` are compared against what the
+    caller declares, because probing the machine for installed tooling — and the application
+    for a Supabase project — is a separate piece of discovery with its own failure modes.
+    Increment 7's external adapters are where that question has to be answered; until then
+    a caller that under-declares its targets gets a weaker plan, not a wrong one.
+13. **Provider selection driving execution.** Increment 6 chooses and explains; it does not
+    run anything. The bridge from a selected plan to an authorized `ProcedureAttempt` — one
+    plan step becoming one Procedure with one consent record — is Increment 7 work, and it
+    is deliberately a separate decision from choosing the method.
 12. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
     impact adjustment: `audience_scale` already accounts for how many parties a failure
     reaches, and counting both double-counts blast radius. Revisit if pilots show

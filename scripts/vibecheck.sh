@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # vibecheck.sh — static scanner for vibecoded applications.
 # Usage: vibecheck.sh [--online-audit] [repo_dir]   (defaults to current directory)
+#        vibecheck.sh --capability                  (what this provider can claim)
 # Output: JSON to stdout, one finding object per line-item, plus a summary.
 # Exit code: 0 for a completed scan; 2 for scanner/input failure.
 #
@@ -24,10 +25,17 @@ POSITIONAL=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h|--help)
-      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     -v|--version)
       echo "$VERSION"; exit 0 ;;
+    --capability)
+      # The scanner is a registry provider: what it may claim, what it costs
+      # and what it touches are declared in schema/provider-registry.v1.json,
+      # not inferred from its output.
+      python3 "$(cd "$(dirname "$0")" && pwd -P)/providers.py" \
+        --capability prov-static-scanner
+      exit ;;
     --online-audit)
       ONLINE_AUDIT=1 ;;
     --)

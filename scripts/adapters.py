@@ -41,12 +41,22 @@ import canonical
 import actions as actions_mod
 import authz as authz_mod
 import items
+import providers as providers_mod
 from controls import (CONTROL_IDS, ITEM_NUMBERS, STATUS_MAP,
                       REGISTRY_NAME, REGISTRY_VERSION)
 
 SCANNER_TOOL = "vibecheck.sh"
 PROBE_TOOL = "supabase_probe.py"
 EVIDENCE_VALIDITY_DAYS = 30
+
+#: The bundled tools are registry providers, so what each one is allowed to
+#: claim comes from its capability record rather than from the adapter's own
+#: idea of it. Nothing about the tools' own output changes: the CLI contracts
+#: are unchanged and export_scanner_jsonl still reconstructs the stream
+#: byte-for-byte from the archived signals.
+SCANNER_PROVIDER = "prov-static-scanner"
+PROBE_PROVIDER = "prov-supabase-probe"
+RLS_PROVIDER = "prov-migration-analysis"
 
 _TITLES = None
 
@@ -106,10 +116,32 @@ def _envelope(assessment_id, context_id, app_name, description,
         "control_registry": {"name": REGISTRY_NAME, "version": REGISTRY_VERSION},
         "action_registry": actions_mod.registry_ref(),
         "coverage_model": authz_mod.model_ref(),
+        "provider_registry": providers_mod.registry_ref(),
         "signals": [],
         "evidence": [],
         "actions": [],
     }
+
+
+def _attach_capability(env, provider_id, version=None, **instance):
+    """Record what the tool that produced this envelope could do.
+
+    An envelope is read long after the run, so the capability travels with the
+    evidence instead of being looked up in whatever the registry says later.
+    It is narrowed to the controls the run actually claimed: the capability as
+    exercised, not a catalogue.
+    """
+    control_ids = sorted({control_id
+                          for item in env.get("evidence") or []
+                          if (item.get("provider") or {}).get("provider_ref")
+                          == provider_id
+                          for control_id in
+                          ((item.get("claim") or {}).get("control_ids") or [])})
+    if not control_ids:
+        return
+    record = providers_mod.instantiate(provider_id, control_ids=control_ids,
+                                       version=version, **instance)
+    env.setdefault("providers", []).append(record)
 
 
 # ------------------------------------------------------------ scanner (§11.1)
@@ -153,7 +185,7 @@ def import_scanner_jsonl(lines, app_name="unknown application",
         signal_id = "sig-scan-%04d" % seq
         signal = {
             "signal_id": signal_id,
-            "source": {"tool": SCANNER_TOOL},
+            "source": {"tool": SCANNER_TOOL, "provider_ref": SCANNER_PROVIDER},
             "subject": {"kind": "repo", "locator": "."},
             "environment": environment,
             "observed_at": observed_at,
@@ -199,8 +231,8 @@ def import_scanner_jsonl(lines, app_name="unknown application",
                          "support a pass (rule R3)." % check)
             env["evidence"].append({
                 "evidence_id": "ev-scan-%04d" % seq,
-                "provider": {"name": "vibecheck.sh static scanner",
-                             "version": tool_version},
+                "provider": providers_mod.evidence_provider_block(
+                    SCANNER_PROVIDER, tool_version),
                 "subject": {"kind": "repo", "locator": "."},
                 "environment": environment,
                 "operation": "static_pattern_scan",
@@ -254,6 +286,7 @@ def import_scanner_jsonl(lines, app_name="unknown application",
                                      "warning is never sufficient."),
                 "reassess_control_ids": claim["control_ids"],
             })
+    _attach_capability(env, SCANNER_PROVIDER, tool_version)
     return env
 
 
@@ -398,7 +431,8 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
         signal_id = "sig-probe-%04d" % seq
         env["signals"].append({
             "signal_id": signal_id,
-            "source": {"tool": PROBE_TOOL, "check_id": check},
+            "source": {"tool": PROBE_TOOL, "check_id": check,
+                       "provider_ref": PROBE_PROVIDER},
             "subject": subject,
             "environment": environment,
             "observed_at": observed_at,
@@ -476,7 +510,8 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
         evidence_id = "ev-probe-%04d" % seq
         env["evidence"].append({
             "evidence_id": evidence_id,
-            "provider": {"name": "vibecheck supabase probe"},
+            "provider": providers_mod.evidence_provider_block(
+                PROBE_PROVIDER, probe.get("version")),
             "subject": subject,
             "environment": environment,
             "operation": _PROBE_OPERATION[check],
@@ -573,6 +608,8 @@ def import_supabase_probe(probe, environment, now=None, app_name=None,
                                      "when access was tightened."),
                 "reassess_control_ids": claim["control_ids"],
             })
+    _attach_capability(env, PROBE_PROVIDER, probe.get("version"),
+                       egress_destinations=[url], network_targets=[url])
     if authorization_objects:
         env = authz_mod.materialize_coverage_actions(env, observed_at,
                                                      environment)
@@ -619,7 +656,8 @@ def import_rls_analysis(analysis, now=None, app_name=None,
         signal_id = "sig-rls-%04d" % seq
         env["signals"].append({
             "signal_id": signal_id,
-            "source": {"tool": _RLS_ANALYSIS_TOOL, "check_id": aspect},
+            "source": {"tool": _RLS_ANALYSIS_TOOL, "check_id": aspect,
+                       "provider_ref": RLS_PROVIDER},
             "subject": subject,
             "environment": environment,
             "observed_at": observed_at,
@@ -633,7 +671,7 @@ def import_rls_analysis(analysis, now=None, app_name=None,
         claim["aspect"] = aspect
         env["evidence"].append({
             "evidence_id": "ev-rls-%04d" % seq,
-            "provider": {"name": "vibecheck SQL migration analysis"},
+            "provider": providers_mod.evidence_provider_block(RLS_PROVIDER),
             "subject": subject,
             "environment": environment,
             "operation": "migration_analysis",
@@ -708,6 +746,7 @@ def import_rls_analysis(analysis, now=None, app_name=None,
                              "verification of a deployment."),
         "reassess_control_ids": control_ids,
     })
+    _attach_capability(env, RLS_PROVIDER)
     return env
 
 

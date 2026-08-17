@@ -41,6 +41,7 @@ import authz as authz_mod
 import canonical
 import context as ctx
 import controls
+import providers as providers_mod
 import report as report_mod
 
 REPO_ROOT = canonical.REPO_ROOT
@@ -144,82 +145,19 @@ def build_context():
 
 # ------------------------------------------------------------------- providers
 
-PROVIDERS = [
-    {
-        "provider_id": "prov-migration-analysis",
-        "name": "vibecheck SQL migration analysis",
-        "version": "0.4.0",
-        "coverage": [{
-            "control_id": ANON,
-            "operations": ["migration_analysis"],
-            "max_strength": "indicative",
-            "closure_threshold": "Cannot close anything: migrations state what "
-                                 "the source intends, and an unapplied or "
-                                 "overridden migration looks identical here.",
-        }],
-        "authorization": {"required": False, "credentials": [],
-                          "notes": "Reads the working tree."},
-        "environments": ["developer_only"],
-        "cost": {"monetary": "none", "compute": "low"},
-        "data_egress": {"occurs": False},
-        "side_effects": {"read": True, "write": False, "destructive": False,
-                         "external_accounts": False},
-        "confidence": {"false_positive_risk": "moderate",
-                       "false_negative_risk": "high",
-                       "limitations": "Statement recognition, not a SQL parser; "
-                                      "policies applied outside migrations are "
-                                      "invisible to it."},
-        "evidence_freshness": {"typical_validity": "until the next migration"},
-        "fallback_order": 2,
-    },
-    {
-        "provider_id": "prov-supabase-probe",
-        "name": "supabase_probe.py",
-        "version": "0.5.0",
-        "coverage": [
-            {
-                "control_id": ANON,
-                "operations": ["http_select_anon_head", "http_insert_anon"],
-                "max_strength": "decisive",
-                "closure_threshold": "One cell per run: this object, this "
-                                     "actor, this operation, this environment. "
-                                     "The control closes only when every "
-                                     "required cell of the matrix is observed "
-                                     "denied.",
-            },
-            {
-                "control_id": IDOR,
-                "operations": ["http_select_authenticated_cross_account"],
-                "max_strength": "decisive",
-                "closure_threshold": "One record and one operation per run; "
-                                     "cross-account update and delete are not "
-                                     "automated and stay open until an "
-                                     "authorized manual test records them.",
-            },
-        ],
-        "authorization": {"required": True,
-                          "credentials": ["SUPABASE_URL", "anon/publishable key",
-                                          "two test account tokens"],
-                          "notes": "Refuses service_role keys; write probing is "
-                                   "opt-in per run and records its cleanup."},
-        "environments": ["private_test", "public_release"],
-        "cost": {"monetary": "none", "compute": "low"},
-        "data_egress": {"occurs": True, "destinations": [PROJECT_URL]},
-        "side_effects": {"read": True, "write": False, "destructive": False,
-                         "external_accounts": False,
-                         "opt_in_flags": ["--write-probe"]},
-        "prerequisites": ["The project owner authorizes probing this project."],
-        "confidence": {"false_positive_risk": "low",
-                       "false_negative_risk": "moderate",
-                       "limitations": "Zero visible rows means RLS or an empty "
-                                      "table; the difference is settled by "
-                                      "reading the same window as a test "
-                                      "account, not assumed."},
-        "evidence_freshness": {"typical_validity": "until the next migration or "
-                                                   "policy change"},
-        "fallback_order": 1,
-    },
-]
+#: The capability records come from the bundled registry rather than being
+#: restated here: a fixture that describes what the probe can do in its own
+#: words is a second source of truth, and the one that drifts. Only the parts
+#: the registry cannot know — this project's URL — are filled in.
+def providers():
+    return [
+        providers_mod.instantiate("prov-migration-analysis",
+                                  control_ids=[ANON, DEFAULT_DENY]),
+        providers_mod.instantiate("prov-supabase-probe",
+                                  control_ids=[ANON, IDOR],
+                                  egress_destinations=[PROJECT_URL],
+                                  network_targets=[PROJECT_URL]),
+    ]
 
 
 # ------------------------------------------------------------------ the record
@@ -1262,7 +1200,7 @@ def build_envelope():
                              "version": controls.REGISTRY_VERSION},
         "action_registry": actions_mod.registry_ref(),
         "coverage_model": authz_mod.model_ref(),
-        "providers": PROVIDERS,
+        "providers": providers(),
         "signals": signals,
         "evidence": evidence,
         "assessments": assessments,

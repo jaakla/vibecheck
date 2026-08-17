@@ -1,0 +1,941 @@
+{
+  "schema": "vibecheck.provider_registry",
+  "schema_version": "1.0.0",
+  "description": "Which verification providers exist, what each one can actually observe, what it costs and touches to run, and the deterministic policy that picks between them (gh issue #8, epic #1; RFC 0001 section 8). A provider never decides a control. It produces scoped Evidence and an assessor decides, so selection ranks methods by the strength of the observation they can make rather than by how confident their output sounds. The strongest method is also frequently the most intrusive one, which is why every capability states its authorization, credentials, network and data-egress behaviour, side effects and cost: a provider the user has not authorized is excluded, and the exclusion is recorded as a coverage gap rather than passed over in silence.",
+  "registry": {
+    "name": "vibecheck.provider_registry",
+    "version": "1.0.0"
+  },
+
+  "executor_roles": {
+    "automation": "A bundled or installed program runs unattended once it has been authorized.",
+    "founder": "The application owner performs documented steps and records what they saw.",
+    "developer": "Someone who can read the application's source and configuration performs the check.",
+    "specialist": "A security or domain specialist is required; the method is not safe or meaningful without one."
+  },
+
+  "operations": {
+    "static_pattern_scan": {
+      "kind": "source",
+      "description": "Regex and path heuristics over a working tree."
+    },
+    "code_review_of_diff": {
+      "kind": "source",
+      "description": "A human reads the source or a change to it."
+    },
+    "migration_analysis": {
+      "kind": "source",
+      "description": "Statement recognition over committed database migrations."
+    },
+    "policy_source_review": {
+      "kind": "source",
+      "description": "A human reads the declared authorization policies as written."
+    },
+    "http_select_anon_head": {
+      "kind": "live",
+      "description": "A read request to the deployed backend holding only what a browser has."
+    },
+    "http_insert_anon": {
+      "kind": "live",
+      "description": "A write request to the deployed backend holding only what a browser has."
+    },
+    "http_select_authenticated_cross_account": {
+      "kind": "live",
+      "description": "A read of one account's record using another account's session."
+    },
+    "browser_two_account_flow": {
+      "kind": "live",
+      "description": "A scripted browser drives the real application as two different accounts."
+    },
+    "guided_browser_check": {
+      "kind": "live",
+      "description": "A person drives the real application as two different accounts and records the result."
+    },
+    "live_http_response_inspection": {
+      "kind": "live",
+      "description": "The deployed application's own responses, headers and error pages are read back."
+    },
+    "kind_rule": "A source operation reads what the application intends; a live operation reads what the deployment does. Only a live operation may fill an authorization coverage cell, because an unapplied or dashboard-overridden policy looks exactly like an applied one in the source (RFC 0001 section 6.4). The source set here is the same set scripts/authz.py refuses a cell to.",
+    "default_rule": "A coverage entry that does not state fills_coverage_cell is read as filling one exactly when every operation it names is live and the control is coverage-tracked. The explicit flag is for the cases the default gets wrong in the unsafe direction: a live method that still cannot settle a cell, such as a browser flow asserting on the routes somebody wrote tests for while the control speaks about every route. An unrecognized operation is not a live one."
+  },
+
+  "effects": {
+    "network": {
+      "requires_authorization": true,
+      "description": "The provider sends a request to something outside this machine.",
+      "prompt_en": "allowed to make network requests to the target"
+    },
+    "data_egress": {
+      "requires_authorization": true,
+      "description": "Application or user data leaves this machine as part of running the check.",
+      "prompt_en": "allowed to send data to the listed destinations"
+    },
+    "credentials": {
+      "requires_authorization": true,
+      "description": "The provider needs credentials the user has to supply.",
+      "prompt_en": "supplied with the listed credentials"
+    },
+    "write": {
+      "requires_authorization": true,
+      "description": "The provider creates or modifies data in the target system.",
+      "prompt_en": "allowed to write to the target system"
+    },
+    "destructive": {
+      "requires_authorization": true,
+      "description": "The provider removes or overwrites data that existed before it ran.",
+      "prompt_en": "allowed to delete or overwrite existing data"
+    },
+    "deployment": {
+      "requires_authorization": true,
+      "description": "The provider changes what is running in an environment.",
+      "prompt_en": "allowed to deploy to the target environment"
+    },
+    "external_accounts": {
+      "requires_authorization": true,
+      "description": "The provider acts in a third-party account: a registry, a mail provider, a cloud console.",
+      "prompt_en": "allowed to act in the named external accounts"
+    },
+    "metered_cost": {
+      "requires_authorization": true,
+      "description": "Running the provider spends money or metered quota.",
+      "prompt_en": "allowed to spend the stated budget"
+    },
+    "read_rule": "Reading a local working tree is not an effect that needs authorization: the user pointed the review at it. Reading a deployed system is, and it appears here as network plus data_egress."
+  },
+
+  "constraint_kinds": {
+    "control_not_covered": {
+      "description": "The provider makes no claim about this control at all.",
+      "applicability": true,
+      "resolvable_by": "never",
+      "records_coverage_gap": false
+    },
+    "operation_not_covered": {
+      "description": "The provider covers the control but not the requested operations or actors.",
+      "applicability": true,
+      "resolvable_by": "never",
+      "records_coverage_gap": false
+    },
+    "subject_not_covered": {
+      "description": "The provider cannot observe this kind of subject.",
+      "applicability": true,
+      "resolvable_by": "never",
+      "records_coverage_gap": false
+    },
+    "target_unavailable": {
+      "description": "The thing the provider needs to observe is not part of this application: no Supabase project, no deployed URL, no source tree.",
+      "applicability": true,
+      "resolvable_by": "never",
+      "records_coverage_gap": false
+    },
+    "environment_unsupported": {
+      "description": "The provider cannot produce an observation about the environment being assessed. Observations never travel between environments, so this excludes it outright.",
+      "applicability": false,
+      "resolvable_by": "environment",
+      "records_coverage_gap": true
+    },
+    "authorization_scope_mismatch": {
+      "description": "This run was authorized for one environment and the requirement is about another. Permission to probe the staging project is not permission to probe production, and an observation made in staging says nothing about production either way. Both halves of that fail at once, so a provider that acts on a live system is excluded outright rather than quietly re-pointed.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
+    "tool_unavailable": {
+      "description": "The provider is not bundled and the tools it needs are not installed here.",
+      "applicability": false,
+      "resolvable_by": "installation",
+      "records_coverage_gap": true
+    },
+    "executor_unavailable": {
+      "description": "Nobody who could run this method is available for this review.",
+      "applicability": false,
+      "resolvable_by": "staffing",
+      "records_coverage_gap": true
+    },
+    "credentials_missing": {
+      "description": "The provider needs credentials that have not been supplied.",
+      "applicability": false,
+      "resolvable_by": "user_input",
+      "records_coverage_gap": true
+    },
+    "input_missing": {
+      "description": "The provider needs an input or data fixture that has not been supplied: a known private record, a base URL, a documented flow.",
+      "applicability": false,
+      "resolvable_by": "user_input",
+      "records_coverage_gap": true
+    },
+    "prerequisite_unmet": {
+      "description": "A stated precondition for running the provider at all has not been met. Prerequisites are prose for a person, so this is raised only when the caller names one it knows to be unmet; the machine-checkable half of every prerequisite lives in required_targets, required_inputs, availability or authorization, and is checked there.",
+      "applicability": false,
+      "resolvable_by": "user_action",
+      "records_coverage_gap": true
+    },
+    "authorization_not_granted": {
+      "description": "The provider declares that it requires authorization and none was given for this run.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
+    "network_not_accepted": {
+      "description": "The provider reaches the network and network access was not authorized.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
+    "data_egress_not_accepted": {
+      "description": "The provider sends data out, or sends it to a destination that was not authorized.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
+    "side_effect_not_authorized": {
+      "description": "Covering the requested cells would require a write, destructive, deployment or external-account effect that was not authorized.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
+    "cost_not_accepted": {
+      "description": "The provider's monetary or compute cost is above what was accepted, or is unknown while only known costs were accepted.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    }
+  },
+
+  "selection": {
+    "rule": "Prefer the strongest applicable method whose authorization, environment, credential, cost, egress and side-effect requirements have actually been accepted for this run. Rank every applicable provider, walk the ranking, and add a provider to the plan while it still contributes a requested cell nothing earlier in the plan covers. Stop when the requested cells are exhausted or the ranking is. Nothing that was excluded disappears: an excluded provider that a user could have enabled is reported with the exact reason and the exact grant that would have enabled it.",
+    "rank_keys": [
+      {
+        "key": "fills_coverage_cell",
+        "direction": "desc",
+        "rationale": "An observation of the running system is worth more than a reading of its source, whatever the source says. This is the same rule that refuses static analysis a coverage cell."
+      },
+      {
+        "key": "max_strength",
+        "direction": "desc",
+        "rationale": "Within one kind of observation, prefer the method that can settle its claim over the method that only produces material for a human."
+      },
+      {
+        "key": "fallback_order",
+        "direction": "asc",
+        "rationale": "The declared preference between methods of equal strength: cheapest and least intrusive first, which for authorization means the API probe before a browser flow before a person."
+      },
+      {
+        "key": "provider_id",
+        "direction": "asc",
+        "rationale": "A total order. Two providers that tie on everything above still have to rank in the same order every time, or the plan stops being reproducible."
+      }
+    ],
+    "strength_rank": {
+      "decisive": 2,
+      "indicative": 1
+    },
+    "determinism_rule": "The rank keys are a total order over any set of capabilities, and the plan is built by a single pass over that order. The same requirement and the same available capabilities therefore produce the same plan, in the same order, with the same explanation, regardless of the order the capabilities were loaded in.",
+    "gap_rule": "A provider excluded for a reason whose constraint kind records a coverage gap is a gap, never a silent skip. The gap names the provider, the constraint, and what would resolve it, and it stays visible in the plan even when a weaker provider was selected in its place.",
+    "authorization_rule": "A plan step whose provider declares an effect that requires authorization is not an instruction to run: it is a request. The request names the exact provider, the exact effects, the destinations data would reach, the credentials needed and the cost, and the run may not start until that exact request has been granted.",
+    "authorization_scope_rule": "An authorization is granted for one environment and holds only there. When the offer names a different environment from the requirement, every provider that acts on a live system — one that requires authorization, reaches the network, or has an effect beyond reading — is excluded, because using the grant would both stretch it to a scope nobody approved and produce an observation about the wrong environment. A provider that only reads the source the review was already pointed at is not acting in an environment at all, so the mismatch does not touch it: it stays the last resort of the chain, indicative as always.",
+    "closure_rule": "Selection covers cells; it never closes controls. A plan that covers every requested cell has established the requirement it was given, which is a smaller statement than the control. Whether the control closes is decided by the coverage model and the assessment rules (R3, R4, R20) against evidence that actually exists, not by a plan that says the evidence could exist.",
+    "no_conclusion_rule": "A provider produces Evidence, with a direction and a strength and a stated scope. It never writes an assessment, a control status or a readiness state. A provider that could produce a conclusion could be pointed at a control and asked for a pass, which is the failure mode this whole model exists to prevent."
+  },
+
+  "providers": [
+    {
+      "provider_id": "prov-supabase-probe",
+      "name": "vibecheck Supabase live probe",
+      "version": "0.5.0",
+      "summary_en": "Sends real requests to the deployed Supabase project with the public key and, when two test-account tokens are supplied, reads one account's record with the other account's session.",
+      "executor_role": "automation",
+      "mechanism": "supabase_probe.py",
+      "fallback_order": 1,
+      "availability": {
+        "bundled": true,
+        "requires_tools": ["python3"],
+        "detect": "Bundled with vibecheck; needs no installation."
+      },
+      "required_targets": ["supabase_project"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["http_select_anon_head"],
+          "subjects": ["table", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "unclassified"]
+          },
+          "closure_threshold": "One cell per request: this table, an anonymous caller, a read, this environment. The control closes only when every required cell of the matrix has been observed denied in the assessed environment."
+        },
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["http_insert_anon"],
+          "subjects": ["table"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write"],
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["create"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "unclassified"]
+          },
+          "closure_threshold": "One anonymous insert into one table. It is opt-in because a successful one leaves a real row behind, and the attempt owns its cleanup."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["http_select_authenticated_cross_account"],
+          "subjects": ["table", "endpoint"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["other_account"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "credential_or_token_record", "unclassified"]
+          },
+          "closure_threshold": "One known record, read by one unrelated account. Cross-account create, update and delete are not automated here and stay open until another provider records them."
+        }
+      ],
+      "authorization": {
+        "required": true,
+        "credentials": ["SUPABASE_URL", "supabase anon/publishable key"],
+        "notes": "Refuses service_role keys outright. Write probing is opt-in per run and records the row it created and the state of its cleanup."
+      },
+      "required_inputs": [
+        {
+          "id": "supabase_url",
+          "description": "The project URL to probe.",
+          "secret": false
+        },
+        {
+          "id": "supabase_anon_key",
+          "description": "The publishable/anon key the browser already ships.",
+          "secret": true
+        },
+        {
+          "id": "test_account_a_token",
+          "description": "A session token for a first test account, used to establish that a record exists.",
+          "secret": true,
+          "required_for": ["vibecheck.control.authz.object_level"]
+        },
+        {
+          "id": "test_account_b_token",
+          "description": "A session token for a second, unrelated test account.",
+          "secret": true,
+          "required_for": ["vibecheck.control.authz.object_level"]
+        },
+        {
+          "id": "known_private_record_id",
+          "description": "The identifier of a record account A owns, so a refusal for account B is a denial rather than an empty result.",
+          "secret": false,
+          "required_for": ["vibecheck.control.authz.object_level"]
+        }
+      ],
+      "prerequisites": ["The project owner authorizes probing this project, which is what authorization.required records."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["the Supabase project URL supplied for the run"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the Supabase project URL supplied for the run"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false,
+        "opt_in_flags": ["--write-probe"]
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "Zero visible rows means row level security or an empty table, and the difference is settled by reading the same window as a test account rather than assumed. It sees PostgREST; an application route in front of the database is a separate question."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next migration or policy change"
+      }
+    },
+    {
+      "provider_id": "prov-playwright-two-account",
+      "name": "Playwright two-account flow",
+      "version": "external",
+      "summary_en": "A scripted browser signs in as two unrelated test accounts and tries to reach each other's records through the real application, including the routes and server code the database probe never sees.",
+      "executor_role": "automation",
+      "mechanism": "playwright test project maintained alongside the application",
+      "fallback_order": 2,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["node", "playwright"],
+        "detect": "Not bundled with vibecheck. Available when a Playwright project with two-account fixtures exists in the repository and its browsers are installed."
+      },
+      "required_targets": ["deployed_web_app"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One route, one actor, one operation per assertion. The flow closes exactly the cells its assertions name."
+        },
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write"],
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["create", "update"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One write attempt per named route. A write that reaches validation already refutes the claim; a write that is refused closes that one cell."
+        },
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write", "destructive"],
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["delete"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "A delete attempt against a record that exists. It is separately opt-in because a successful one removes data that was there before the review started."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["other_account"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One record of account A, requested through the application as account B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write"],
+          "cells": {
+            "actors": ["other_account"],
+            "operations": ["create", "update"],
+            "object_classes": ["user_owned_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One modification of account A's record attempted as account B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write", "destructive"],
+          "cells": {
+            "actors": ["other_account"],
+            "operations": ["delete"],
+            "object_classes": ["user_owned_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One deletion of account A's record attempted as account B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.tenant_isolation",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["other_tenant_member"],
+            "operations": ["read"],
+            "object_classes": ["tenant_scoped_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One shared record of tenant A, requested as a member of tenant B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.tenant_isolation",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write"],
+          "cells": {
+            "actors": ["other_tenant_member"],
+            "operations": ["create", "update"],
+            "object_classes": ["tenant_scoped_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One write into tenant A's scope attempted as a member of tenant B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.tenant_isolation",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write", "destructive"],
+          "cells": {
+            "actors": ["other_tenant_member"],
+            "operations": ["delete"],
+            "object_classes": ["tenant_scoped_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One deletion in tenant A's scope attempted as a member of tenant B."
+        },
+        {
+          "control_id": "vibecheck.control.authz.admin_actions_server_side",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["unprivileged_account"],
+            "operations": ["read"],
+            "object_classes": ["admin_or_privileged_record", "unclassified"]
+          },
+          "closure_threshold": "One privileged route requested from an account that does not hold the role, with the client-side navigation bypassed."
+        },
+        {
+          "control_id": "vibecheck.control.authz.admin_actions_server_side",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write"],
+          "cells": {
+            "actors": ["unprivileged_account"],
+            "operations": ["create", "update"],
+            "object_classes": ["admin_or_privileged_record", "unclassified"]
+          },
+          "closure_threshold": "One privileged write attempted from an account without the role."
+        },
+        {
+          "control_id": "vibecheck.control.authz.admin_actions_server_side",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "requires_effects": ["write", "destructive"],
+          "cells": {
+            "actors": ["unprivileged_account"],
+            "operations": ["delete"],
+            "object_classes": ["admin_or_privileged_record", "unclassified"]
+          },
+          "closure_threshold": "One privileged deletion attempted from an account without the role."
+        },
+        {
+          "control_id": "vibecheck.control.authz.server_side_default_deny",
+          "operations": ["browser_two_account_flow"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": false,
+          "closure_threshold": "An undeclared route observed refusing an unauthenticated request is evidence about that route. Default-deny is a statement about every route, including the ones nobody wrote a test for, so a flow cannot close it."
+        }
+      ],
+      "authorization": {
+        "required": true,
+        "credentials": ["two test-account logins for the deployment under test"],
+        "notes": "Drives the real application. Read-only assertions are safe against a shared environment; create, update and delete assertions leave data behind and are separately opt-in."
+      },
+      "required_inputs": [
+        {
+          "id": "deployment_base_url",
+          "description": "The URL of the deployment the flow runs against.",
+          "secret": false
+        },
+        {
+          "id": "test_account_a_login",
+          "description": "Credentials for a first test account.",
+          "secret": true
+        },
+        {
+          "id": "test_account_b_login",
+          "description": "Credentials for a second, unrelated test account.",
+          "secret": true
+        },
+        {
+          "id": "two_account_flow_spec",
+          "description": "The maintained Playwright project naming the routes and records each assertion uses. Without it there is nothing to run.",
+          "secret": false
+        }
+      ],
+      "prerequisites": [
+        "A Playwright project with two-account fixtures exists and its browsers are installed, which availability.requires_tools and the two_account_flow_spec input record.",
+        "The deployment owner authorizes automated traffic against it, which authorization.required records."
+      ],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "cost": {
+        "monetary": "none",
+        "compute": "moderate",
+        "human_effort": "high_once",
+        "notes": "Free to run and expensive to write: the flows are application-specific and have to be maintained alongside the routes they assert on."
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["the deployment base URL supplied for the run"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the deployment base URL supplied for the run"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false,
+        "opt_in_flags": ["--write-flows", "--delete-flows"]
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "It tests the routes somebody wrote an assertion for. An unasserted route is not a passing route, and a flow that signs in through the UI can be defeated by an unrelated UI change rather than by an authorization failure."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next deploy"
+      }
+    },
+    {
+      "provider_id": "prov-guided-browser-test",
+      "name": "Guided two-account browser test",
+      "version": "1.0.0",
+      "summary_en": "A person signs in as two test accounts in an ordinary browser, follows a written script, and records what each account could and could not reach.",
+      "executor_role": "founder",
+      "mechanism": "documented manual steps with a recorded result",
+      "fallback_order": 3,
+      "availability": {
+        "bundled": true,
+        "requires_tools": ["a web browser"],
+        "detect": "Always available to a review with a person in it and two usable test accounts; executor_role records that the person is the requirement."
+      },
+      "required_targets": ["deployed_web_app"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["guided_browser_check"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["anonymous"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "tenant_scoped_record", "admin_or_privileged_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One page or link opened in a private window, on one object. What the person saw is the observation; 'it looked fine' is not one."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["guided_browser_check"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["other_account"],
+            "operations": ["read"],
+            "object_classes": ["user_owned_record", "credential_or_token_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One record's URL, created by account A and opened by account B. The record has to be one account A can actually see, or a blank page proves nothing."
+        },
+        {
+          "control_id": "vibecheck.control.authz.tenant_isolation",
+          "operations": ["guided_browser_check"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["other_tenant_member"],
+            "operations": ["read"],
+            "object_classes": ["tenant_scoped_record", "file_or_storage_object", "unclassified"]
+          },
+          "closure_threshold": "One shared record's URL, opened by a member of the other organisation."
+        },
+        {
+          "control_id": "vibecheck.control.authz.admin_actions_server_side",
+          "operations": ["guided_browser_check"],
+          "subjects": ["endpoint", "deployment"],
+          "max_strength": "decisive",
+          "fills_coverage_cell": true,
+          "cells": {
+            "actors": ["unprivileged_account"],
+            "operations": ["read"],
+            "object_classes": ["admin_or_privileged_record", "unclassified"]
+          },
+          "closure_threshold": "One admin URL typed directly into the address bar from an ordinary account. A hidden menu item is not an enforced check."
+        }
+      ],
+      "authorization": {
+        "required": true,
+        "credentials": ["two test accounts on the deployment"],
+        "notes": "Read-only by design. The script never asks anyone to create, change or delete data in an environment other people are using."
+      },
+      "required_inputs": [
+        {
+          "id": "deployment_base_url",
+          "description": "The URL the person opens.",
+          "secret": false
+        },
+        {
+          "id": "test_account_a_login",
+          "description": "A first test account.",
+          "secret": true
+        },
+        {
+          "id": "test_account_b_login",
+          "description": "A second, unrelated test account.",
+          "secret": true
+        },
+        {
+          "id": "known_private_record_url",
+          "description": "The address of a record account A can see, so account B's result means something.",
+          "secret": false
+        }
+      ],
+      "prerequisites": ["Someone is available to run the steps and write down what happened, which executor_role records."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "moderate",
+        "notes": "Roughly fifteen minutes per object type, every time it has to be repeated. That recurring cost is the argument for automating it, not a reason to skip it now."
+      },
+      "network": {
+        "outbound": true,
+        "targets": ["the deployment the person opens"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the deployment the person opens"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "high",
+        "limitations": "It covers what the script names and what the person actually did. Steps get skipped, results get remembered rather than recorded, and nobody repeats it after the next deploy."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next deploy"
+      }
+    },
+    {
+      "provider_id": "prov-code-policy-review",
+      "name": "Code and policy review",
+      "version": "1.0.0",
+      "summary_en": "A person who can read the application reads the authorization policies, the server routes and the queries, and states what the source intends.",
+      "executor_role": "developer",
+      "mechanism": "guided reading of the source and configuration",
+      "fallback_order": 4,
+      "availability": {
+        "bundled": true,
+        "requires_tools": [],
+        "detect": "Available whenever the source is available and somebody can read it. This is the last resort of the chain, and it is never empty."
+      },
+      "required_targets": ["source_tree"],
+      "coverage_rules": [
+        {
+          "controls_from": "all",
+          "operations": ["policy_source_review", "code_review_of_diff"],
+          "subjects": ["repo", "file", "config"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Closes nothing about the deployed system. A policy that exists in the repository may be unapplied, overridden in a dashboard, or shadowed by a second data path; source and deployment look identical from here. It is the strongest thing available when nobody may touch the running system, and the weakest thing available when they may."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": ["read access to the source"],
+        "notes": "Reads what the review was already pointed at."
+      },
+      "prerequisites": ["Someone who can read the application's source is available, which executor_role records."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "A source reading is material about whichever environment runs that source, which is why this provider is the last resort of the chain in every environment rather than only in the developer's own. It stays indicative and fills no cell there, because the deployed policy and the committed one look identical from here.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "high"
+      },
+      "network": {
+        "outbound": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "high",
+        "limitations": "Reading is not running. It finds what is written down, in the files the reader opened, and says nothing about configuration held outside the repository."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the source changes"
+      }
+    },
+    {
+      "provider_id": "prov-migration-analysis",
+      "name": "vibecheck SQL migration analysis",
+      "version": "0.4.0",
+      "summary_en": "Recognizes table creation and row-level-security statements in committed migrations and reports the tables created without a matching policy.",
+      "executor_role": "automation",
+      "mechanism": "analyze_sql.py",
+      "fallback_order": 5,
+      "availability": {
+        "bundled": true,
+        "requires_tools": ["python3"],
+        "detect": "Bundled with vibecheck; runs when the repository contains SQL migrations."
+      },
+      "required_targets": ["source_tree", "sql_migrations"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.authz.anon_data_access",
+          "operations": ["migration_analysis"],
+          "subjects": ["file", "repo", "table"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Closes nothing. Migrations state what the source intends, and an unapplied migration, a dashboard override and an applied one all look the same from here."
+        },
+        {
+          "control_id": "vibecheck.control.authz.server_side_default_deny",
+          "operations": ["migration_analysis"],
+          "subjects": ["file", "repo"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Closes nothing, for the same reason. A table created without row level security is material worth acting on; it is not an observation of the deployment."
+        },
+        {
+          "control_id": "vibecheck.control.authz.object_level",
+          "operations": ["migration_analysis"],
+          "subjects": ["file", "repo"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Closes nothing. A policy expression matching every row is material about who can reach which record, and whether that is intended is a decision rather than a signal."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the working tree."
+      },
+      "prerequisites": ["The repository contains SQL migrations, which required_targets records."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "Committed migrations are material about whatever environment they were applied to, and about none of them conclusively: an unapplied migration and an applied one are the same text. Indicative everywhere, a cell nowhere.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": false
+      },
+      "data_egress": {
+        "occurs": false
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "moderate",
+        "false_negative_risk": "high",
+        "limitations": "Statement recognition, not a SQL parser. Policies applied outside migrations are invisible to it, and a policy that exists can still be wrong."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the next migration"
+      }
+    },
+    {
+      "provider_id": "prov-static-scanner",
+      "name": "vibecheck.sh static scanner",
+      "version": "0.4.0",
+      "summary_en": "Regex and path heuristics over the working tree. Emits WARN, NO_SIGNAL or MANUAL per check; it proves neither a vulnerability nor its absence.",
+      "executor_role": "automation",
+      "mechanism": "vibecheck.sh",
+      "fallback_order": 6,
+      "availability": {
+        "bundled": true,
+        "requires_tools": ["bash", "grep"],
+        "detect": "Bundled with vibecheck; needs no installation."
+      },
+      "required_targets": ["source_tree"],
+      "coverage_rules": [
+        {
+          "controls_from": "scanner_checks",
+          "operations": ["static_pattern_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Closes nothing. A match is material for a reviewer and a non-match is the absence of a match, which is not the absence of the problem: NO_SIGNAL is never a pass."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the working tree. The optional advisory lookup is the only part that leaves the machine and it is off unless asked for."
+      },
+      "prerequisites": [],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "The working tree is the source of whatever is deployed, so a match is material for every environment that runs it. It is never more than material: the scanner has no view of the running system at all.",
+      "cost": {
+        "monetary": "none",
+        "compute": "low",
+        "human_effort": "none"
+      },
+      "network": {
+        "outbound": false,
+        "opt_in_flags": ["--online-audit"],
+        "targets": ["the configured npm registry"]
+      },
+      "data_egress": {
+        "occurs": false,
+        "opt_in_flags": ["--online-audit"],
+        "destinations": ["the configured npm registry"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "high",
+        "false_negative_risk": "high",
+        "limitations": "Path and pattern heuristics with no dataflow and no type information. Every hit needs a reviewer, and the checks it has no rule for are emitted as explicit to-dos rather than passed over."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the working tree changes"
+      }
+    }
+  ]
+}

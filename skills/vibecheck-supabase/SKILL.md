@@ -94,6 +94,16 @@ Every finding carries the cell it establishes — object, actor (`anonymous` / `
 - Cells do not transfer between environments: probing the pilot says nothing about production.
 - Report the gaps as gaps. `partial` with named untested operations is the honest status; `pass` on one lucky request is not.
 
+The probe is a registry provider (`prov-supabase-probe`), and `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/supabase_probe.py --capability` prints exactly which cells it can fill, what it needs, and what it touches. For the cells it cannot reach — cross-account writes, storage objects, anything behind a server-side route — ask `scripts/providers.py` what would reach them rather than leaving them silent:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/providers.py \
+  --select vibecheck.control.authz.object_level --environment private_test \
+  --target source_tree --target supabase_project --target deployed_web_app
+```
+
+A gap it names is scheduled work with a stated method — a two-account browser check, a Playwright flow, a reviewer reading the route — not a caveat.
+
 ## When the write is supposed to be open
 
 A visible anonymous INSERT is often the product: contact forms, booking requests and lead captures write from the browser by design. Do not record it as a failure, and do not assume it is fine either. Ask the owner, in their terms:
