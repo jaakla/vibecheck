@@ -692,6 +692,16 @@ checked per coverage entry as well as per provider, so a read-only grant selects
 read cells and reports its insert cell as a gap: a side effect excludes the aspect that
 needs it, not the whole provider.
 
+**Authorization is scoped to one environment.** When the offer names a different environment
+from the requirement, every provider that acts on a live system — one that requires
+authorization, reaches the network, or has an effect beyond reading — is excluded with an
+`authorization_scope_mismatch`, and the gap asks for the grant it would actually need.
+Permission to probe the pilot is not permission to probe production, and an observation made
+in the pilot would not have answered the production question either (§6.4); both halves fail
+at once, so the provider is refused rather than quietly re-pointed. A provider that only
+reads the source the review was already given is not acting in an environment at all, so it
+survives the mismatch and remains the last resort of the chain.
+
 Worked plans for six offers — nothing authorized, the probe authorized read-only, the same
 requirement one write grant later, and a review where the strongest method is missing for a
 reason the user could fix — are pinned in
@@ -766,7 +776,7 @@ validator (several already have structural halves in the schema and tests today)
 | R21 | Staged remediation: repository patch, deployment and live verification are authorized, ordered and evidenced separately; patches are diff-first and branch-first, deployments name their target and revision, and verification watches the deployed behaviour. |
 | R22 | Anything that wrote to a live system records its consent provenance, target environment, result and cleanup/rollback state; data-writing procedures cannot be consent-free. |
 | R23 | An intended exposure is a confirmed decision with a source and a reason, never an inference; it may not be read as supporting the control; and it stays open until its bounds — no read-back, plus an evidenced limit on the unauthenticated write path — are in place. |
-| R24 | Provider evidence stays inside the declared capability: the cited control, evidence operation, environment, strength and side effects are ones the capability allows, only a provider that can observe the deployment may carry a coverage cell, and every coverage entry states a closure threshold. |
+| R24 | Provider evidence stays inside the declared capability, checked per claimed control rather than pooled across them: the evidence operation, strength and coverage cells must be ones that control's own coverage entries allow, the environment must be one the provider can observe, an effect beyond reading needs an explicit declaration or a coverage entry that names it in `requires_effects`, only a provider that can observe the deployment may carry a coverage cell, and every coverage entry states a closure threshold. |
 
 ## 11. Legacy mapping and migration
 
@@ -913,7 +923,7 @@ of an older envelope should still be able to validate:
 | `schema/provider-registry.v1.json` | The bundled capabilities, the evidence-operation vocabulary, the effects that need authorization, the constraint vocabulary and the deterministic ranking policy, as data |
 | `schema/examples/*.json` | End-to-end story + one example per legacy surface |
 | `tests/golden/` | Four scope profiles, fully derived and committed: the same inputs must keep producing the same risks and readiness |
-| `tests/golden/providers/selection.md` | Six worked selection plans, committed: the same requirement and capabilities must keep producing the same plan and the same refusals |
+| `tests/golden/providers/selection.md` | Seven worked selection plans, committed: the same requirement and capabilities must keep producing the same plan and the same refusals |
 | `tests/test_rfc_schema.py` | 29 tests pinning schema validity, examples, structural invariants, matrix determinism/monotonicity, reference integrity, supersedes acyclicity, fail→pass evidence-recency, scanner-status mapping semantics, and the `vibecheck_v1` round-trip |
 | `tests/test_context.py` | 82 tests pinning context provenance and revisions, derivation determinism, unknown propagation, compensating-control limits, scope projection, the readiness ladder, and the framework-verdict comparison |
 | `tests/test_actions.py` | Increment-4 tests pinning multi-procedure Actions, exact consent scope, attempt effects/rollback, lifecycle completion, deadline labels, and the derived legacy view |
@@ -939,6 +949,7 @@ Acceptance criteria → verification:
 | Every attempted write records consent, environment, result, cleanup (issue #7) | §7.5, R22, `TestWriteAccountability` |
 | An intended public write is confirmed by the owner and then bounded | §6.5, R23, `TestIntendedExposure` |
 | Selection is deterministic for the same requirements and capabilities (issue #8) | §8.2, `TestDeterministicSelection`, `tests/golden/providers/selection.md` |
+| An authorization granted for one environment never runs against another (issue #8) | §8.2, `authorization_scope_mismatch`, `TestConstraintsExclude` |
 | Higher-ranked providers that were unavailable or unsafe are explained (issue #8) | §8.2, `TestRefusalsAreExplained` |
 | Cost, egress, credentials, environment and side effects can exclude a provider (issue #8) | §8.1, `TestConstraintsExclude` |
 | Provider results create normalized Evidence only (issue #8) | §8.1, R24, `TestProvidersOnlyMakeEvidence` |

@@ -251,6 +251,23 @@ def fills_coverage_cell(record, control_id):
                if entry.get("control_id") == control_id)
 
 
+def acts_on_a_live_system(record):
+    """Whether running this provider does something to somebody's deployment.
+
+    Reading the working tree the review was already pointed at is not acting
+    in an environment, so a scoped authorization has nothing to say about it.
+    Anything that needs permission, leaves the machine, or has an effect
+    beyond reading is acting somewhere specific, and *where* is exactly what
+    an authorization grants.
+    """
+    if (record.get("authorization") or {}).get("required"):
+        return True
+    if (record.get("network") or {}).get("outbound"):
+        return True
+    side_effects = record.get("side_effects") or {}
+    return any(side_effects.get(name) for name in _SIDE_EFFECT_GRANTS)
+
+
 # ---------------------------------------------------------------- requirements
 
 def requirement(control_id, environment, cells=None, subjects=None,
@@ -464,6 +481,18 @@ def evaluate(record, req, off):
             "observation never travels between environments."
             % (result["name"], ", ".join(record.get("environments") or ["nothing"]),
                environment)))
+        result["eligible"] = False
+
+    offer_environment = off.get("environment")
+    if (offer_environment and environment and offer_environment != environment
+            and acts_on_a_live_system(record)):
+        result["constraints"].append(_constraint(
+            "authorization_scope_mismatch",
+            "this run is authorized for %s and the requirement is about %s; "
+            "the grant does not stretch, and an observation made in %s would "
+            "not answer the question anyway."
+            % (offer_environment, environment, offer_environment),
+            grant="authorize %s for %s" % (provider_id, environment)))
         result["eligible"] = False
 
     availability = record.get("availability") or {}
@@ -951,7 +980,6 @@ def validate_providers(envelope):
 
         control_ids = ((item.get("claim") or {}).get("control_ids")) or []
         operation = item.get("operation")
-        declared_ops = set()
         for control_id in control_ids:
             entries = _coverage_entries(record, control_id)
             if not entries:
@@ -959,33 +987,88 @@ def validate_providers(envelope):
                     "R24 %s: %s declares no coverage of %s but the evidence "
                     "claims it" % (evidence_id, provider_ref, control_id))
                 continue
+            # Per control, never pooled across them. An anonymous read is a
+            # claim about anonymous access; adding object-level authorization
+            # to the same record does not make the same request cover it, and
+            # a union would let one covered control vouch for the rest.
+            declared_ops = set()
             for entry in entries:
                 declared_ops.update(entry.get("operations") or [])
+            if declared_ops and operation not in declared_ops:
+                problems.append(
+                    "R24 %s: %s does not declare operation %r for %s"
+                    % (evidence_id, provider_ref, operation, control_id))
             max_strength = provider_max_strength(record, control_id)
             if item.get("strength") == "decisive" and max_strength != "decisive":
                 problems.append(
                     "R24 %s: %s can be at most %s about %s, and the evidence "
                     "claims decisive"
                     % (evidence_id, provider_ref, max_strength, control_id))
-        if declared_ops and operation not in declared_ops:
-            problems.append(
-                "R24 %s: %s does not declare operation %r for %s"
-                % (evidence_id, provider_ref, operation,
-                   ", ".join(control_ids) or "this claim"))
 
-        if item.get("coverage"):
-            fills = any(fills_coverage_cell(record, control_id)
-                        for control_id in control_ids)
-            if not fills:
-                problems.append(
-                    "R24 %s: %s fills no coverage cell for %s, so its "
-                    "observation cannot carry one"
-                    % (evidence_id, provider_ref,
-                       ", ".join(control_ids) or "this claim"))
+        problems.extend(_validate_coverage_cells(item, record, provider_ref,
+                                                 control_ids))
 
         problems.extend(_validate_effects(item, record, provider_ref))
 
     return problems
+
+
+def _validate_coverage_cells(item, record, provider_ref, control_ids):
+    """A cell has to be one the capability says this provider can observe.
+
+    The operation check above asks how the observation was made; this asks
+    what it was an observation *of*. A provider that reads a table with the
+    public key did not thereby watch a second account try to delete a row,
+    and a capability that never claimed the actor cannot carry a cell naming
+    it.
+    """
+    cells = item.get("coverage")
+    if not cells:
+        return []
+    evidence_id = item.get("evidence_id")
+    entries = [entry for control_id in control_ids
+               for entry in _coverage_entries(record, control_id)
+               if entry_fills_coverage_cell(entry)]
+    if not entries:
+        return ["R24 %s: %s fills no coverage cell for %s, so its observation "
+                "cannot carry one"
+                % (evidence_id, provider_ref,
+                   ", ".join(control_ids) or "this claim")]
+
+    described = [entry for entry in entries if entry.get("cells")]
+    if not described:
+        # A capability from before cells were declared. It says it can fill
+        # one and does not say which; there is nothing to check it against.
+        return []
+
+    problems = []
+    for cell in cells:
+        if any(_cell_matches(entry, cell) for entry in described):
+            continue
+        problems.append(
+            "R24 %s: %s does not declare that it can observe %s / %s, so its "
+            "observation cannot carry that cell"
+            % (evidence_id, provider_ref, cell.get("actor"),
+               cell.get("operation")))
+    return problems
+
+
+def _opt_in_effects(record):
+    """Effects a run of this provider may be opted into.
+
+    ``requires_effects`` on a coverage entry is the precise statement, and the
+    same one selection gates cells on. ``opt_in_flags`` on its own unlocks
+    writing and nothing further: a flag that turns on an insert probe is not
+    consent to remove data that was there before the review started, and
+    reading it as if it were is how a read-only tool ends up excused for a
+    delete it never declared.
+    """
+    effects = set()
+    for entry in record.get("coverage") or []:
+        effects.update(entry.get("requires_effects") or [])
+    if (record.get("side_effects") or {}).get("opt_in_flags"):
+        effects.add("write")
+    return effects
 
 
 def _validate_effects(item, record, provider_ref):
@@ -993,14 +1076,13 @@ def _validate_effects(item, record, provider_ref):
     evidence_id = item.get("evidence_id")
     observed = item.get("side_effects") or {}
     declared = record.get("side_effects") or {}
-    opt_in = bool(declared.get("opt_in_flags"))
+    opt_in = _opt_in_effects(record)
     for observed_key, declared_key in (("writes", "write"),
                                        ("destructive", "destructive"),
                                        ("external_accounts", "external_accounts")):
         if not observed.get(observed_key):
             continue
-        if declared.get(declared_key) or (opt_in and declared_key
-                                          in ("write", "destructive")):
+        if declared.get(declared_key) or declared_key in opt_in:
             continue
         problems.append(
             "R24 %s: %s declares no %s effect, and the evidence records one"

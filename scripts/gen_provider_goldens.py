@@ -118,6 +118,25 @@ CASES = [
             authorized_effects=LIVE_EFFECTS + ["write"]),
     },
     {
+        "id": "authorized-for-a-different-environment",
+        "title": "Authorized for the pilot, asked about production",
+        "why": "The probe is installed, credentialed and authorized — for the "
+               "pilot. The question is about production. Permission does not "
+               "stretch to a scope nobody approved, and an observation made "
+               "in the pilot would not have answered the question anyway, so "
+               "the plan falls back and asks for the grant it actually needs.",
+        "requirement": providers_mod.requirement(
+            ANON, "public_release",
+            cells=_cells("anonymous", "user_owned_record", "public.orders",
+                         ["read"])),
+        "offer": providers_mod.offer(
+            environment="private_test",
+            targets=["source_tree", "supabase_project"],
+            inputs=PROBE_INPUTS,
+            authorized_providers=["prov-supabase-probe"],
+            authorized_effects=LIVE_EFFECTS),
+    },
+    {
         "id": "no-supabase-guided-fallback",
         "title": "No Supabase project, no Playwright, one available person",
         "why": "The two automated methods are gone for different reasons — "

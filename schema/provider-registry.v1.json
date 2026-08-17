@@ -134,6 +134,12 @@
       "resolvable_by": "environment",
       "records_coverage_gap": true
     },
+    "authorization_scope_mismatch": {
+      "description": "This run was authorized for one environment and the requirement is about another. Permission to probe the staging project is not permission to probe production, and an observation made in staging says nothing about production either way. Both halves of that fail at once, so a provider that acts on a live system is excluded outright rather than quietly re-pointed.",
+      "applicability": false,
+      "resolvable_by": "user_authorization",
+      "records_coverage_gap": true
+    },
     "tool_unavailable": {
       "description": "The provider is not bundled and the tools it needs are not installed here.",
       "applicability": false,
@@ -227,6 +233,7 @@
     "determinism_rule": "The rank keys are a total order over any set of capabilities, and the plan is built by a single pass over that order. The same requirement and the same available capabilities therefore produce the same plan, in the same order, with the same explanation, regardless of the order the capabilities were loaded in.",
     "gap_rule": "A provider excluded for a reason whose constraint kind records a coverage gap is a gap, never a silent skip. The gap names the provider, the constraint, and what would resolve it, and it stays visible in the plan even when a weaker provider was selected in its place.",
     "authorization_rule": "A plan step whose provider declares an effect that requires authorization is not an instruction to run: it is a request. The request names the exact provider, the exact effects, the destinations data would reach, the credentials needed and the cost, and the run may not start until that exact request has been granted.",
+    "authorization_scope_rule": "An authorization is granted for one environment and holds only there. When the offer names a different environment from the requirement, every provider that acts on a live system — one that requires authorization, reaches the network, or has an effect beyond reading — is excluded, because using the grant would both stretch it to a scope nobody approved and produce an observation about the wrong environment. A provider that only reads the source the review was already pointed at is not acting in an environment at all, so the mismatch does not touch it: it stays the last resort of the chain, indicative as always.",
     "closure_rule": "Selection covers cells; it never closes controls. A plan that covers every requested cell has established the requirement it was given, which is a smaller statement than the control. Whether the control closes is decided by the coverage model and the assessment rules (R3, R4, R20) against evidence that actually exists, not by a plan that says the evidence could exist.",
     "no_conclusion_rule": "A provider produces Evidence, with a direction and a strength and a stated scope. It never writes an assessment, a control status or a readiness state. A provider that could produce a conclusion could be pointed at a control and asked for a pass, which is the failure mode this whole model exists to prevent."
   },

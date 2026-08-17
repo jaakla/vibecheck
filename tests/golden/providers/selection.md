@@ -87,6 +87,26 @@ Authorization:
 
 - **required_to_run** — vibecheck Supabase live probe must be supplied with the listed credentials; allowed to send data to the listed destinations; allowed to make network requests to the target; allowed to write to the target system before this step runs.
 
+## Authorized for the pilot, asked about production
+
+The probe is installed, credentialed and authorized — for the pilot. The question is about production. Permission does not stretch to a scope nobody approved, and an observation made in the pilot would not have answered the question anyway, so the plan falls back and asks for the grant it actually needs.
+
+```text
+Requirement: vibecheck.control.authz.anon_data_access in public_release, 1 cell(s).
+EXCLUDED  vibecheck Supabase live probe — this run is authorized for private_test and the requirement is about public_release; the grant does not stretch, and an observation made in private_test would not answer the question anyway.
+n/a       Playwright two-account flow — Playwright two-account flow observes deployed_web_app, which this review does not have.
+n/a       Guided two-account browser test — Guided two-account browser test observes deployed_web_app, which this review does not have.
+SELECTED  Code and policy review — indicative; material only, fills no coverage cell and closes nothing
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+Coverage: 0 of 1 requested cell(s); this plan closes no control.
+GAP       no available provider observes user_owned_record / anonymous / read
+```
+
+Authorization:
+
+- **would_strengthen_the_plan** — vibecheck Supabase live probe is available but unused: authorize prov-supabase-probe for public_release.
+
 ## No Supabase project, no Playwright, one available person
 
 The two automated methods are gone for different reasons — one has nothing to observe, the other is not installed — and only the second is a gap. A person with a browser is what is left, and it is a real observation, not a consolation.

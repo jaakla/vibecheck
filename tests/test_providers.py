@@ -477,6 +477,60 @@ class TestConstraintsExclude(unittest.TestCase):
         self.assertFalse(entry["eligible"])
         self.assertIn("executor_unavailable", constraint_kinds_of(entry))
 
+    def test_an_authorization_granted_elsewhere_does_not_reach_here(self):
+        # Permission to probe the staging project is not permission to probe
+        # production, and an observation made in staging would not answer the
+        # question anyway. Both halves fail at once.
+        requirement = providers.requirement(
+            ANON, "public_release", cells=cells("anonymous", ["read"]))
+        plan = providers.select(requirement,
+                                probe_offer(environment="private_test"))
+        entry = evaluation_for(plan, "prov-supabase-probe")
+        self.assertFalse(entry["eligible"])
+        self.assertIn("authorization_scope_mismatch", constraint_kinds_of(entry))
+        self.assertNotIn("prov-supabase-probe", plan["selected"])
+
+    def test_the_scope_mismatch_names_the_environment_it_would_need(self):
+        requirement = providers.requirement(
+            ANON, "public_release", cells=cells("anonymous", ["read"]))
+        plan = providers.select(requirement,
+                                probe_offer(environment="private_test"))
+        gap = next(gap for gap in plan["gaps"]
+                   if gap["provider_id"] == "prov-supabase-probe")
+        self.assertEqual(
+            ["authorize prov-supabase-probe for public_release"],
+            [constraint["grant"] for constraint in gap["constraints"]])
+
+    def test_reading_the_source_is_not_acting_in_an_environment(self):
+        # The last resort of the chain must survive a scope mismatch: nobody
+        # needs permission to keep reading the tree the review was pointed at.
+        requirement = providers.requirement(
+            ANON, "public_release", cells=cells("anonymous", ["read"]))
+        plan = providers.select(requirement,
+                                probe_offer(environment="private_test"))
+        self.assertEqual(["prov-code-policy-review"], plan["selected"])
+        self.assertFalse(
+            providers.acts_on_a_live_system(
+                providers.capability("prov-code-policy-review")))
+        self.assertTrue(
+            providers.acts_on_a_live_system(
+                providers.capability("prov-supabase-probe")))
+
+    def test_a_matching_scope_is_not_a_mismatch(self):
+        requirement = providers.requirement(
+            ANON, "private_test", cells=cells("anonymous", ["read"]))
+        plan = providers.select(requirement,
+                                probe_offer(environment="private_test"))
+        self.assertIn("prov-supabase-probe", plan["selected"])
+
+    def test_an_offer_that_names_no_environment_still_selects(self):
+        # An offer with no environment states nothing about scope, so it
+        # constrains nothing; the requirement's environment still applies.
+        requirement = providers.requirement(
+            ANON, "private_test", cells=cells("anonymous", ["read"]))
+        plan = providers.select(requirement, probe_offer(environment=None))
+        self.assertIn("prov-supabase-probe", plan["selected"])
+
     def test_a_prerequisite_the_caller_knows_is_unmet_excludes_it(self):
         record = providers.capability("prov-supabase-probe")
         entry = providers.evaluate(
@@ -531,6 +585,39 @@ class TestProvidersOnlyMakeEvidence(unittest.TestCase):
         self.assertIn("does not declare operation",
                       " ".join(canonical.validate_envelope(env)))
 
+    def test_one_covered_control_does_not_vouch_for_another(self):
+        # The probe's anonymous read is declared for anon access and not for
+        # object-level authorization. Adding the second control to the same
+        # record must not let the first control's operation cover it.
+        env = copy.deepcopy(self.env)
+        env["providers"][0] = providers.instantiate(
+            "prov-supabase-probe", control_ids=[ANON, IDOR],
+            egress_destinations=["https://demo.supabase.co"])
+        env["evidence"][0]["claim"]["control_ids"] = [ANON, IDOR]
+        self.assertIn(
+            "does not declare operation 'http_select_anon_head' for %s" % IDOR,
+            " ".join(canonical.validate_envelope(env)))
+
+    def test_an_operation_declared_for_the_claimed_control_is_accepted(self):
+        env = copy.deepcopy(self.env)
+        self.assertEqual([ANON], env["evidence"][0]["claim"]["control_ids"])
+        self.assertEqual([], canonical.validate_envelope(env))
+
+    def test_a_cell_naming_an_actor_the_provider_never_watched_is_refused(self):
+        # The operation check asks how the observation was made; this asks
+        # what it was an observation of. An anonymous read did not watch a
+        # second account.
+        env = copy.deepcopy(self.env)
+        env["evidence"][0]["coverage"][0]["actor"] = "other_account"
+        self.assertIn("does not declare that it can observe other_account",
+                      " ".join(canonical.validate_envelope(env)))
+
+    def test_a_cell_naming_an_operation_the_provider_never_ran_is_refused(self):
+        env = copy.deepcopy(self.env)
+        env["evidence"][0]["coverage"][0]["operation"] = "delete"
+        self.assertIn("does not declare that it can observe anonymous / delete",
+                      " ".join(canonical.validate_envelope(env)))
+
     def test_a_provider_cannot_report_an_environment_it_cannot_observe(self):
         env = copy.deepcopy(self.env)
         env["providers"][0]["environments"] = ["developer_only"]
@@ -559,6 +646,36 @@ class TestProvidersOnlyMakeEvidence(unittest.TestCase):
         self.assertEqual([], [problem
                               for problem in canonical.validate_envelope(env)
                               if "no write effect" in problem])
+
+    def test_an_opt_in_write_flag_is_not_consent_to_delete(self):
+        # --write-probe turns on an insert. A provider that declares
+        # destructive: false may not record a destructive observation because
+        # it happens to have an opt-in flag for something else.
+        capability = providers.capability("prov-supabase-probe")
+        self.assertFalse(capability["side_effects"]["destructive"])
+        self.assertTrue(capability["side_effects"]["opt_in_flags"])
+        env = copy.deepcopy(self.env)
+        env["evidence"][0]["side_effects"]["destructive"] = True
+        self.assertIn("declares no destructive effect",
+                      " ".join(canonical.validate_envelope(env)))
+
+    def test_a_provider_that_declares_the_delete_cell_may_record_one(self):
+        # Playwright names delete cells behind requires_effects, so the same
+        # rule that refuses the probe admits the flow.
+        self.assertEqual(
+            {"write", "destructive"},
+            providers._opt_in_effects(
+                providers.capability("prov-playwright-two-account")))
+        self.assertEqual(
+            {"write"},
+            providers._opt_in_effects(
+                providers.capability("prov-supabase-probe")))
+
+    def test_an_opt_in_flag_never_excuses_an_external_account_effect(self):
+        env = copy.deepcopy(self.env)
+        env["evidence"][0]["side_effects"]["external_accounts"] = True
+        self.assertIn("declares no external_accounts effect",
+                      " ".join(canonical.validate_envelope(env)))
 
     def test_undeclared_data_egress_is_refused(self):
         env = copy.deepcopy(self.env)
