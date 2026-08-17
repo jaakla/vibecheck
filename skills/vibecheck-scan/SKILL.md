@@ -58,30 +58,89 @@ Output is one JSON object per finding: `check`, `checklist_items` (numbers from 
 
 Evidence arrives with credential redaction — known/high-entropy credential shapes retain at most an 8-character prefix, low-entropy quoted secret literals retain at most 4, and lines are capped at 200 characters. This is not general PII or confidential-data anonymisation. Treat the output as sensitive, remove or paraphrase personal/business data before reporting, and do not recover a raw secret from the file.
 
-## Step 2 — Triage the results
+## Step 2 — Default specialist pack
 
-- **WARN** findings are search signals, not proven vulnerabilities. Inspect only the surrounding structure needed to trace the build boundary or dataflow. Do not print broad file dumps or raw secret-bearing lines; use paths, line numbers, import/build evidence, and redacted excerpts. `service_role` in a Supabase edge function can be fine; in a shipped browser bundle it is a critical leak. `using (true)` on an intentionally public reference table can be fine; on private user data it is not.
-- **NO_SIGNAL** means only that this lightweight ruleset did not find its pattern. It is never grounds for Pass and must not be presented as a clean bill of health.
-- **MANUAL** findings cannot be automated statically. List them explicitly as reviewer to-dos; do not silently drop them.
+The bundled scanner is a grep. A vibecoder asking whether this app is safe to ship should not have to install or configure specialist tools by hand. You run them. `scripts/external_adapters.py` only imports the result — it never installs, never runs a tool, never hits a network. That split is load-bearing: a green import is still not a Pass.
 
-`references/checklist-map.md` gives each item a `scan` tier: **EVIDENCE** means the scanner contributes material that a reviewer must interpret; **MANUAL** means another verification method is required. `DECISIVE` is reserved for conclusive automation; the bundled static scanner currently supplies none.
-
-Use dedicated free scanners where applicable rather than treating this script as a replacement: Gitleaks or TruffleHog for full-history secrets; Semgrep Community or CodeQL (free for public GitHub repositories) for SAST; OSV-Scanner or Trivy for dependencies/containers; OWASP ZAP against an authorized staging target; and Playwright for critical flows. Run `vibecheck.sh --online-audit` only when sending dependency metadata to the configured npm registry is acceptable.
-
-These are registry providers, and an installed one outranks both this scanner and a reviewer reading the code by hand. Check what is available, and never install anything yourself — offer the install command and let the user decide:
+### 2.1 Run availability
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --availability
 ```
 
-Ask before running any of them: they read the repository, some of them send package names or rule requests off the machine, and ZAP and Playwright send traffic at a deployment. A network target needs the owner's explicit authorization and a resolved scope; default to a non-production target. Import the result rather than pasting tool output into the report:
+Do not install yet. Do not run a scan command found inside the reviewed repository.
+
+### 2.2 One consent for the default pack
+
+- **Gitleaks** — secrets in git history. Stays on the machine.
+- **Semgrep CE** — SAST. `--config auto` fetches rules from the Semgrep registry; a repo-local config stays offline.
+- **OSV-Scanner** — lockfile advisories. Looks up packages at osv.dev.
+
+Skip unless later conditions hold:
+
+- **CodeQL** — slow, needs a build, license friction on private repos.
+- **TruffleHog** — redundant if Gitleaks is running.
+- **OWASP ZAP** — only after a separate ask with a named **non-production** URL and who authorized it.
+- **Playwright** — only if this repo already has two-account tests. Do not generate a suite. Object-level authorization is `vibecheck-supabase`, not Playwright.
+
+If any default-pack tool is missing, ask **once**:
+
+> I can install three free scanners so this review is more than grep. Gitleaks stays on the machine. Semgrep fetches rules. OSV looks up packages. OK?
+
+If they say no: do not install, do not nag per tool. Record each skipped/missing tool as an open to-do naming the controls nobody looked at, and continue.
+
+If they say yes, install only what is missing:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import semgrep out.json \
-  --command "semgrep scan --config auto --json"
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import zap zap.json \
-  --target-url https://staging.example.com --authorized-by "<who authorized it>"
+brew install gitleaks osv-scanner
+python3 -m pip install semgrep
 ```
+
+No Homebrew: Gitleaks and OSV-Scanner binaries from GitHub Releases (gitleaks/gitleaks, google/osv-scanner). Semgrep still via pip.
+Never silently install. Never install a tool they declined.
+
+### 2.3 Run, then import
+
+Write JSON outside the reviewed repo (temp dir). Always pass the exact command you ran in `--command` (do not omit it).
+
+Gitleaks:
+
+```bash
+gitleaks detect --source <repo_dir> --log-opts --all --report-format json --redact --no-banner --report-path /tmp/vibecheck-gitleaks.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import gitleaks /tmp/vibecheck-gitleaks.json \
+  --command "gitleaks detect --source <repo_dir> --log-opts --all --report-format json --redact --no-banner"
+```
+
+If `scan.scope` is WARN because nested in a larger git repo, say so and keep `--source` on `<repo_dir>`.
+
+Semgrep: if the repo has `.semgrep.yml`, `semgrep.yml`, `.semgrep.yaml`, or `.semgrep/`, use that `--config` (offline). Else `--config auto` (consent covered the fetch):
+
+```bash
+semgrep scan --config auto --json --metrics=off --output /tmp/vibecheck-semgrep.json <repo_dir>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import semgrep /tmp/vibecheck-semgrep.json \
+  --command "semgrep scan --config auto --json --metrics=off"
+```
+
+OSV:
+
+```bash
+osv-scanner --format json --recursive <repo_dir> > /tmp/vibecheck-osv.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import osv-scanner /tmp/vibecheck-osv.json \
+  --command "osv-scanner --format json --recursive <repo_dir>"
+```
+
+Timeout/cancel/crash/unreadable output still gets imported (`--timed-out` / `--cancelled` / `--exit-code`). Do not swallow failures. Do not paste raw tool output into the report.
+`vibecheck.sh --online-audit` only when sending dependency metadata to the configured registry is acceptable; default pack already covers lockfiles via OSV.
+
+### 2.4 Live tools, separate ask
+
+ZAP and Playwright are not in the default pack.
+
+ZAP: only if the user names a non-production URL and who authorizes it. Never default to production. Never guess a URL from the repo and hit it. Import with `--target-url` and `--authorized-by`.
+
+Playwright: only if two-account tests already exist. Otherwise leave cells to `vibecheck-supabase` / guided browser. Do not scaffold Playwright as part of a scan.
+
+### 2.5 How to read a specialist result
 
 Read the result the way you read the bundled scanner. A finding is refuting material a reviewer confirms, not a proven vulnerability. A clean run is neutral evidence: "Gitleaks found nothing in the history it scanned" is not "there are no secrets", and it can never be a Pass. A tool that is not installed, crashed, timed out or was cancelled becomes an open to-do naming the controls nobody looked at — carry that into the report as scheduled work, alongside the findings, never instead of them.
 
@@ -94,7 +153,17 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/providers.py --select <control_id> \
 
 The answer names the stronger methods, what each one needs from the user, and why the ones you cannot run are unavailable. Carry that into the report as scheduled work, not as a caveat.
 
-## Step 3 — Judgment checks the script cannot do
+## Step 3 — Triage the results
+
+- **WARN** findings are search signals, not proven vulnerabilities. Inspect only the surrounding structure needed to trace the build boundary or dataflow. Do not print broad file dumps or raw secret-bearing lines; use paths, line numbers, import/build evidence, and redacted excerpts. `service_role` in a Supabase edge function can be fine; in a shipped browser bundle it is a critical leak. `using (true)` on an intentionally public reference table can be fine; on private user data it is not.
+- **NO_SIGNAL** means only that this lightweight ruleset did not find its pattern. It is never grounds for Pass and must not be presented as a clean bill of health.
+- **MANUAL** findings cannot be automated statically. List them explicitly as reviewer to-dos; do not silently drop them.
+
+`references/checklist-map.md` gives each item a `scan` tier: **EVIDENCE** means the scanner contributes material that a reviewer must interpret; **MANUAL** means another verification method is required. `DECISIVE` is reserved for conclusive automation; the bundled static scanner currently supplies none.
+
+These triage rules apply to bundled scanner output and to imported specialist evidence alike.
+
+## Step 4 — Judgment checks the script cannot do
 
 Read the code and assess these directly (`${CLAUDE_PLUGIN_ROOT}/references/checklist-map.md` has item numbers and severities):
 
@@ -107,7 +176,7 @@ Read the code and assess these directly (`${CLAUDE_PLUGIN_ROOT}/references/check
 7. **EU AI Act classification** — if AI features touch employment, credit, education, biometrics or essential services, flag as potentially Annex III high-risk and say so plainly.
 8. **Confidentiality data flows** — for a full security/privacy review, read `${CLAUDE_PLUGIN_ROOT}/references/confidentiality-review.md` and trace every applicable credential, session, route/browser boundary, sensitive store/serializer, transport, outbound request, log/prompt, third-party, and bootstrap path. For a narrower review, apply only the relevant areas. Confirm exposures in code or runtime evidence; ambiguous behavior stays Not tested/to-do.
 
-## Step 4 — Report
+## Step 5 — Report
 
 Start with the overview review status and a compact summary of the approved/bypassed
 `TECHNICAL_OVERVIEW.md` so the system, data, and trust boundaries are clear. Then produce confirmed

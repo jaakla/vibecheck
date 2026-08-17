@@ -13,9 +13,11 @@ The acceptance criteria this file stands for:
   * several providers contribute evidence to one assessment without
     overwriting each other.
 """
+import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -806,6 +808,44 @@ class TestMultiProviderAssessment(unittest.TestCase):
                       if item["direction"] == "supports"]
         self.assertEqual(1, len(supporting))
         self.assertEqual(1, len(supporting[0]["coverage"]))
+
+# -------------------------------------------------------------------- CLI
+
+class TestCli(unittest.TestCase):
+    """The CLI must not invent an invocation from the report filename."""
+
+    def _import(self, extra_argv):
+        handle = tempfile.NamedTemporaryFile(
+            "w", suffix=".json", delete=False, encoding="utf-8")
+        try:
+            handle.write("[]")
+            handle.close()
+            captured = io.StringIO()
+            argv = ["--import", "gitleaks", handle.name] + extra_argv
+            old = sys.stdout
+            try:
+                sys.stdout = captured
+                code = ext._cli(argv)
+            finally:
+                sys.stdout = old
+            self.assertEqual(0, code)
+            env = json.loads(captured.getvalue())
+            return env, os.path.basename(handle.name)
+        finally:
+            os.unlink(handle.name)
+
+    def test_omitted_command_does_not_invent_provenance_from_the_filename(self):
+        env, filename = self._import([])
+        scope = env["evidence"][0]["scope"]
+        self.assertIn("command not recorded", scope)
+        self.assertNotIn(filename, scope)
+
+    def test_provided_command_still_travels_in_the_evidence_scope(self):
+        command = ("gitleaks detect --source . --log-opts --all "
+                   "--report-format json --redact")
+        env, _filename = self._import(["--command", command])
+        self.assertIn(command, env["evidence"][0]["scope"])
+
 
 
 if __name__ == "__main__":

@@ -728,7 +728,9 @@ The bundled detection is a grep, and a grep is the weakest thing in this registr
 over git history, OSV-Scanner and Trivy over dependencies, Semgrep CE and CodeQL over source,
 OWASP ZAP against an authorized deployment — alongside the Playwright two-account flow that
 was already declared. `scripts/external_adapters.py` imports what each one produced; it never
-runs, installs, or fetches anything.
+runs, installs, or fetches anything. The scan skill may install and run the
+default pack after one explicit user yes, then import; that is
+instruction-level execution, not a Python runner.
 
 Each of them declares the same things every provider declares (§8.1) plus `run_semantics`:
 what a **timeout**, a **cancellation**, a **crash** and a **partial result** mean for the
@@ -1131,16 +1133,16 @@ Acceptance criteria → verification:
     founder-facing EN/ET wording lands with the founder report (#5), alongside the rest of
     the founder vocabulary.
 12. **Detecting provider availability rather than being told it.**
-    `availability.requires_tools` and `required_targets` are compared against what the
-    caller declares, because probing the machine for installed tooling — and the application
-    for a Supabase project — is a separate piece of discovery with its own failure modes.
-    Increment 7's external adapters are where that question has to be answered; until then
-    a caller that under-declares its targets gets a weaker plan, not a wrong one.
-13. **Provider selection driving execution.** Increment 6 chooses and explains; it does not
-    run anything. The bridge from a selected plan to an authorized `ProcedureAttempt` — one
-    plan step becoming one Procedure with one consent record — is Increment 7 work, and it
-    is deliberately a separate decision from choosing the method.
-12. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
+    Increment 7 now detects specialist-tool PATH via `shutil.which`. Remaining work is
+    probing the application for targets (a Supabase project, a deployed URL), not whether
+    Gitleaks is installed. A caller that under-declares its application targets still gets
+    a weaker plan, not a wrong one.
+13. **Provider selection driving execution.** Skill-level run-after-consent is this
+    increment: the scan skill asks once, then installs/runs/imports the default pack. A
+    Python bridge from a selected plan to an authorized `ProcedureAttempt` — one plan
+    step becoming one Procedure with one consent record — is later work, and it is
+    deliberately a separate decision from choosing the method.
+14. **Tenancy as a derivation input.** Recorded and reported, but not a second automatic
     impact adjustment: `audience_scale` already accounts for how many parties a failure
     reaches, and counting both double-counts blast radius. Revisit if pilots show
     multi-tenant failures landing systematically harder than the audience band predicts.

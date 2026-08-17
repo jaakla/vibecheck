@@ -1430,7 +1430,7 @@ def _cli(argv=None):
 
     run = run_record(
         command=(options["command"].split() if options.get("command")
-                 else [tool, path]),
+                 else None),
         exit_code=(int(options["exit_code"]) if options.get("exit_code")
                    else None),
         timed_out=options.get("timed_out", False),
