@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regenerate references/checklist-map.md from items.py (single source of truth).
+"""Regenerate references/checklist-map.md from the canonical vibecheck_v1 mapping.
 
-Coverage tiers come from items.SCANNER_CHECKS, which is verified against the
-emit() calls in vibecheck.sh by tests/test_coverage_map.py — so the map can no
-longer drift from what the scanner actually checks.
+Item text, severity and verification come from controls.build_framework_mapping()
+— the same source the workbook and the assessment model read. Coverage tiers come
+from items.SCANNER_CHECKS, which tests/test_coverage_map.py verifies against the
+emit() calls in vibecheck.sh, so the map cannot drift from what the scanner
+actually checks. This is a generator, so importing the authoring input is fine.
 
 Usage: python3 scripts/gen_map.py [--check]   (run from anywhere)
 """
@@ -14,7 +16,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import controls  # canonical vibecheck_v1 mapping (issue #10 cutover)
+import controls  # canonical vibecheck_v1 mapping
 from items import TIER_ORDER, coverage_by_item, item_count
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,9 +25,9 @@ OUT = os.path.join(REPO_ROOT, "references", "checklist-map.md")
 cov = coverage_by_item()
 n_items = item_count()
 
-# Increment 8 cutover: the map renders from the canonical vibecheck_v1 framework
-# mapping (the lossless projection of items.py), so item text, verification and
-# coverage can no longer drift from what the workbook and assessment consume.
+# The map renders from the canonical vibecheck_v1 framework mapping (the lossless
+# projection of items.py), so item text, verification and coverage cannot drift
+# from what the workbook and the assessment model consume.
 _mapping = controls.build_framework_mapping()
 rows = []
 for e in sorted(_mapping["entries"], key=lambda e: e["item_number"]):

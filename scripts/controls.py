@@ -10,10 +10,9 @@ reused and never renamed, so a wording change in items.py must never move a
 control's identity. Renumbering the workbook must never move it either — that
 is why row numbers may not leak into slugs (tests/test_canonical.py pins it).
 
-items.py is the authoring input for wording, severity, verification and
-scanner coverage (Increment 8 cut over the runtime consumers to the mapping;
-items.py now feeds this module only, with a deprecation window documented in
-RFC 0001 §11.4). This module derives from it:
+items.py is the generator-only authoring input for wording, severity,
+verification and scanner coverage; nothing reads it at runtime (RFC 0001 §11.4).
+This module derives from it:
 
   build_registry()             -> schema/vibecheck.controls.v1.json
   build_framework_mapping()    -> schema/mappings/vibecheck_v1.json
@@ -27,6 +26,16 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from items import CATEGORIES, WEIGHT, VERIFICATION, SCANNER_CHECKS, item_count
+
+# WEIGHT (severity -> workbook weight) is deliberately part of this module's
+# surface: consumers read the scoring table from the canonical module rather
+# than reaching into the authoring input. The same numbers appear on every
+# mapping entry as `weight`.
+__all__ = ["WEIGHT", "CONTROL_IDS", "ITEM_NUMBERS", "STATUS_MAP",
+           "REGISTRY_NAME", "REGISTRY_VERSION", "FRAMEWORK",
+           "FRAMEWORK_VERSION", "build_registry", "build_framework_mapping",
+           "build_focus_framework", "scanner_tier",
+           "scanner_covered_control_ids"]
 
 REGISTRY_NAME = "vibecheck.controls"
 REGISTRY_VERSION = "1.0.0"
@@ -234,12 +243,26 @@ def scanner_tier(check_id):
     SCANNER_CHECKS data). Returns None for an unknown check, matching the
     legacy `items.SCANNER_CHECKS.get(check, ...)` fallback behaviour at the
     call site. Consumers read tiers here so the assessment pipeline does not
-    depend on items.py directly after cutover (issue #10)."""
+    depend on items.py directly."""
     for entry in build_framework_mapping()["entries"]:
         for check in entry.get("scanner_checks") or []:
             if check["check_id"] == check_id:
                 return check["tier"]
     return None
+
+
+def scanner_covered_control_ids():
+    """Control IDs the bundled scanner's checks touch, in registry order.
+
+    The same set the legacy `items.SCANNER_CHECKS` item numbers expanded to,
+    read from the canonical mapping so provider coverage does not depend on
+    items.py. Item numbers stay an internal detail of the vibecheck_v1 view."""
+    covered = []
+    for entry in sorted(build_framework_mapping()["entries"],
+                        key=lambda e: e["item_number"]):
+        if entry.get("scanner_checks"):
+            covered.append(entry["control_id"])
+    return covered
 
 
 def build_framework_mapping():
@@ -278,7 +301,7 @@ def build_framework_mapping():
 
 
 # ---------------------------------------------------------------------------
-# Second sample framework: founder_focus (Increment 8, issue #10).
+# Second sample framework: founder_focus.
 #
 # Proves the mapping model is reusable: a completely different framework view —
 # a short founder-side go/no-go list — reuses the same stable control records
