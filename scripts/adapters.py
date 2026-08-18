@@ -6,13 +6,19 @@ Import (legacy tool output -> vibecheck.assessment envelope):
   import_scanner_jsonl(lines, ...)      vibecheck.sh JSONL stream  (§11.1)
   import_supabase_probe(probe, env, ..) supabase_probe.py JSON     (§11.2)
   import_rls_analysis(analysis, ...)    analyze_sql.py JSON        (§11.2)
+  import_workbook_rows(rows, ...)      legacy review-workbook cells (§11.3)
 
-All importers produce Signals (raw archive), Evidence and Actions only —
+All tool importers produce Signals (raw archive), Evidence and Actions only —
 never Assessments: providers propose material, a human or accountable process
-decides (§6.3). NO_SIGNAL becomes neutral evidence, which can never support a
-pass (rule R3), and MANUAL/NOT_TESTED become open verify actions so nothing is
-silently skipped. Raw values are redacted and bounded before they enter the
-envelope; secret-bearing raw results are never copied in.
+decides (§6.3). NO_SIGNAL emitted by a tool becomes neutral evidence, which can
+never support a pass (rule R3), and MANUAL/NOT_TESTED become open verify actions
+so nothing is silently skipped. Raw values are redacted and bounded before they
+enter the envelope; secret-bearing raw results are never copied in.
+
+`import_workbook_rows` is the one deliberate exception: a completed legacy
+workbook *is* the human's decision, so its cells become canonical Assessments
+(and the notes of pass/partial/fail cells become scoped Evidence, because the
+schema requires an evidence-backed status).
 
 Live probe results additionally carry the authorization coverage cell they
 establish — one object, one actor, one operation, one environment (rule R20).
@@ -34,16 +40,16 @@ Export (envelope -> current output contracts):
 import datetime
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import canonical
 import actions as actions_mod
 import authz as authz_mod
-import items
 import providers as providers_mod
 from controls import (CONTROL_IDS, ITEM_NUMBERS, STATUS_MAP,
-                      REGISTRY_NAME, REGISTRY_VERSION)
+                      REGISTRY_NAME, REGISTRY_VERSION, scanner_tier)
 
 SCANNER_TOOL = "vibecheck.sh"
 PROBE_TOOL = "supabase_probe.py"
@@ -215,7 +221,7 @@ def import_scanner_jsonl(lines, app_name="unknown application",
         env["signals"].append(signal)
 
         claim = _claim(obj.get("checklist_items") or [])
-        tier = items.SCANNER_CHECKS.get(check, (None, "EVIDENCE"))[1]
+        tier = scanner_tier(check) or "EVIDENCE"
 
         if status in ("WARN", "NO_SIGNAL") and claim["control_ids"]:
             if status == "WARN":
@@ -789,9 +795,244 @@ def export_workbook_rows(env, lang="en"):
         notes = (asm.get("basis") or {}).get("rationale", "")
         acceptance = asm.get("acceptance")
         if acceptance:
+            review_by = acceptance.get("review_by", "?")
+            if isinstance(review_by, str) and review_by.endswith("T00:00:00Z"):
+                review_by = review_by[:10]
             notes = ("%s [Accepted by %s: %s; review by %s]" % (
                 notes, acceptance.get("accepted_by", "?"),
-                acceptance.get("reason", "?"),
-                acceptance.get("review_by", "?"))).strip()
+                acceptance.get("reason", "?"), review_by)).strip()
         rows[n] = {"status": wording, "notes": notes}
     return rows
+
+
+# --------------------------------------------------------- workbook rows (§11.3)
+
+#: Reverse of STATUS_MAP: workbook display wording (per language) -> canonical
+#: status. Built lazily because it depends on the per-language wording tables.
+_WORKBOOK_WORDING_TO_STATUS = None
+
+
+def _workbook_map():
+    global _WORKBOOK_WORDING_TO_STATUS
+    if _WORKBOOK_WORDING_TO_STATUS is None:
+        _WORKBOOK_WORDING_TO_STATUS = {}
+        for canonical_status, langs in STATUS_MAP.items():
+            for lang, wording in langs.items():
+                _WORKBOOK_WORDING_TO_STATUS[(lang, wording)] = canonical_status
+    return _WORKBOOK_WORDING_TO_STATUS
+
+
+_ACCEPTANCE_RE = None
+
+
+def _acceptance_suffix(notes):
+    """Split a notes cell into (rationale, acceptance_record). The workbook
+    export composes acceptance as a trailing "[Accepted by ...]" block; this is
+    the inverse, so a workbook row round-trips into an assessment without the
+    acceptance being misread as plain rationale."""
+    global _ACCEPTANCE_RE
+    if _ACCEPTANCE_RE is None:
+        _ACCEPTANCE_RE = re.compile(
+            r"\s*\[Accepted by ([^:]+): ([^;]+); review by ([^\]]+)\]\s*$")
+    m = _ACCEPTANCE_RE.search(notes)
+    if not m:
+        return notes, None
+    rationale = notes[:m.start()].strip()
+    accepted_by, reason, review_by = m.groups()
+    reason = reason.strip()
+    review_by = review_by.strip()
+    if not review_by:
+        review_by = None
+    return rationale, {
+        "accepted_by": accepted_by.strip(), "reason": reason,
+        "review_by": review_by,
+    }
+
+
+def normalized_acceptance(acceptance):
+    """Acceptance records demand a full timestamp in `review_by`; a legacy
+    workbook cell usually carries a plain review-by date. Normalize a YYYY-MM-DD
+    to the start of that day in UTC, and refuse anything unparseable so a typo
+    is not silently kept."""
+    record = dict(acceptance)
+    review_by = record.get("review_by")
+    if not review_by:
+        return record
+    try:
+        datetime.datetime.strptime(review_by, "%Y-%m-%d")
+        record["review_by"] = review_by + "T00:00:00Z"
+    except ValueError:
+        pass  # already a full timestamp, or malformed; let the schema decide
+    return record
+
+
+def import_workbook_rows(rows, lang="en", assessment_id="legacy-workbook",
+                         context_id="ctx-legacy-workbook", app_name="legacy workbook",
+                         now=None, env=None):
+    """Migrate a legacy workbook into canonical Assessments (RFC §11.3).
+
+    `rows` maps item numbers (1-89) to workbook cells:
+        {item_number: {"status": <workbook wording>, "notes": <text>}}
+
+    Semantic rules:
+      * a blank status imports *no* assessment (deliberately distinct from an
+        explicit "Not tested"),
+      * a status wording that has no canonical counterpart in this language is
+        refused (no silent guessing),
+      * accepted-risk notes carry the [Accepted by ...] block, which is split
+        back out into the structured acceptance record so the re-exported row
+        is identical,
+      * N/A is allowed only on non-Critical/non-High controls with the reason
+        captured; Critical/High N/A is refused (matches the workbook gate),
+      * Accepted risk is refused on Critical controls (rule R5) and refused
+        without a parseable acceptance record,
+      * pass/partial/fail is refused with an empty notes cell, because the
+        note is the only evidence a legacy row carries.
+
+    A refused row is reported in `problems` and produces no assessment, so a
+    workbook cell the gates forbid can never enter the envelope as a valid-
+    looking assessment. The rows the workbook itself counts as violations
+    (Critical accepted, acceptance without a reason, Pass without evidence)
+    are exactly the ones refused here.
+
+    Returns a canonical envelope fragment (assessments) ready to be merged into
+    an envelope, plus the created envelopes' evidence/accepted-risk view. The
+    control's intrinsic severity and item mapping come from the canonical
+    registry/mapping, so nothing is re-rated by this migration.
+    """
+    mapping = canonical.load_framework_mapping()
+    by_number = {e["item_number"]: e for e in mapping["entries"]}
+    w2s = _workbook_map()
+    created_at = _iso(_parse_now(now))
+
+    if env is None:
+        env = _envelope("va-" + assessment_id, context_id, app_name,
+                        "Legacy workbook assessment migrated on import",
+                        [{"environment": "developer_only",
+                          "intended_use": "prototype_demo"}],
+                        created_at)
+        env["signals"] = []
+    env.setdefault("evidence", [])
+    env.setdefault("signals", [])
+
+    assessments = []
+    problems = []
+    for n in sorted(rows):
+        cell = rows[n] or {}
+        status_word = (cell.get("status") or "").strip()
+        notes = (cell.get("notes") or "").strip()
+        if not status_word:
+            continue  # blank -> not reviewed -> no assessment object
+
+        key = (lang, status_word)
+        if key not in w2s:
+            problems.append(
+                "workbook status %r (lang %s) has no canonical counterpart"
+                % (status_word, lang))
+            continue
+        status = w2s[key]
+        entry = by_number.get(n)
+        if entry is None:
+            problems.append("item number %d is not in the vibecheck_v1 mapping" % n)
+            continue
+        severity = entry["severity"]
+        entry_kind = entry.get("kind", "control")
+
+        if status == "not_applicable" and severity in ("Critical", "High"):
+            problems.append(
+                "item %d: N/A on a Critical/High control requires a reason; "
+                "the workbook gate forbids N/A on Critical/High without it"
+                % n)
+            continue
+
+        # Rule R5: a Critical control can never be accepted, only fixed or
+        # escalated. The workbook says so in its own instructions and counts
+        # the violation (m_critacc), so a legacy file can carry the cell;
+        # importing it would produce an envelope validate_envelope refuses.
+        if status == "risk_accepted" and severity == "Critical":
+            problems.append(
+                "item %d: Critical controls cannot be marked Accepted risk "
+                "(rule R5); fix or escalate the item instead" % n)
+            continue
+
+        rationale, acceptance = _acceptance_suffix(notes)
+        if status == "not_applicable" and rationale:
+            rationale = "N/A reason: %s" % rationale
+
+        # An acceptance is a named decision with a review date; the schema
+        # requires the record for risk_accepted. A cell whose notes carry no
+        # parseable "[Accepted by ...]" block is an incomplete acceptance
+        # (the workbook's m_narat counter), not one to invent a record for.
+        if status == "risk_accepted" and acceptance is None:
+            problems.append(
+                "item %d: Accepted risk needs who accepted it, why, and a "
+                "review-by date in the notes ('[Accepted by NAME: REASON; "
+                "review by YYYY-MM-DD]')" % n)
+            continue
+
+        # Rule R5, other half: the screening statuses belong to the AI-Act
+        # triage controls and mean nothing on an ordinary control.
+        if status in ("answered", "needs_specialist") and entry_kind != "screening":
+            problems.append(
+                "item %d: %r is a screening status and is only valid on a "
+                "screening control (rule R5)" % (n, status_word))
+            continue
+
+        # pass/partial/fail must rest on evidence, and the notes cell is the
+        # only evidence a legacy row carries. With no notes there is nothing
+        # to scope evidence to, so the status cannot be substantiated.
+        if status in ("pass", "partial", "fail") and not rationale:
+            problems.append(
+                "item %d: %r needs a note to stand as evidence; an empty "
+                "notes cell cannot support the status" % (n, status_word))
+            continue
+
+        # Every assessment states why (schema: basis.rationale minLength 1).
+        # A status with an empty notes cell records a decision with no reason,
+        # which the envelope cannot represent.
+        if not rationale:
+            problems.append(
+                "item %d: %r needs a note saying why; an assessment cannot "
+                "record a decision with no rationale" % (n, status_word))
+            continue
+
+        refs = []
+        # A pass/partial/fail assessment must rest on evidence (schema rule);
+        # the legacy notes cell becomes that scoped evidence, so the migration
+        # does not drop the references the cell carries. The guard above has
+        # already refused these statuses without a note.
+        if status in ("pass", "partial", "fail"):
+            evidence_id = "ev-wb-%s-%03d" % (assessment_id, n)
+            env["evidence"].append({
+                "evidence_id": evidence_id,
+                "provider": providers_mod.evidence_provider_block(
+                    "prov-code-policy-review"),
+                "subject": {"kind": "repo", "locator": "."},
+                "environment": "developer_only",
+                "operation": "policy_source_review",
+                "scope": rationale,
+                "claim": {"control_ids": [entry["control_id"]],
+                          "statement": rationale},
+                "direction": ("supports" if status == "pass"
+                              else "neutral" if status == "partial"
+                              else "refutes"),
+                "strength": "indicative",
+                "observed_at": created_at,
+            })
+            refs = [evidence_id]
+
+        asm = {
+            "assessment_id": "asm-%s-%03d" % (assessment_id, n),
+            "control_id": entry["control_id"],
+            "status": status,
+            "assessor": {"kind": "human", "id": "legacy-workbook-import"},
+            "assessed_at": created_at,
+            "basis": {"rationale": rationale, "evidence_refs": refs},
+        }
+        if acceptance:
+            asm["acceptance"] = normalized_acceptance(acceptance)
+        assessments.append(asm)
+    env["assessments"] = assessments
+    if env.get("evidence"):
+        _attach_capability(env, "prov-code-policy-review")
+    return env, problems

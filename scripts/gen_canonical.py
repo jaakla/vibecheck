@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """Regenerate the canonical control registry and vibecheck_v1 framework mapping.
 
-Outputs (both derived from scripts/items.py + scripts/controls.py):
+Outputs (derived from scripts/items.py + scripts/controls.py):
 
   schema/vibecheck.controls.v1.json   stable control registry
   schema/mappings/vibecheck_v1.json   full 89-entry lossless framework mapping
+  schema/mappings/founder_focus_v1.json  sample second framework reusing controls
 
 Usage: python3 scripts/gen_canonical.py [--check]   (run from anywhere)
 
@@ -23,6 +24,7 @@ import controls
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY_OUT = os.path.join(REPO_ROOT, "schema", "vibecheck.controls.v1.json")
 MAPPING_OUT = os.path.join(REPO_ROOT, "schema", "mappings", "vibecheck_v1.json")
+FOCUS_OUT = os.path.join(REPO_ROOT, "schema", "mappings", "founder_focus_v1.json")
 
 
 def render(doc):
@@ -33,6 +35,7 @@ def artifacts():
     return {
         REGISTRY_OUT: render(controls.build_registry()),
         MAPPING_OUT: render(controls.build_framework_mapping()),
+        FOCUS_OUT: render(controls.build_focus_framework()),
     }
 
 

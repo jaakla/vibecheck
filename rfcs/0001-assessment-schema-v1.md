@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted; implemented through Increment 6 |
+| Status | Accepted; implemented through Increment 8 |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
@@ -32,7 +32,14 @@ fallback chain, and moved the bundled scanner, migration analysis and Supabase p
 the provider contract. Increment 7 (#9) shipped the external specialist adapters: seven
 maintained tools declared as providers with their availability, authorization, egress, cost,
 side effects and run semantics, and one import path that keeps a missing tool, a crash, a
-timeout and a partial result explicit. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are
+timeout and a partial result explicit. Increment 8 (#10) made the normalized model
+canonical: the workbook and checklist map render from the vibecheck_v1 framework mapping
+(not from items.py), the mapping and each of its entries carry provenance, the schema
+supports many-to-many item <-> control edges, a second sample framework (founder_focus)
+reuses the same control records without duplication, legacy workbook rows migrate into
+canonical assessments through `import_workbook_rows` and round-trip exactly, and direct
+legacy paths (positional items.py tuples, scanner-check maps) have a documented deprecation
+window with no silent behaviour change. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are
 normative for the shipped code (schema version 1.6.0, additive; coverage model 1.1.0;
 provider registry 1.0.0).
 
@@ -153,6 +160,16 @@ the canonical→workbook status wording per language.
 `tests/test_rfc_schema.py::VibecheckV1RoundTrip` round-trips the shipped entries against
 `scripts/items.py`, `SCANNER_CHECKS`, `VERIFICATION`, and the workbook `STR` table —
 losslessness is a test, not a promise.
+
+The mapping and each entry carry **provenance** (source, review method/date, change policy,
+and per-edge rationale) so a later reader can tell how an item <-> control edge was
+established. **Many-to-many** is explicit: one framework item may span several controls via
+`related_control_ids`, and one control may satisfy many items across frameworks — the
+registry holds each control once, every framework view only references it (pinned by
+`tests/test_framework_mappings.py`). Since a second framework may number its items
+differently, `item_number` and `category.number` are no longer hard-capped at the
+vibecheck_v1 maxima (89/18) in the shared schema. Historical envelopes retain the mapping
+version current at assessment time and are never re-mapped in place.
 
 ## 4. Environments, intended uses, readiness
 
@@ -893,13 +910,46 @@ structurally. Verdict ladders (BLOCK, FIX BEFORE RELEASE, …) become derived vi
 assessments + readiness; they are not stored and their gates map onto the readiness
 derivation of §4.2.
 
+Increment 8 ships `adapters.import_workbook_rows` as the importer half of this mapping:
+legacy cells become canonical Assessments (never Assessment-less evidence), a blank status
+stays absent, unknown wording is refused rather than guessed, N/A on Critical/High is
+refused, pass/partial/fail cells become scoped Evidence the assessment references (the
+schema's evidence-backed status rule), and `[Accepted by ...]` cells come back as a
+structured acceptance record. Re-exporting through `adapters.export_workbook_rows`
+round-trips the original cells exactly (`tests/test_framework_mappings.py`).
+
+A finished workbook is a human decision, but it is not automatically a *valid* one: the
+workbook itself counts the cells its own gates forbid (Critical marked Accepted, an
+acceptance or N/A with no reason, a Critical/High Pass with no evidence). The importer
+refuses those rows rather than minting an assessment the envelope rules would reject —
+`risk_accepted` on Critical (R5), `risk_accepted` with no parseable acceptance record,
+`answered`/`needs_specialist` on a non-screening control (R5), `pass`/`partial`/`fail`
+with an empty notes cell (R3: the note is the only evidence a legacy row carries), and any
+status with no rationale (`basis.rationale` is non-empty). Each refusal is reported in the
+returned `problems` list and produces no assessment, so the invariant is that the importer
+never returns success alongside an envelope `validate_envelope` refuses — pinned
+exhaustively over the item/status/notes space by `tests/test_framework_mappings.py`.
+Migrating a workbook that trips a gate is therefore a conversation with the reviewer, not a
+silent downgrade.
+
 ### 11.4 `items.py` → registry + mapping
 ([`vibecheck-v1-framework-mapping.json`](../schema/examples/vibecheck-v1-framework-mapping.json))
 
 Each 7-tuple plus `VERIFICATION` and `SCANNER_CHECKS` entry becomes one mapping entry as in
 §3.4. Migration is generative: Increment 1 emits the registry and the full 89-entry mapping
-*from* `items.py`, keeps `items.py` as the authoring source until cutover (Increment 8),
-and the round-trip test guards both directions meanwhile.
+*from* `items.py`; Increment 8 cut the consumers over — `build_workbook.py`, `gen_map.py`
+and `adapters.py` now render from the mapping, so the workbook and checklist map are the
+canonical projection (byte-identical output, pinned by `tests/test_framework_mappings.py`).
+
+**Deprecation window (Increment 8).** `items.py` positional 7-tuples, the `VERIFICATION` and
+`SCANNER_CHECKS` tables, and `vibecheck.sh`'s `checklist_items` numbers remain the authoring
+source for the *generator only* for at least four more minor schema releases (schema major 1,
+through 1.10.0). Reading them directly at runtime is deprecated: new consumers must read the
+registry and `vibecheck_v1` mapping (`controls.build_framework_mapping()`), and direct reads
+must stay byte-equivalent to the mapping or be refused — there is no silent behaviour
+change. After 1.10.0 the positional tuples may be moved behind a generator-only module
+without touching assessments, because no assessment references them. Historical envelopes
+keep the mapping version that was current at assessment time either way.
 
 ### 11.5 Precheck fingerprint
 
@@ -1018,6 +1068,7 @@ of an older envelope should still be able to validate:
 | `tests/test_authz.py` | Increment-5 tests pinning the whole lifecycle fixture, the deployment checkpoint, per-cell coverage, inconclusive results, legacy probe import, write accountability, and the confirm-then-bound treatment of intended exposures |
 | `tests/test_providers.py` | Increment-6 tests pinning registry coherence, selection determinism under shuffled load order, explained refusals, per-cell requirements, each constraint that can exclude a provider, rule R24, and the bundled tools' compatibility behind the provider contract |
 | `tests/test_external_adapters.py` | Increment-7 tests pinning each specialist adapter's parser, its failure/timeout/unavailable cases, the neutral clean run, the capability boundary on every claim, secret redaction, and one assessment several providers contributed to |
+| `tests/test_framework_mappings.py` | Increment-8 tests pinning canonical cutover (workbook/map read the mapping), mapping provenance, the many-to-many second framework reusing controls, the legacy workbook round-trip, and historical schema/mapping versions |
 
 Acceptance criteria → verification:
 
@@ -1045,6 +1096,12 @@ Acceptance criteria → verification:
 | Partial coverage cannot close a broader control (issue #8) | §6.4, §8.2, R20/R24, `TestCoverageIsPerCell` |
 | Scanner and Supabase compatibility survive the provider contract (issue #8) | §8.3, `TestBundledToolsAreProviders` |
 | Each specialist adapter has a fixture/parser test and a failure case (issue #9) | §11.6, `tests/test_external_adapters.py` |
+| Workbook and generated-map consistency tests pass from the canonical source (issue #10) | §3.4/§11.4, `TestCutoverIsLossless`, `TestVibecheckV1MappingCanonical` |
+| A second sample framework reuses controls without duplication (issue #10) | §3.4, `TestSecondFrameworkReusesControls` |
+| A legacy assessment migrates and round-trips losslessly (issue #10) | §11.3, `TestLegacyMigrationRoundTrip` |
+| Historical assessments retain schema and mapping version (issue #10) | `TestHistoricalVersions` |
+| Direct legacy paths have a documented deprecation window, no silent change (issue #10) | §11.4, `TestCutoverIsLossless` |
+| Framework item <-> control edges are many-to-many with explicit provenance (issue #10) | §3.4, `TestSecondFrameworkReusesControls` |
 | Tool unavailable, parse failure, timeout and partial coverage stay explicit (issue #9) | §8.4, §11.6, `run_semantics`, `TestAvailability`, per-adapter failure tests |
 | A green specialist result never becomes a control-wide Pass (issue #9) | §8.4, R3, `assertNoPassPossible` in every adapter's clean-run test |
 | Selection compares the adapters on coverage, authorization, environment, cost, egress and side effects (issue #9) | §8.4, `TestSelectionSeesTheAdapters`, `tests/golden/providers/selection.md` |

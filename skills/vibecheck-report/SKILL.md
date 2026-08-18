@@ -26,8 +26,9 @@ will re-run checks themselves.
 
 Each scanner finding carries `checklist_items` (numbers 1-89). Use
 `${CLAUDE_PLUGIN_ROOT}/references/checklist-map.md` for item text, category, severity, and
-scanner coverage — it is generated from `scripts/items.py`, the same source the workbook
-builds from, so numbers always match.
+scanner coverage — it is generated from the canonical `vibecheck_v1` framework mapping
+(`schema/mappings/vibecheck_v1.json`), the same source the workbook and the canonical
+assessment model consume, so numbers always match.
 
 The map's `scan` column says what the scanner contributes: **EVIDENCE** (you decide from
 context), **MANUAL** (verify another way or record Not tested), or reserved **DECISIVE**
