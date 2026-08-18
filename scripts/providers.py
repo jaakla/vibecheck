@@ -34,8 +34,8 @@ model and the assessment rules against evidence that actually exists.
 The registry itself — providers, ranking keys, constraint vocabulary, and the
 prose that says why each rule exists — is reviewable data in
 schema/provider-registry.v1.json. Stdlib only; imports authz for the coverage
-vocabulary and items/controls for the static scanner's control list, and
-nothing from canonical.py, because canonical imports this module.
+vocabulary and controls for the static scanner's control list, and nothing from
+canonical.py, because canonical imports this module.
 """
 import copy
 import json
@@ -43,7 +43,6 @@ import os
 
 import authz as authz_mod
 import controls as controls_mod
-import items
 
 REGISTRY_NAME = "vibecheck.provider_registry"
 REGISTRY_VERSION = "1.0.0"
@@ -112,11 +111,7 @@ def _expand_controls(controls_from):
         return list(controls_mod.CONTROL_IDS[number]
                     for number in sorted(controls_mod.CONTROL_IDS))
     if controls_from == "scanner_checks":
-        numbers = set()
-        for item_numbers, _tier in items.SCANNER_CHECKS.values():
-            numbers.update(item_numbers)
-        return [controls_mod.CONTROL_IDS[number] for number in sorted(numbers)
-                if number in controls_mod.CONTROL_IDS]
+        return controls_mod.scanner_covered_control_ids()
     if controls_from == "coverage_tracked":
         return sorted(authz_mod.requirements())
     raise ValueError("unknown coverage rule source %r" % (controls_from,))

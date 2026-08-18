@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted; implemented through Increment 8 |
+| Status | Accepted; implemented |
 | Issue | [#2](https://github.com/jaakla/vibecheck/issues/2), under epic [#1](https://github.com/jaakla/vibecheck/issues/1) |
 | Schema | [`schema/vibecheck.assessment.v1.schema.json`](../schema/vibecheck.assessment.v1.schema.json) |
 | Risk method | [`schema/risk-matrix.v1.json`](../schema/risk-matrix.v1.json) + [`schema/risk-derivation.v1.json`](../schema/risk-derivation.v1.json) |
@@ -15,33 +15,10 @@
 | Tests | [`tests/test_rfc_schema.py`](../tests/test_rfc_schema.py), [`tests/test_canonical.py`](../tests/test_canonical.py), [`tests/test_context.py`](../tests/test_context.py), [`tests/test_report.py`](../tests/test_report.py), [`tests/test_actions.py`](../tests/test_actions.py), [`tests/test_authz.py`](../tests/test_authz.py), [`tests/test_providers.py`](../tests/test_providers.py) |
 
 This RFC defines the versioned domain contract for context-aware, risk-based, actionable
-Vibecheck assessments. It is the normative design dependency for every implementation
-increment under epic #1.
-
-Implementation status: Increment 1 (#3) shipped the envelope, the stable control IDs and
-the legacy adapters. Increment 2 (#4) shipped the context profile, the contextual-risk
-derivation and environment-scoped readiness. Increment 3 (#5) shipped deterministic
-founder scenarios, completeness-safe mandatory placement, the full reviewer appendix, and
-founder/reviewer EN/ET rendering. Increment 4 (#6) shipped the versioned Action/Procedure
-registry, exact-scope attempts, consent and completion guards, and deterministic deadline
-labels. Increment 5 (#7) shipped the Supabase authorization slice end to end: per-cell
-authorization coverage, the representative-object inventory, staged remediation with a
-separate deployment checkpoint, and write-probe accountability. Increment 6 (#8) shipped the
-verification-provider registry, deterministic capability matching and the explainable
-fallback chain, and moved the bundled scanner, migration analysis and Supabase probe behind
-the provider contract. Increment 7 (#9) shipped the external specialist adapters: seven
-maintained tools declared as providers with their availability, authorization, egress, cost,
-side effects and run semantics, and one import path that keeps a missing tool, a crash, a
-timeout and a partial result explicit. Increment 8 (#10) made the normalized model
-canonical: the workbook and checklist map render from the vibecheck_v1 framework mapping
-(not from items.py), the mapping and each of its entries carry provenance, the schema
-supports many-to-many item <-> control edges, a second sample framework (founder_focus)
-reuses the same control records without duplication, legacy workbook rows migrate into
-canonical assessments through `import_workbook_rows` and round-trip exactly, and direct
-legacy paths (positional items.py tuples, scanner-check maps) have a documented deprecation
-window with no silent behaviour change. Sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8 and 9 are
-normative for the shipped code (schema version 1.6.0, additive; coverage model 1.1.0;
-provider registry 1.0.0).
+Vibecheck assessments. It is fully implemented: sections 4.3, 5.3, 6.4, 6.5, 7, 7.5, 8
+and 9 are normative for the shipped code (schema version 1.6.0, additive; coverage model
+1.1.0; provider registry 1.0.0). The increment-by-increment delivery history is in the
+pull requests and issues under epic [#1](https://github.com/jaakla/vibecheck/issues/1).
 
 ## 1. Invariants this design preserves
 
@@ -144,9 +121,8 @@ vibecheck.control.<namespace>.<slug>       e.g. vibecheck.control.authz.object_l
   the registry with `superseded_by`; historical assessments keep pointing at the old ID.
 - Row numbers must not leak into slugs (tested): renumbering the workbook must never move a
   control's identity.
-- The full 89-entry registry is Increment 1 (#3) work. This RFC fixes the grammar, the
-  namespaces, and the mapping structure, and ships verified entries for items 13 and 14 as
-  the pattern.
+- This RFC fixes the grammar, the namespaces, and the mapping structure; the full 89-entry
+  registry is generated from `items.py` and reviewed by hand.
 
 ### 3.4 The lossless `vibecheck_v1` mapping
 
@@ -451,8 +427,8 @@ An authorization observation is small, and the control it belongs to is not. A p
 reads one row of one table as one actor establishes one **cell**: an (object, actor,
 operation) triple, in one environment. "Users cannot reach records they don't own" is a
 statement about every private object type and every operation, so it cannot close on the
-cell that happened to be easiest to run. Increment 5 makes that difference data rather than
-a caveat in prose ([`schema/authz-coverage.v1.json`](../schema/authz-coverage.v1.json),
+cell that happened to be easiest to run. That difference is data rather than a caveat in
+prose ([`schema/authz-coverage.v1.json`](../schema/authz-coverage.v1.json),
 `scripts/authz.py`).
 
 - **Cells.** Evidence carries `coverage`: object (`object_ref`, resolved to an inventory
@@ -800,15 +776,15 @@ complete regardless of headline count (R12):
 - specialist escalations,
 - actions whose deadline blocks the assessed environment/use.
 
-A renderer may fold these below the headlines; it may never drop them. Increment 3
-implements the derivation; the semantic rule is: *every* envelope object matching a
-mandatory category must appear in the corresponding set, and validation fails otherwise.
+A renderer may fold these below the headlines; it may never drop them. The semantic rule
+is: *every* envelope object matching a mandatory category must appear in the corresponding
+set, and validation fails otherwise.
 One object can match several sets — for example an immediate incident-response action owned
 by a specialist — but still receives exactly one visible disclosure placement. That
 placement records every matching category and either the headline scenario that visibly
 names it or its primary category in the mandatory section. Screening assessments marked
-`needs_specialist` are materialized as open specialist-owned escalation Actions by
-Increment 4. The direct assessment disclosure remains as a compatibility fallback for older
+`needs_specialist` are materialized as open specialist-owned escalation Actions.
+The direct assessment disclosure remains as a compatibility fallback for older
 envelopes, so a missing derived Action still cannot hide the escalation. Only an **open**
 escalation Action covers its control: the escalation set lists open Actions only, so a
 `done` or `rejected` escalation whose assessment still reads `needs_specialist` returns the
@@ -831,7 +807,7 @@ validator (several already have structural halves in the schema and tests today)
 | R5 | Screening statuses only on screening controls; `risk_accepted` never on Critical, always with acceptance record. |
 | R6 | `level` = matrix(impact, exposure); unknown in → unknown out; downgrades need rationale + evidence + approver, max one step. |
 | R7 | Compensating controls: exposure −1 max, current supporting evidence required, impact untouched. |
-| R8 | Unknown is never low; material unknowns keep readiness ≤ incomplete, and a listed blocker means `blocked` (validated since Increment 2). |
+| R8 | Unknown is never low; material unknowns keep readiness ≤ incomplete, and a listed blocker means `blocked` (validated). |
 | R9 | Readiness always scoped to an environment + intended-use pair (structural). |
 | R10 | `conditional` readiness requires machine-readable, enforced, expiring conditions (structural). |
 | R11 | Effectful procedures require explicit consent; attempts record exact authorization (structural half + rule). |
@@ -910,7 +886,7 @@ structurally. Verdict ladders (BLOCK, FIX BEFORE RELEASE, …) become derived vi
 assessments + readiness; they are not stored and their gates map onto the readiness
 derivation of §4.2.
 
-Increment 8 ships `adapters.import_workbook_rows` as the importer half of this mapping:
+`adapters.import_workbook_rows` is the importer half of this mapping:
 legacy cells become canonical Assessments (never Assessment-less evidence), a blank status
 stays absent, unknown wording is refused rather than guessed, N/A on Critical/High is
 refused, pass/partial/fail cells become scoped Evidence the assessment references (the
@@ -936,20 +912,21 @@ silent downgrade.
 ([`vibecheck-v1-framework-mapping.json`](../schema/examples/vibecheck-v1-framework-mapping.json))
 
 Each 7-tuple plus `VERIFICATION` and `SCANNER_CHECKS` entry becomes one mapping entry as in
-§3.4. Migration is generative: Increment 1 emits the registry and the full 89-entry mapping
-*from* `items.py`; Increment 8 cut the consumers over — `build_workbook.py`, `gen_map.py`
-and `adapters.py` now render from the mapping, so the workbook and checklist map are the
-canonical projection (byte-identical output, pinned by `tests/test_framework_mappings.py`).
+§3.4. Migration is generative: the generator emits the registry and the full 89-entry
+mapping *from* `items.py`, and every consumer — `build_workbook.py`, `gen_map.py`,
+`adapters.py`, `providers.py` — renders from the mapping, so the workbook and checklist map
+are the canonical projection (byte-identical output, pinned by
+`tests/test_framework_mappings.py`).
 
-**Deprecation window (Increment 8).** `items.py` positional 7-tuples, the `VERIFICATION` and
-`SCANNER_CHECKS` tables, and `vibecheck.sh`'s `checklist_items` numbers remain the authoring
-source for the *generator only* for at least four more minor schema releases (schema major 1,
-through 1.10.0). Reading them directly at runtime is deprecated: new consumers must read the
-registry and `vibecheck_v1` mapping (`controls.build_framework_mapping()`), and direct reads
-must stay byte-equivalent to the mapping or be refused — there is no silent behaviour
-change. After 1.10.0 the positional tuples may be moved behind a generator-only module
-without touching assessments, because no assessment references them. Historical envelopes
-keep the mapping version that was current at assessment time either way.
+**`items.py` is generator-only.** The positional 7-tuples, the `VERIFICATION` and
+`SCANNER_CHECKS` tables, and `vibecheck.sh`'s `checklist_items` numbers are authoring input
+for the generator. Nothing reads them at runtime: consumers read the registry and the
+`vibecheck_v1` mapping through `controls.build_framework_mapping()` (with `controls.WEIGHT`,
+`controls.scanner_tier()` and `controls.scanner_covered_control_ids()` for the derived
+lookups), and `tests/test_framework_mappings.py` fails if a runtime module imports the
+authoring input again. The tuples can therefore be restructured without touching
+assessments, because no assessment references them; historical envelopes keep the mapping
+version that was current at assessment time either way.
 
 ### 11.5 Precheck fingerprint
 
@@ -1160,9 +1137,7 @@ Acceptance criteria → verification:
 
 ## 15. Deferred questions
 
-1. **The full 89-entry control registry and slug list** — Increment 1 (#3), generated from
-   `items.py`, reviewed by hand, guarded by the round-trip test.
-2. **Registry governance** for `x_` extensions and third-party framework mappings (who may
+1. **Registry governance** for `x_` extensions and third-party framework mappings (who may
    register, collision policy).
 3. **Envelope signing/attestation** (content hashes, provenance chains) — valuable once
    envelopes travel between parties; out of scope for v1.
@@ -1178,9 +1153,9 @@ Acceptance criteria → verification:
 9. **A `partial`-evidence calculus** (aspect coverage accounting per control) — answered for
    authorization by §6.4: the object/actor/operation matrix is the aspect registry for the
    `authz` namespace. Other namespaces still record `aspect` as free text; whether secrets,
-   input handling or observability deserve their own matrices is Increment 7 work, and
-   §8 is built to take them: a coverage entry names its cells, and a namespace with no
-   matrix simply has none to name.
+   input handling or observability deserve their own matrices is open, and §8 is built to
+   take them: a coverage entry names its cells, and a namespace with no matrix simply has
+   none to name.
 10. **Per-scope context profiles.** §5.3 projects the dimensions a transition necessarily
     changes and takes the higher reading. Letting an owner state the expected audience,
     exposure and authentication *for a future scope* directly would be more precise; it
@@ -1190,7 +1165,7 @@ Acceptance criteria → verification:
     founder-facing EN/ET wording lands with the founder report (#5), alongside the rest of
     the founder vocabulary.
 12. **Detecting provider availability rather than being told it.**
-    Increment 7 now detects specialist-tool PATH via `shutil.which`. Remaining work is
+    Specialist-tool PATH is detected via `shutil.which`. Remaining work is
     probing the application for targets (a Supabase project, a deployed URL), not whether
     Gitleaks is installed. A caller that under-declares its application targets still gets
     a weaker plan, not a wrong one.

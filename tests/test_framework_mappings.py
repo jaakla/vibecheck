@@ -189,6 +189,41 @@ class TestCutoverIsLossless(unittest.TestCase):
         self.assertEqual(tier, controls.scanner_tier(check))
         self.assertIsNone(controls.scanner_tier("no-such-check"))
 
+    def test_scanner_covered_controls_match_the_legacy_expansion(self):
+        """The control set provider coverage expands `scanner_checks` to must
+        be exactly what the legacy items.SCANNER_CHECKS item numbers gave,
+        order included — provider capabilities are compared byte-wise."""
+        numbers = set()
+        for item_numbers, _tier in items.SCANNER_CHECKS.values():
+            numbers.update(item_numbers)
+        legacy = [controls.CONTROL_IDS[n] for n in sorted(numbers)
+                  if n in controls.CONTROL_IDS]
+        self.assertEqual(legacy, controls.scanner_covered_control_ids())
+
+    def test_items_py_is_generator_only(self):
+        """items.py is authoring input: only the generator side may import it.
+
+        A runtime consumer reaching back into the positional tuples is the
+        coupling the canonical model exists to remove, so this fails loudly
+        rather than letting it creep back in."""
+        allowed = {"items.py", "controls.py", "gen_map.py", "gen_canonical.py"}
+        scripts_dir = os.path.join(REPO, "scripts")
+        offenders = []
+        for name in sorted(os.listdir(scripts_dir)):
+            if not name.endswith(".py") or name in allowed:
+                continue
+            with open(os.path.join(scripts_dir, name), encoding="utf-8") as fh:
+                for lineno, line in enumerate(fh, 1):
+                    stripped = line.strip()
+                    if (stripped.startswith("import items")
+                            or stripped.startswith("from items ")):
+                        offenders.append("%s:%d" % (name, lineno))
+        self.assertEqual(
+            [], offenders,
+            "these runtime modules import the generator-only authoring input "
+            "items.py; read controls.build_framework_mapping() instead: %s"
+            % ", ".join(offenders))
+
 
 class TestLegacyMigrationRoundTrip(unittest.TestCase):
     """A legacy workbook assessment migrates and round-trips losslessly."""

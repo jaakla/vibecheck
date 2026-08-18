@@ -1,5 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Shared item bank for the vibecoded-app review workbooks.
+"""Authoring input for the vibecheck_v1 item bank. GENERATOR-ONLY.
+
+Edit this file to change the 89-item checklist wording, severity, verification
+metadata or scanner coverage, then run `python3 scripts/gen_canonical.py` to
+regenerate the canonical artifacts. Nothing at runtime reads this module.
+
+    items.py  --gen_canonical.py-->  schema/vibecheck.controls.v1.json
+                                     schema/mappings/vibecheck_v1.json
+                                          ^
+                                          |  everything else reads these
+              build_workbook.py, gen_map.py, adapters.py, providers.py
+
+The positional tuples here are an authoring convenience, not a contract: item
+numbers are coordinates of the vibecheck_v1 framework view, while control
+identity lives in the registry as a stable ID that never moves when wording
+changes or the workbook is renumbered. Read severity, wording, verification and
+scanner tiers through `controls.build_framework_mapping()` (or `controls.WEIGHT`
+and `controls.scanner_tier()`); importing this module from a runtime consumer
+reintroduces the coupling the canonical model exists to remove.
 
 Each item = (severity, tech_en, tech_et, plain_en, plain_et, test_en, test_et)
 - tech_*  : precise control wording (Reviewer edition)

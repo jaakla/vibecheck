@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Render vibecoded-app review workbooks in two profiles from the canonical
-vibecheck_v1 framework mapping (RFC 0001 §3.4; increment-8 cutover, issue #10).
+vibecheck_v1 framework mapping (RFC 0001 §3.4).
 
 Profiles:
   reviewer : technical wording, Pass/Partial/Fail/Not tested/N/A, weights, full gate model.
@@ -30,15 +30,14 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.formatting.rule import CellIsRule
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import controls  # canonical vibecheck_v1 framework mapping (issue #10 cutover)
-from items import WEIGHT
+import controls  # canonical vibecheck_v1 framework mapping
+from controls import WEIGHT
 
 
-# Increment 8 cutover: the workbook now renders from the canonical vibecheck_v1
-# framework mapping (schema/mappings/vibecheck_v1.json) instead of reading the
-# positional tuples in items.py directly. The mapping is the lossless projection
-# of items.py, so the generated workbooks are byte-identical; items.py becomes an
-# authoring input to the generator rather than a runtime consumer contract.
+# The workbook renders from the canonical vibecheck_v1 framework mapping
+# (schema/mappings/vibecheck_v1.json), never from the positional tuples in
+# items.py: those are generator-only authoring input, and the mapping is their
+# lossless projection.
 def _canonical_categories():
     """[(category, [(tuple-shaped item...)])] rebuilt from the canonical mapping,
     preserving workbook order (item_number ascending)."""
