@@ -54,15 +54,31 @@ verdict model; ambiguous behavior remains Not tested/to-do rather than becoming 
 
 ## Prefer dedicated free tools for detection
 
-Vibecheck's useful role is orchestration: it keeps technical, product, operational, and legal-review work from being silently skipped. For detection depth, use maintained specialist tools alongside it:
+Vibecheck's useful role is orchestration: it keeps technical, product, operational, and legal-review work from being silently skipped. It is a review aid and report/verdict framework, not a vulnerability-detection competitor to the specialist tools below or to an LLM security scanner run as a detection specialist. For detection depth, use maintained specialist tools alongside it.
 
+The bundled scanner, the specialist adapters, and the LLM-driven judgment pass are all **detection**; the checklist, evidence model, coverage ledger, scoring, and verdict are **review orchestration**. Keep those two layers honest by treating every finding as refuting material a reviewer confirms, not as a proven vulnerability.
+
+- **[Claude Security](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/claude-security) (Anthropic, MIT)** — a deep multi-agent LLM scanner of your own code, run in-session, that maps architecture and threat models, hunts across components, and adversarially verifies every finding before it is reported. Its verification model (three independent lens verifiers defaulting to false-positive, vote-clamped confidence, code-computed tally) is the same trust discipline vibecheck applies to its own findings — vibecheck's three-lens panel (`vibecheck-scan`, `vibecheck-fix`) is the in-skill expression of that idea rather than code reused from it. Use Claude Security as an added detection specialist and feed what survives its panel into a Vibecheck review as normalized evidence; do not treat a scaffold of its ideas as an endorsement or as Anthropic's product.
 - Secrets: Gitleaks or TruffleHog over the full git history.
 - SAST: Semgrep Community; CodeQL for public GitHub repositories.
 - Dependencies and containers: OSV-Scanner or Trivy.
 - Dynamic web testing: OWASP ZAP against an authorized staging deployment.
 - Functional and authorization flows: Playwright with two test accounts.
 
-These tools also have false positives/negatives, but they are substantially more mature than the bundled grep-based scanner — so vibecheck ranks an installed one ahead of its own scanner and ahead of a person reading the code by hand, and imports what it produced as normalized evidence. The Python never installs or runs a tool. The scan skill may install the default pack after one user yes, then run and import:
+Two code-computed products keep a scan honest about coverage and machine-readable:
+
+```bash
+# Code coverage ledger: completeness = checked | partial | not-checkable,
+# listing scanned, explicitly-skipped (with reasons) and unaccounted dirs.
+bash scripts/vibecheck.sh <repo> > /tmp/vibecheck.jsonl
+python3 scripts/coverage.py --repo <repo> < /tmp/vibecheck.jsonl
+
+# SARIF 2.1.0 for GitHub code scanning / IDE viewers; --withhold-evidence
+# never quotes a hard-coded credential line in a file that leaves the session.
+python3 scripts/sarif.py --repo <repo> --withhold-evidence < /tmp/vibecheck.jsonl
+```
+
+The Python never installs or runs a tool. The scan skill may install the default pack after one user yes, then run and import:
 
 ```bash
 # What the scan skill checks before asking. The Python never installs.

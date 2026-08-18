@@ -11,6 +11,13 @@ Rules, in order:
      are excluded from the run so file paths survive intact.
   3. Lines capped at 200 chars, output capped at 40 lines (base64 blobs in git
      history used to arrive here 4 KB at a time).
+  4. `--strings`: any quoted literal of real length (used for the hardcoded-
+     secret check, where the value may be a low-entropy passphrase).
+  5. `--withhold`: drop credential values entirely (no prefix) and keep the
+     CWE roll-up / symbol locating code. Used for machine-readable products
+     (SARIF/JSONL), where even an 8-char prefix of a hard-coded credential is
+     more than the product should quote; the finding's file, line and symbol
+     still locate it.
 """
 import json
 import re
@@ -49,12 +56,24 @@ def cut_quoted(match):
     return '%s%s...[REDACTED %d chars]%s' % (q, value[:4], len(value) - 4, q)
 
 
+def _cut_withhold(match):
+    return '...[REDACTED]'
+
+
+def _cut_quoted_withhold(match):
+    q = match.group(1)
+    return '%s...[REDACTED]%s' % (q, q)
+
+
 def main():
+    withhold = '--withhold' in sys.argv[1:]
     text = sys.stdin.read()
-    text = KNOWN.sub(cut, text)
-    text = GENERIC.sub(cut, text)
+    sub = _cut_withhold if withhold else cut
+    sub_q = _cut_quoted_withhold if withhold else cut_quoted
+    text = KNOWN.sub(sub, text)
+    text = GENERIC.sub(sub, text)
     if '--strings' in sys.argv[1:]:
-        text = QUOTED.sub(cut_quoted, text)
+        text = QUOTED.sub(sub_q, text)
 
     lines = []
     for line in text.splitlines():
