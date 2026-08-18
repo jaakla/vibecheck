@@ -56,6 +56,12 @@ def registry_sev(control_id):
     return None
 
 
+#: The AI-Act triage controls: the only ones the screening statuses are valid on.
+SCREENING_IDS = {entry["control_id"]
+                 for entry in controls.build_registry()["controls"]
+                 if entry["kind"] == "screening"}
+
+
 class TestVibecheckV1MappingCanonical(unittest.TestCase):
     """The mapping is canonical: it carries provenance and full item data."""
 
@@ -245,6 +251,81 @@ class TestLegacyMigrationRoundTrip(unittest.TestCase):
             {14: {"status": "N/A", "notes": "feature not used"}}, lang="en")
         self.assertTrue(any("N/A" in p and "reason" in p for p in problems))
         self.assertEqual([], env["assessments"])
+
+    def test_accepted_risk_on_critical_is_refused(self):
+        """Rule R5: Critical is fixed or escalated, never accepted. The
+        workbook counts this violation (m_critacc), so a legacy file can
+        carry the cell; importing it must not mint the assessment."""
+        n = next(num for num in range(1, 90)
+                 if registry_sev(controls.CONTROL_IDS[num]) == "Critical")
+        env, problems = adapters.import_workbook_rows(
+            {n: {"status": "Accepted risk",
+                 "notes": "x [Accepted by j: r; review by 2026-09-01]"}},
+            lang="en")
+        self.assertTrue(any("Critical" in p and "R5" in p for p in problems),
+                        problems)
+        self.assertEqual([], env["assessments"])
+
+    def test_accepted_risk_without_acceptance_record_is_refused(self):
+        """The schema requires an acceptance record for risk_accepted; notes
+        with no parseable [Accepted by ...] block must be refused rather than
+        imported with the record missing."""
+        for notes in ("we accept this", ""):
+            env, problems = adapters.import_workbook_rows(
+                {33: {"status": "Accepted risk", "notes": notes}}, lang="en")
+            self.assertTrue(any("Accepted risk needs" in p for p in problems),
+                            (notes, problems))
+            self.assertEqual([], env["assessments"])
+
+    def test_pass_without_notes_is_refused(self):
+        """A pass must rest on evidence (rule R3) and the notes cell is the
+        only evidence a legacy row carries."""
+        env, problems = adapters.import_workbook_rows(
+            {14: {"status": "Pass", "notes": ""}}, lang="en")
+        self.assertTrue(any("stand as evidence" in p for p in problems),
+                        problems)
+        self.assertEqual([], env["assessments"])
+
+    def test_screening_status_on_ordinary_control_is_refused(self):
+        """Rule R5: answered/needs_specialist only on screening controls."""
+        n = next(num for num in range(1, 90)
+                 if controls.CONTROL_IDS[num] not in SCREENING_IDS)
+        env, problems = adapters.import_workbook_rows(
+            {n: {"status": "Answered", "notes": "screened"}}, lang="en")
+        self.assertTrue(any("screening" in p for p in problems), problems)
+        self.assertEqual([], env["assessments"])
+
+    def test_status_without_any_note_is_refused(self):
+        """basis.rationale has minLength 1: a decision needs a stated why."""
+        env, problems = adapters.import_workbook_rows(
+            {14: {"status": "Not tested", "notes": ""}}, lang="en")
+        self.assertTrue(problems)
+        self.assertEqual([], env["assessments"])
+
+    def test_refused_rows_never_yield_an_invalid_envelope(self):
+        """The whole point of the guards: for every item/status/notes
+        combination the workbook can produce, the importer either reports a
+        problem or emits an envelope that validate_envelope accepts. It never
+        reports success on output the project's own gate refuses."""
+        notes_opts = ["", "a note",
+                      "Legacy [Accepted by j: r; review by 2026-09-01]",
+                      "x [Accepted by j: a; b; review by 2026-09-01]"]
+        wordings = [controls.STATUS_MAP[s]["en"] for s in controls.STATUS_MAP]
+        checked = 0
+        for n in (1, 7, 14, 33, 60, 89):
+            for word in wordings:
+                for notes in notes_opts:
+                    env, problems = adapters.import_workbook_rows(
+                        {n: {"status": word, "notes": notes}}, lang="en")
+                    checked += 1
+                    if problems:
+                        self.assertEqual([], env["assessments"])
+                        continue
+                    self.assertEqual(
+                        [], canonical.validate_envelope(env),
+                        "item %d / %r / %r imported without problems but the "
+                        "envelope is invalid" % (n, word, notes))
+        self.assertEqual(6 * len(wordings) * len(notes_opts), checked)
 
     def test_na_on_low_or_medium_is_preserved(self):
         n = next(num for num in range(1, 90)

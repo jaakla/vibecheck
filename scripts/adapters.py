@@ -883,7 +883,17 @@ def import_workbook_rows(rows, lang="en", assessment_id="legacy-workbook",
         back out into the structured acceptance record so the re-exported row
         is identical,
       * N/A is allowed only on non-Critical/non-High controls with the reason
-        captured; Critical/High N/A is refused (matches the workbook gate).
+        captured; Critical/High N/A is refused (matches the workbook gate),
+      * Accepted risk is refused on Critical controls (rule R5) and refused
+        without a parseable acceptance record,
+      * pass/partial/fail is refused with an empty notes cell, because the
+        note is the only evidence a legacy row carries.
+
+    A refused row is reported in `problems` and produces no assessment, so a
+    workbook cell the gates forbid can never enter the envelope as a valid-
+    looking assessment. The rows the workbook itself counts as violations
+    (Critical accepted, acceptance without a reason, Pass without evidence)
+    are exactly the ones refused here.
 
     Returns a canonical envelope fragment (assessments) ready to be merged into
     an envelope, plus the created envelopes' evidence/accepted-risk view. The
@@ -926,6 +936,7 @@ def import_workbook_rows(rows, lang="en", assessment_id="legacy-workbook",
             problems.append("item number %d is not in the vibecheck_v1 mapping" % n)
             continue
         severity = entry["severity"]
+        entry_kind = entry.get("kind", "control")
 
         if status == "not_applicable" and severity in ("Critical", "High"):
             problems.append(
@@ -934,15 +945,63 @@ def import_workbook_rows(rows, lang="en", assessment_id="legacy-workbook",
                 % n)
             continue
 
+        # Rule R5: a Critical control can never be accepted, only fixed or
+        # escalated. The workbook says so in its own instructions and counts
+        # the violation (m_critacc), so a legacy file can carry the cell;
+        # importing it would produce an envelope validate_envelope refuses.
+        if status == "risk_accepted" and severity == "Critical":
+            problems.append(
+                "item %d: Critical controls cannot be marked Accepted risk "
+                "(rule R5); fix or escalate the item instead" % n)
+            continue
+
         rationale, acceptance = _acceptance_suffix(notes)
         if status == "not_applicable" and rationale:
             rationale = "N/A reason: %s" % rationale
 
+        # An acceptance is a named decision with a review date; the schema
+        # requires the record for risk_accepted. A cell whose notes carry no
+        # parseable "[Accepted by ...]" block is an incomplete acceptance
+        # (the workbook's m_narat counter), not one to invent a record for.
+        if status == "risk_accepted" and acceptance is None:
+            problems.append(
+                "item %d: Accepted risk needs who accepted it, why, and a "
+                "review-by date in the notes ('[Accepted by NAME: REASON; "
+                "review by YYYY-MM-DD]')" % n)
+            continue
+
+        # Rule R5, other half: the screening statuses belong to the AI-Act
+        # triage controls and mean nothing on an ordinary control.
+        if status in ("answered", "needs_specialist") and entry_kind != "screening":
+            problems.append(
+                "item %d: %r is a screening status and is only valid on a "
+                "screening control (rule R5)" % (n, status_word))
+            continue
+
+        # pass/partial/fail must rest on evidence, and the notes cell is the
+        # only evidence a legacy row carries. With no notes there is nothing
+        # to scope evidence to, so the status cannot be substantiated.
+        if status in ("pass", "partial", "fail") and not rationale:
+            problems.append(
+                "item %d: %r needs a note to stand as evidence; an empty "
+                "notes cell cannot support the status" % (n, status_word))
+            continue
+
+        # Every assessment states why (schema: basis.rationale minLength 1).
+        # A status with an empty notes cell records a decision with no reason,
+        # which the envelope cannot represent.
+        if not rationale:
+            problems.append(
+                "item %d: %r needs a note saying why; an assessment cannot "
+                "record a decision with no rationale" % (n, status_word))
+            continue
+
         refs = []
         # A pass/partial/fail assessment must rest on evidence (schema rule);
         # the legacy notes cell becomes that scoped evidence, so the migration
-        # does not drop the references the cell carries.
-        if status in ("pass", "partial", "fail") and rationale:
+        # does not drop the references the cell carries. The guard above has
+        # already refused these statuses without a note.
+        if status in ("pass", "partial", "fail"):
             evidence_id = "ev-wb-%s-%03d" % (assessment_id, n)
             env["evidence"].append({
                 "evidence_id": evidence_id,
@@ -961,8 +1020,6 @@ def import_workbook_rows(rows, lang="en", assessment_id="legacy-workbook",
                 "observed_at": created_at,
             })
             refs = [evidence_id]
-        else:
-            refs = []
 
         asm = {
             "assessment_id": "asm-%s-%03d" % (assessment_id, n),

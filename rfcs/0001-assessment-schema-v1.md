@@ -918,6 +918,20 @@ schema's evidence-backed status rule), and `[Accepted by ...]` cells come back a
 structured acceptance record. Re-exporting through `adapters.export_workbook_rows`
 round-trips the original cells exactly (`tests/test_framework_mappings.py`).
 
+A finished workbook is a human decision, but it is not automatically a *valid* one: the
+workbook itself counts the cells its own gates forbid (Critical marked Accepted, an
+acceptance or N/A with no reason, a Critical/High Pass with no evidence). The importer
+refuses those rows rather than minting an assessment the envelope rules would reject —
+`risk_accepted` on Critical (R5), `risk_accepted` with no parseable acceptance record,
+`answered`/`needs_specialist` on a non-screening control (R5), `pass`/`partial`/`fail`
+with an empty notes cell (R3: the note is the only evidence a legacy row carries), and any
+status with no rationale (`basis.rationale` is non-empty). Each refusal is reported in the
+returned `problems` list and produces no assessment, so the invariant is that the importer
+never returns success alongside an envelope `validate_envelope` refuses — pinned
+exhaustively over the item/status/notes space by `tests/test_framework_mappings.py`.
+Migrating a workbook that trips a gate is therefore a conversation with the reviewer, not a
+silent downgrade.
+
 ### 11.4 `items.py` → registry + mapping
 ([`vibecheck-v1-framework-mapping.json`](../schema/examples/vibecheck-v1-framework-mapping.json))
 
