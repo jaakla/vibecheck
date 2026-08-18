@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Render vibecoded-app review workbooks in two profiles from one shared item bank.
+"""Render vibecoded-app review workbooks in two profiles from the canonical
+vibecheck_v1 framework mapping (RFC 0001 §3.4; increment-8 cutover, issue #10).
 
 Profiles:
   reviewer : technical wording, Pass/Partial/Fail/Not tested/N/A, weights, full gate model.
@@ -29,7 +30,43 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.formatting.rule import CellIsRule
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from items import CATEGORIES, WEIGHT, VERIFICATION
+import controls  # canonical vibecheck_v1 framework mapping (issue #10 cutover)
+
+
+# Increment 8 cutover: the workbook now renders from the canonical vibecheck_v1
+# framework mapping (schema/mappings/vibecheck_v1.json) instead of reading the
+# positional tuples in items.py directly. The mapping is the lossless projection
+# of items.py, so the generated workbooks are byte-identical; items.py becomes an
+# authoring input to the generator rather than a runtime consumer contract.
+def _canonical_categories():
+    """[(category, [(tuple-shaped item...)])] rebuilt from the canonical mapping,
+    preserving workbook order (item_number ascending)."""
+    mapping = controls.build_framework_mapping()
+    by_number = sorted(mapping["entries"], key=lambda e: e["item_number"])
+    cats = []
+    for entry in by_number:
+        cat = entry["category"]
+        tup = (entry["severity"],
+               entry["wording"]["tech_en"], entry["wording"]["tech_et"],
+               entry["wording"]["plain_en"], entry["wording"]["plain_et"],
+               entry["wording"]["test_en"], entry["wording"]["test_et"])
+        if cats and cats[-1]["number"] == cat["number"]:
+            cats[-1]["items"].append(tup)
+        else:
+            cats.append({"number": cat["number"], "en": cat["en"], "et": cat["et"],
+                         "items": [tup]})
+    return cats
+
+CATEGORIES = _canonical_categories()
+
+
+def _canonical_verification():
+    """item_number -> (codes, tools) from the canonical mapping."""
+    mapping = controls.build_framework_mapping()
+    return {e["item_number"]: (e["verification"]["codes"], e["verification"]["tools"])
+            for e in mapping["entries"]}
+
+VERIFICATION = _canonical_verification()
 
 STR = {
  "en": {

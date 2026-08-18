@@ -1,0 +1,263 @@
+{
+  "framework": "founder_focus",
+  "framework_version": "2026.08",
+  "provenance": {
+    "source": "curated subset of the vibecheck_v1 checklist for a non-technical owner go/no-go review (sample second framework, issue #10)",
+    "established_at": "2026-08-16T00:00:00Z",
+    "method": "hand-reviewed mapping onto existing stable control IDs; reuse is intentional and pinned by tests (no control record is duplicated)",
+    "reviewed_by": "vibecheck maintainers (issue #10)",
+    "change_policy": "sample only: illustrates control reuse across frameworks; not a compliance framework."
+  },
+  "status_map": {
+    "pass": {
+      "en": "Pass",
+      "et": "Korras"
+    },
+    "partial": {
+      "en": "Partial",
+      "et": "Osaline"
+    },
+    "fail": {
+      "en": "Fail",
+      "et": "Puudulik"
+    },
+    "not_tested": {
+      "en": "Not tested",
+      "et": "Testimata"
+    },
+    "not_applicable": {
+      "en": "N/A",
+      "et": "Ei kohaldu"
+    },
+    "risk_accepted": {
+      "en": "Accepted risk",
+      "et": "Aktsepteeritud risk"
+    },
+    "answered": {
+      "en": "Answered",
+      "et": "Vastatud"
+    },
+    "needs_specialist": {
+      "en": "Needs specialist",
+      "et": "Vajab spetsialisti"
+    }
+  },
+  "entries": [
+    {
+      "control_id": "vibecheck.control.arch.datastore_fit",
+      "related_control_ids": [],
+      "item_number": 1,
+      "category": {
+        "number": 1,
+        "en": "Data durability",
+        "et": "Andmete püsivus"
+      },
+      "severity": "High",
+      "weight": 3,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Primary data store is a managed persistent DB; no SQLite/JSON-file/localStorage as system of record.",
+        "tech_et": "Põhihoidla on hallatud püsiv andmebaas; mitte SQLite/JSON-fail/localStorage põhihoidlana.",
+        "plain_en": "Is user data stored in a durable database, not a file or browser storage?",
+        "plain_et": "Kas kasutajaandmed on püsivas andmebaasis, mitte failis või brauseri mälus?",
+        "test_en": "Ask where data lives; the scanner flags SQLite/JSON-file/localStorage on ephemeral hosting.",
+        "test_et": "Küsi, kus andmed elavad; skanner märgib SQLite/JSON-faili ajutisel majutusel."
+      },
+      "verification": {
+        "codes": [
+          "AI"
+        ],
+        "tools": "storage question, second pair of eyes"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 1 reuses vibecheck.control.arch.datastore_fit without duplicating any control"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.authz.object_level",
+      "related_control_ids": [
+        "vibecheck.control.authz.tenant_isolation"
+      ],
+      "item_number": 2,
+      "category": {
+        "number": 2,
+        "en": "Other users' data",
+        "et": "Teiste kasutajate andmed"
+      },
+      "severity": "Critical",
+      "weight": 5,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Object-level authorization and tenant isolation hold against a second account.",
+        "tech_et": "Objektitaseme õigused ja rentniku eraldus peavad vastu teisele kontole.",
+        "plain_en": "Could another customer see or change data that is not theirs?",
+        "plain_et": "Kas keegi teine saaks näha või muuta andmed, mis ei ole tema omad?",
+        "test_en": "Two test accounts; try to read/write the other account's records.",
+        "test_et": "Kaks testkontot; proovi teise konto kirjeid lugeda või muuta."
+      },
+      "verification": {
+        "codes": [
+          "E2E"
+        ],
+        "tools": "two-account test (Playwright)"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 2 reuses vibecheck.control.authz.object_level, vibecheck.control.authz.tenant_isolation without duplicating any control"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.arch.proven_auth_provider",
+      "related_control_ids": [
+        "vibecheck.control.privacy.password_hashing"
+      ],
+      "item_number": 3,
+      "category": {
+        "number": 3,
+        "en": "Login & secrets",
+        "et": "Sisselogimine ja saladused"
+      },
+      "severity": "Critical",
+      "weight": 5,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Authentication and handling of credentials use a proven provider/library, never hand-rolled crypto.",
+        "tech_et": "Autentimine ja mandaadid kasutavad tõestatud teenust/teeki, mitte isetehtud krüptot.",
+        "plain_en": "Are login and secrets handled by a proven provider or library?",
+        "plain_et": "Kas sisselogimist ja saladusi haldab tõestatud teenus või teek?",
+        "test_en": "Ask which auth provider handles login; the scanner flags home-made primitives.",
+        "test_et": "Küsi, milline teenus sisselogimist haldab; skanner märgib isetehtud räsid."
+      },
+      "verification": {
+        "codes": [
+          "AI"
+        ],
+        "tools": "auth review (provider/library check)"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 3 reuses vibecheck.control.arch.proven_auth_provider, vibecheck.control.privacy.password_hashing without duplicating any control"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.deps.dependency_trust",
+      "related_control_ids": [
+        "vibecheck.control.deps.vuln_scanning"
+      ],
+      "item_number": 6,
+      "category": {
+        "number": 6,
+        "en": "Supply chain",
+        "et": "Tarneahel"
+      },
+      "severity": "Medium",
+      "weight": 2,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Dependencies and the supply chain are reviewed for vulnerabilities and trust.",
+        "tech_et": "Sõltuvused ja tarneahel on üle vaadatud haavatavuste ja usalduse osas.",
+        "plain_en": "Are the libraries and packages the app is built on reviewed?",
+        "plain_et": "Kas raamatukogud ja paketid, millel rakendus põhineb, on üle vaadatud?",
+        "test_en": "Run a lockfile scan (OSV/Trivy) in CI and evaluate severity and reachability.",
+        "test_et": "Käivita lukufaili skann (OSV/Trivy) ning hinda haavatavusi ja nende mõju."
+      },
+      "verification": {
+        "codes": [
+          "AUTO"
+        ],
+        "tools": "OSV-Scanner / Trivy lockfile scan"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 6 reuses vibecheck.control.deps.dependency_trust, vibecheck.control.deps.vuln_scanning without duplicating any control"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.data.versioned_migrations",
+      "related_control_ids": [
+        "vibecheck.control.data.tested_backups",
+        "vibecheck.control.deploy.change_control"
+      ],
+      "item_number": 7,
+      "category": {
+        "number": 7,
+        "en": "Data integrity",
+        "et": "Andmete terviklikkus"
+      },
+      "severity": "High",
+      "weight": 3,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Versioned migrations, tested backups and safe production-change control are demonstrable.",
+        "tech_et": "Versioonitud migratsioonid, testitud varukoopiad ja ohutu tootemuudatuste kontroll on tõendatud.",
+        "plain_en": "Can you restore your data after a bad deployment or deletion?",
+        "plain_et": "Kas saad pärast vigast juurutust või kustutamist andmed taastada?",
+        "test_en": "Do a backup restore drill on a throwaway environment.",
+        "test_et": "Proovi varukoopia taastamist kindlas testimiskeskkonnas."
+      },
+      "verification": {
+        "codes": [
+          "MAN"
+        ],
+        "tools": "backup restore drill"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 7 reuses vibecheck.control.data.versioned_migrations, vibecheck.control.data.tested_backups, vibecheck.control.deploy.change_control without duplicating any control"
+      }
+    },
+    {
+      "control_id": "vibecheck.control.continuity.account_ownership",
+      "related_control_ids": [
+        "vibecheck.control.continuity.data_export",
+        "vibecheck.control.continuity.failure_recovery"
+      ],
+      "item_number": 8,
+      "category": {
+        "number": 8,
+        "en": "Recovery",
+        "et": "Taastumine"
+      },
+      "severity": "High",
+      "weight": 3,
+      "kind": "control",
+      "wording": {
+        "tech_en": "Account ownership, data export and failure recovery are available and tested.",
+        "tech_et": "Kontode omanik, andmete eksport ja rikkest taastumine on saadaval ja testitud.",
+        "plain_en": "Can you get your users' data back out, and recover accounts if needed?",
+        "plain_et": "Kas saad kasutajate andmed välja ja vigased kontod taastada?",
+        "test_en": "Walk through export and account recovery with a real second user.",
+        "test_et": "Käi eksport ja konto taastamine läbi teise reaalse kasutajaga."
+      },
+      "verification": {
+        "codes": [
+          "MAN"
+        ],
+        "tools": "account recovery + export test"
+      },
+      "scanner_checks": [],
+      "workbook_profiles": [
+        "founder"
+      ],
+      "provenance": {
+        "rationale": "founder item 8 reuses vibecheck.control.continuity.account_ownership, vibecheck.control.continuity.data_export, vibecheck.control.continuity.failure_recovery without duplicating any control"
+      }
+    }
+  ]
+}

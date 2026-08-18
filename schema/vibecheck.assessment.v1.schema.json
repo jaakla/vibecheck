@@ -1354,6 +1354,18 @@
             }
           }
         },
+        "provenance": {
+          "type": "object",
+          "description": "How this framework mapping was established and how it is maintained. Historical envelopes keep the mapping version that was current at assessment time; a mapping change ships as a new version, never an in-place rewrite of past assessments.",
+          "required": ["source", "established_at"],
+          "properties": {
+            "source": { "type": "string" },
+            "established_at": { "type": "string", "format": "date-time" },
+            "method": { "type": "string" },
+            "reviewed_by": { "type": "string" },
+            "change_policy": { "type": "string" }
+          }
+        },
         "entries": {
           "type": "array",
           "minItems": 1,
@@ -1362,12 +1374,17 @@
             "required": ["control_id", "item_number", "category", "severity", "weight", "wording", "verification", "scanner_checks", "workbook_profiles"],
             "properties": {
               "control_id": { "$ref": "#/$defs/control_id" },
-              "item_number": { "type": "integer", "minimum": 1, "maximum": 89 },
+              "related_control_ids": {
+                "type": "array",
+                "description": "Optional other controls this framework item also maps to. Framework items and controls are many-to-many: a framework item may span several controls, and a control may satisfy several items across frameworks. The primary control_id keeps the entry addressable; related ids record the reuse edges without duplicating control records.",
+                "items": { "$ref": "#/$defs/control_id" }
+              },
+              "item_number": { "type": "integer", "minimum": 1, "maximum": 9999 },
               "category": {
                 "type": "object",
                 "required": ["number", "en", "et"],
                 "properties": {
-                  "number": { "type": "integer", "minimum": 1, "maximum": 18 },
+                  "number": { "type": "integer", "minimum": 1, "maximum": 9999 },
                   "en": { "type": "string" },
                   "et": { "type": "string" }
                 }
@@ -1406,7 +1423,16 @@
                   }
                 }
               },
-              "workbook_profiles": { "type": "array", "minItems": 1, "items": { "enum": ["reviewer", "founder"] } }
+              "workbook_profiles": { "type": "array", "minItems": 1, "items": { "enum": ["reviewer", "founder"] } },
+              "provenance": {
+                "type": "object",
+                "description": "Optional per-entry provenance: why this framework item maps to this control. Framework items and controls are many-to-many; provenance records the rationale and review for a specific mapping edge.",
+                "properties": {
+                  "rationale": { "type": "string" },
+                  "reviewed_by": { "type": "string" },
+                  "reviewed_at": { "type": "string", "format": "date-time" }
+                }
+              }
             }
           }
         }
