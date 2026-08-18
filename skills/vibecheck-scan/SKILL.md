@@ -58,6 +58,19 @@ Output is one JSON object per finding: `check`, `checklist_items` (numbers from 
 
 Evidence arrives with credential redaction — known/high-entropy credential shapes retain at most an 8-character prefix, low-entropy quoted secret literals retain at most 4, and lines are capped at 200 characters. This is not general PII or confidential-data anonymisation. Treat the output as sensitive, remove or paraphrase personal/business data before reporting, and do not recover a raw secret from the file.
 
+Optionally render the same run as machine-readable products that leave the session
+(a code-scanning upload, a CI artifact). Capture the scanner output, then:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/vibecheck.sh <repo_dir> > /tmp/vibecheck.jsonl
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/coverage.py --repo <repo_dir> < /tmp/vibecheck.jsonl > /tmp/vibecheck-coverage.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sarif.py --repo <repo_dir> --withhold-evidence < /tmp/vibecheck.jsonl > /tmp/vibecheck.sarif
+```
+
+`coverage.py` recomputes a code coverage ledger: every top-level directory scanned or explicitly skipped, an `unaccounted` list, and a `completeness` status (`checked` / `partial` / `not-checkable`). A clean scan whose completeness is `partial` is a coverage gap, never a clean bill of health; carry it into the report's coverage section.
+
+`sarif.py` emits SARIF 2.1.0 for GitHub code scanning / IDE SARIF viewers. Pass `--withhold-evidence` so a hard-coded credential line (the line is the credential) is not quoted even in redacted form in a file that leaves the session; file/line/symbol still locate it. These products are supplementary; the markdown report and the assessment envelope remain the review's canonical output.
+
 ## Step 2 — Default specialist pack
 
 The bundled scanner is a grep. A vibecoder asking whether this app is safe to ship should not have to install or configure specialist tools by hand. You run them. `scripts/external_adapters.py` only imports the result — it never installs, never runs a tool, never hits a network. That split is load-bearing: a green import is still not a Pass.
@@ -163,6 +176,24 @@ The answer names the stronger methods, what each one needs from the user, and wh
 
 These triage rules apply to bundled scanner output and to imported specialist evidence alike.
 
+A WARN finding becomes a confirmed finding only after an **adversarial three-lens panel**,
+three independent passes each defaulting to FALSE_POSITIVE:
+
+- **Reachability** — is the source genuinely attacker-controlled, the path reachable in a
+  default deployment, and is there a guard on every route to the sink?
+- **Impact** — if reachable, does it matter? Is the claimed consequence real, the data
+  actually sensitive, the write actually dangerous?
+- **Defenses** — is something already stopping it (a framework default, middleware, a
+  type, an escape, a prepared statement, a check one frame up)?
+
+Confirmed requires at least two of three lenses unable to refute it from code **you**
+read; refute only with a mitigation you located and read, never one a comment claims.
+A finding you cannot fully trace stays a named gap, never a confirmed finding. Confidence
+cannot outrun its vote: 2-of-3 is never `high` confidence; only a unanimous 3-of-3 earns
+`high`. Record the tally with each confirmed finding in the report (`n/3 lens verifiers
+confirmed`). The panel is independent of whoever produced the finding and never votes on
+its own work.
+
 ## Step 4 — Judgment checks the script cannot do
 
 Read the code and assess these directly (`${CLAUDE_PLUGIN_ROOT}/references/checklist-map.md` has item numbers and severities):
@@ -186,6 +217,13 @@ reproducible path, configuration, or command-result evidence. An unverified abse
 to-do/opinion, not a finding. Give the impact and concrete fix, then end with the unresolved MANUAL
 list, overview/reconnaissance gaps, and workbook verdict:
 
+Include a **Coverage** section from the `coverage.py` ledger. State the `completeness` status
+(`checked` / `partial` / `not-checkable`), name the scanned and explicitly-skipped directories
+with reasons, and list every `unaccounted` directory plainly. When completeness is `partial`,
+say that the areas in `unaccounted` were neither scanned nor skipped — that is exactly the
+coverage a clean-seeming scan would otherwise overstate. Give every confirmed finding its panel
+tally (`n/3 lens verifiers confirmed`) and its vote-clamped confidence.
+
 INCOMPLETE REVIEW (including unsupported Critical/High Passes or coverage < 100%) → BLOCK (any Critical fail) → BLOCK – RISK ACCEPTANCE REQUIRED (any High fail) → FIX BEFORE RELEASE (any other Fail/Partial) → REVIEW COMPLETE — NO OPEN FAIL/PARTIAL.
 
 Percentages are prioritisation data, not release gates. There is no "secure" or "ready to ship" verdict — do not invent one.
@@ -206,3 +244,5 @@ When `authz.backend_target` reports a located project URL or publishable key, th
 - Use the existing checklist item, severity, status, and verdict model; do not introduce a parallel
   finding taxonomy for a targeted audit area.
 - If `scan.scope` is WARN because the directory is nested inside a larger git repo, say so — history findings cover only the scanned subtree.
+- Never report `coverage` as clean when `coverage.py` returns `partial` or `not-checkable`; carry the unaccounted list and completeness status into the report.
+- Never claim a confirmed finding without its three-lens panel tally, and never let a finding’s confidence exceed what its panel vote earned.

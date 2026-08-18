@@ -74,6 +74,50 @@ Prefer the strongest applicable method the user has actually authorized, and wal
    For authorization fixes, verification is per cell: object, actor, operation, environment. A denied read is not a denied write, and a fixed table is not a fixed database. Record what you observed and leave the rest as named gaps — `partial` with untested operations listed is the honest reassessment.
 8. Report the Action state, every attempt result, remaining blockers, and which Procedures still need owner/developer/specialist action.
 
+## Adversarial verification panel
+
+Independent verification is a panel, not a single echo. For any claim that a fix
+closes a security-relevant finding — and for any WARN finding you are about to
+treat as confirmed or resolved — apply the three-lens panel before accepting it.
+The point is a voter panel whose arithmetic is done in code or record, never a
+model voting on its own work.
+
+For each finding under review, take three independent adversarial passes, one per
+lens. Each pass starts from **default = FALSE_POSITIVE**: it survives only if a
+pass finds it cannot be broken.
+
+- **Reachability** — can an attacker actually arrive at the flaw? Is the source
+  genuinely attacker-controlled, the path reachable in a default deployment, and
+  is there a guard on every route to the sink rather than only on the one the
+  reporter looked at?
+- **Impact** — if reachable, does it matter? Is the claimed consequence the real
+  one, the data actually sensitive, the write actually dangerous?
+- **Defenses** — is something already stopping it? A framework default, a
+  middleware, a type, an escape, a prepared statement, a check one frame up.
+
+A finding is **confirmed only when at least two of three lenses cannot refute it
+from code you read**, and no lens you could not complete goes unrecorded. Do not
+invent a defense to kill a true finding either: refute only with a mitigation you
+located and read, never one a comment merely claims. "The framework probably
+escapes this" is not a mitigation. Rules:
+
+- The three panels are independent of each other and of whoever produced the
+  finding; none of them ever votes on its own work.
+- **Confidence cannot outrun its vote.** A finding confirmed 2-of-3 is never
+  `High`-confidence; only a unanimous 3-of-3 panel earns `high`. Record the
+  panel tally alongside the assessment.
+- A finding you cannot fully trace in the time available is **not** confirmed —
+  record what stopped you as a named gap, exactly as a refused probe stays a
+  named gap.
+- The tally is computed and recorded, never asserted by the model that produced
+  the finding. Report `n/3` lens verifiers confirmed for every conclusion you
+  treat as a finding.
+
+In `vibecheck-fix` this same panel gates a patch: before you mark an Action
+`done`, the reassessment must cite the panel verdict that the exploit path is
+closed **and** that the change introduces no new reachable flaw.
+
+
 ## Hard rules
 
 - Diff-first and branch-first for code changes.
@@ -87,3 +131,5 @@ Prefer the strongest applicable method the user has actually authorized, and wal
 - Never substitute a weaker verification method without saying which stronger one was unavailable and what would have enabled it.
 - Never decide on the owner's behalf that an anonymous write is intended, and never treat a confirmed one as finished: it needs the read path denied and an observed limit on the write path before the control can close.
 - One failed or partial attempt never completes the Action; a disappeared warning is never success evidence.
+- Never let one voter or the finding's own author confirm a security-relevant fix; the three-lens panel tally is recorded, never asserted.
+- Never give a 2-of-3 finding `high` confidence.

@@ -82,6 +82,19 @@ class TestRedactor(unittest.TestCase):
             subprocess.run([sys.executable, REDACT], input=raw,
                            capture_output=True, text=True, check=True)
 
+    def test_withhold_mode_drops_credential_values_entirely(self):
+        out = redact('key = "sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"',
+                     "--withhold")
+        self.assertNotIn("sk-ant", out)
+        self.assertNotIn("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345", out)
+        self.assertIn("REDACTED", out)
+
+    def test_withhold_keeps_file_paths_and_lines(self):
+        line = "./src/config.ts:4:const k = \"sk-ant-AAAAAAAAAAAAAAAAAAAA\";"
+        out = redact(line, "--withhold")
+        self.assertIn("./src/config.ts:4", out)
+        self.assertNotIn("sk-ant", out)
+
     def test_total_cap_preserves_valid_json_with_many_escapes(self):
         raw = (("\\" * 100) + "\n") * 40
         proc = subprocess.run([sys.executable, REDACT], input=raw,
