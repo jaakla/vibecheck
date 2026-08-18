@@ -31,6 +31,7 @@ from openpyxl.formatting.rule import CellIsRule
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import controls  # canonical vibecheck_v1 framework mapping (issue #10 cutover)
+from items import WEIGHT
 
 
 # Increment 8 cutover: the workbook now renders from the canonical vibecheck_v1
