@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regenerate the Increment 3 founder/reviewer markdown golden reports.
+"""Regenerate the founder/reviewer markdown golden reports.
 
-The selected cases jointly pin the issue #5 edge cases: more than five
+The selected cases jointly pin the report edge cases: more than five
 scenarios, conflicting evidence, an incomplete context, current private versus
 future public risk, and both report profiles and languages.
 """

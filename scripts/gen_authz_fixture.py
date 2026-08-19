@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regenerate the Supabase authorization lifecycle fixture (gh issue #7).
+"""Regenerate the Supabase authorization lifecycle fixture.
 
 One envelope walks the whole vertical slice for a real Supabase authorization
 problem, in the order it actually happens:
@@ -1220,7 +1220,7 @@ def build_fixture():
     return derived
 
 
-# ------------------------------------------ the intended public write (issue #7)
+# ------------------------------------------ the intended public write
 
 INTENDED_PATH = os.path.join(REPO_ROOT, "schema", "examples",
                              "intended-anon-write.json")

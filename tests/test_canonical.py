@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 1 (gh issue #3): canonical schema, stable control IDs, adapters.
+"""Canonical schema, stable control IDs and scanner adapters.
 
 Pins the acceptance criteria:
   - every checklist item has a stable control ID and a lossless vibecheck_v1

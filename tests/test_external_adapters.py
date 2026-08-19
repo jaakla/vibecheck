@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""External specialist tool adapters (gh issue #9, Increment 7).
+"""External specialist tool adapters.
 
 The acceptance criteria this file stands for:
 

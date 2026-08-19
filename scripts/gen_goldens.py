@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regenerate the golden context / risk / readiness cases (gh issue #4).
+"""Regenerate the golden context, risk and readiness cases.
 
 Each case in tests/golden/inputs/ states an application context, a handful of
 assessed controls and, where relevant, a baseline review of the Critical, High

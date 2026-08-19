@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Deterministic contextual risk (RFC 0001 §5, gh issue #4, Increment 2).
+"""Deterministic contextual risk (RFC 0001 §5).
 
 Turns "this control is not met" into "and here is what that means for *this*
 application, in *this* environment, for *this* intended use" — reproducibly:

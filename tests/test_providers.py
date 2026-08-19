@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Increment 6 (gh issue #8): the verification provider registry.
+"""The verification provider registry.
 
 The acceptance criteria of the issue, one class each:
 

@@ -1,7 +1,7 @@
 {
   "schema": "vibecheck.action_policy",
   "schema_version": "1.1.0",
-  "description": "Normative lifecycle, staged-remediation, deadline-label and legacy-display policy for Action, Procedure and ProcedureAttempt records (gh issues #6 and #7, epic #1). AUTO/PROPOSE/ADVISORY exists only in the derived legacy view. It never grants authorization and it never replaces executor_role, execution_mode, effects or consent.",
+  "description": "Normative lifecycle, staged-remediation, deadline-label and legacy-display policy for Action, Procedure and ProcedureAttempt records. AUTO/PROPOSE/ADVISORY exists only in the derived legacy view. It never grants authorization and it never replaces executor_role, execution_mode, effects or consent.",
   "registry": {
     "name": "vibecheck.action_registry",
     "version": "1.0.0"

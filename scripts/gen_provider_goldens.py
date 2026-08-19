@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regenerate the golden provider-selection cases (gh issue #8).
+"""Regenerate the golden provider-selection cases.
 
 Each case states one requirement and one offer — what this review has, and
 what its owner has actually authorized — and the script writes the plan the

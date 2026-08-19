@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Machine checks for the RFC 0001 schema deliverables.
 
-These tests pin the acceptance criteria of the schema RFC (gh issue #2):
+These tests pin the acceptance criteria of the schema RFC:
 the JSON Schema is itself valid, every shipped example validates, the
 structural invariants hold (evidence can never carry a control status,
 readiness is always scoped, unknown is never low), the risk matrix is total

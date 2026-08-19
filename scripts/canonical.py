@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Canonical vibecheck.assessment envelope library (RFC 0001, Increment 1).
+"""Canonical vibecheck.assessment envelope library (RFC 0001).
 
 Provides, stdlib-only:
 
@@ -88,7 +88,7 @@ ID_KEYS = ("signal_id", "evidence_id", "assessment_id", "risk_id",
            "provider_id", "readiness_id")
 CONTROL_ID_RE = re.compile(r"^vibecheck\.control\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
 
-# Bounded raw values (issue #3: raw evidence references stay bounded and
+# Bounded raw values: raw evidence references stay bounded and
 # redacted). The scanner already caps one finding's evidence at 4000 chars;
 # the signal bound sits above that so legacy JSONL lines survive verbatim and
 # the export path stays byte-compatible.

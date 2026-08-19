@@ -1,7 +1,7 @@
 {
   "schema": "vibecheck.authz_coverage",
   "schema_version": "1.1.0",
-  "description": "What an authorization observation is worth, and what it takes to close an object-level authorization control (gh issue #7, epic #1). One probe result establishes exactly one (object, actor, operation) cell in one environment. Closure is a property of the whole required matrix, never of the single request that happened to be easy to run. Version 1.1.0 adds intended exposures: a public form legitimately needs an anonymous insert, so the owner can confirm that exception per operation — and confirming it does not make it free, because an unauthenticated write path inherits abuse risk that has to be bounded and evidenced.",
+  "description": "What an authorization observation is worth, and what it takes to close an object-level authorization control. One probe result establishes exactly one (object, actor, operation) cell in one environment. Closure is a property of the whole required matrix, never of the single request that happened to be easy to run. Version 1.1.0 adds intended exposures: a public form legitimately needs an anonymous insert, so the owner can confirm that exception per operation — and confirming it does not make it free, because an unauthenticated write path inherits abuse risk that has to be bounded and evidenced.",
   "object_classes": {
     "user_owned_record": {
       "description": "A record belonging to one end user: their order, message, document, profile.",

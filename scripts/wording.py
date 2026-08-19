@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""EN/ET report vocabulary (gh issue #5, Increment 3).
+"""EN/ET report vocabulary (RFC 0001 §9).
 
 Every fixed string the founder and reviewer reports render comes from
 schema/report-wording.v1.json through this module. Wording is data for one

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Verification provider registry, capability matching and safe selection
-(gh issue #8, Increment 6; RFC 0001 section 8).
+(RFC 0001 section 8).
 
 A provider is a way of finding something out. It is never a way of deciding
 something: it produces scoped Evidence, and an assessor reads it. That single
@@ -302,9 +302,8 @@ def cell_key(cell):
 
 def requirement_from_coverage(envelope, control_id, environment, now=None):
     """The still-uncovered cells of a coverage-tracked control, as a
-    requirement. This is the bridge from Increment 5's coverage state to
-    Increment 6's selection: the gaps the matrix reports are exactly what a
-    provider has to be chosen to close."""
+    requirement. The coverage matrix reports the still-uncovered gaps;
+    selection picks the provider that can close them."""
     state = authz_mod.coverage_state(envelope, control_id, environment, now)
     return requirement(
         control_id, environment,

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Action / Procedure registry semantics (gh issues #6 and #7, Increments 4-5).
+"""Action / Procedure registry semantics.
 
 The JSON Schema describes record shape.  This module enforces the relations
 that a structural schema cannot express: revision lineages, lifecycle

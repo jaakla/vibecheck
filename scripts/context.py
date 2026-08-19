@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Versioned application context (RFC 0001 §4, gh issue #4, Increment 2).
+"""Versioned application context (RFC 0001 §4).
 
 The context says what the application is for, who can reach it, and what is at
 stake. Everything downstream — contextual risk, environment-scoped readiness,
@@ -19,7 +19,7 @@ separately versioned record rather than a few fields on a report:
 
 The dimension list, the allowed values and the standard environment/intended-use
 bands are data: schema/vibecheck.context.v1.json. Labels are English only in
-v1; founder-facing EN/ET wording arrives with the founder report (gh issue #5).
+v1; founder-facing EN/ET wording is carried by the founder report.
 
 Stdlib only, like the rest of scripts/. This module deliberately imports
 nothing from canonical.py: canonical imports it, not the other way round.

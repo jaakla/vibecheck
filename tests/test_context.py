@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 2 (gh issue #4): versioned context, contextual risk, readiness.
+"""Versioned context, contextual risk and readiness.
 
 Pins the acceptance criteria:
   - golden cases for a developer-only prototype, a private invite-only pilot, a
@@ -175,7 +175,7 @@ class TestContextModel(unittest.TestCase):
                     self.assertTrue(value["description"].strip())
 
     def test_dimensions_cover_the_issue_list(self):
-        # the facts gh issue #4 requires capturing
+        # the facts the context model requires capturing
         for dimension_id in ("lifecycle", "audience_scale", "network_exposure",
                              "authentication", "tenancy", "data_sensitivity",
                              "financial_operations", "privileged_operations",

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""External specialist tool adapters (gh issue #9, Increment 7; RFC 0001 §8.4,
+"""External specialist tool adapters (RFC 0001 §8.4,
 §11.6).
 
 Vibecheck's own detection is a grep. These adapters let a maintained specialist
@@ -117,7 +117,7 @@ def tool_availability(provider_id, path_lookup=None):
 
     Detection only. Nothing here installs anything, and a missing tool is a
     reported gap rather than something to fix silently — the user decides what
-    runs on their machine (issue #9, "do not silently install tools").
+    runs on their machine — tools are never installed silently.
     """
     lookup = path_lookup or shutil.which
     needed = required_tools(provider_id)
@@ -1096,7 +1096,7 @@ def import_owasp_zap_json(data, target_url, authorized_by, run=None,
     ``target_url`` and ``authorized_by`` are positional on purpose. ZAP sends
     traffic at somebody's deployment; an import that cannot say which target
     was scanned or who authorized it has no business producing evidence, so
-    this refuses rather than defaulting (issue #9, "do not scan a network
+    this refuses rather than defaulting ("do not scan a network
     target without explicit authorization and resolved scope").
     """
     if not target_url:

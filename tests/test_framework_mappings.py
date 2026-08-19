@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 8 (gh issue #10): framework mappings and model cutover.
+"""Framework mappings and model cutover.
 
 Pins the acceptance criteria:
   - the versioned vibecheck_v1 mapping is the canonical projection the workbook
