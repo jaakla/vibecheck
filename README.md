@@ -1,10 +1,56 @@
 # vibecheck
 
-## Install from GitHub
+An orchestration and review toolkit for **vibecoded applications** (built with Lovable, Claude Code, Codex, Cursor, Bolt, v0, etc.). It combines lightweight static signals, guided code reading, live checks, and an 89-item workbook (technical and founder profiles, EN/ET). It is a review aid, not a security scanner replacement or certification.
 
-In Claude Code Desktop, go to Settings → Plugins → Add marketplace → Add from repository, then enter `jaakla/vibecheck`.
+Supports **Claude Code**, **Pi**, and **Codex**, or can be run standalone via CLI.
 
-A Claude Code / Cowork plugin for organizing reviews of **vibecoded applications**. It combines lightweight static signals, guided code reading, live checks, and an 89-item workbook (technical and founder profiles, EN/ET). It is a review aid, not a security scanner replacement or certification.
+## Installation
+
+### Claude Code
+In Claude Code Desktop: Settings → Plugins → Add marketplace → Add from repository: `jaakla/vibecheck`
+
+Or via CLI:
+```bash
+claude plugin add jaakla/vibecheck
+```
+
+### Pi (`pi`)
+Install as a Pi package:
+```bash
+pi install git:github.com/jaakla/vibecheck
+# Or from local clone:
+pi install /path/to/vibecheck
+```
+Or add to `~/.pi/agent/settings.json`:
+```json
+{
+  "skills": ["/path/to/vibecheck/skills"]
+}
+```
+
+### Codex / Agent Skills standard
+Symlink or copy the skills into your Codex/Agent skills directory:
+```bash
+mkdir -p ~/.codex/skills
+ln -s /path/to/vibecheck/skills/* ~/.codex/skills/
+# Or project-level:
+mkdir -p .agents/skills
+ln -s /path/to/vibecheck/skills/* .agents/skills/
+```
+
+### Standalone / CLI
+No AI harness required. Clone the repository and run the scripts directly:
+```bash
+git clone https://github.com/jaakla/vibecheck.git
+cd vibecheck
+pip install -r requirements.txt
+```
+
+### Harness compatibility & feature differences
+
+- **Full feature parity:** The core engine — static scanner (`scripts/vibecheck.sh`), Supabase live probe (`scripts/supabase_probe.py`), precheck fingerprinting, coverage ledger, SARIF export, 3-lens adversarial verification panel, workbook builder, and canonical report generator — is harness-agnostic Python/Bash.
+- **Skill execution:** All 5 skills conform to the [Agent Skills specification](https://agentskills.io/specification). In Claude Code, `${CLAUDE_PLUGIN_ROOT}` locates bundled scripts. In Pi, Codex, or local setups, the agent executes the scripts relative to the repository/package path.
+- **Interactive commands:** Pi exposes direct `/skill:vibecheck-*` slash commands. Claude and Codex trigger skills through natural language queries (e.g. *"vibecheck this repo"*, *"prepare technical overview"*).
 
 ## What the automation is worth
 
@@ -54,47 +100,38 @@ verdict model; ambiguous behavior remains Not tested/to-do rather than becoming 
 
 ## Prefer dedicated free tools for detection
 
-Vibecheck's useful role is orchestration: it keeps technical, product, operational, and legal-review work from being silently skipped. It is a review aid and report/verdict framework, not a vulnerability-detection competitor to the specialist tools below or to an LLM security scanner run as a detection specialist. For detection depth, use maintained specialist tools alongside it.
+Vibecheck's primary role is orchestration: it keeps technical, product, operational, and legal-review work from being silently skipped. It is a review aid and report/verdict framework, not a standalone competitor to dedicated specialist tools or deep LLM scanners.
 
-The bundled scanner, the specialist adapters, and the LLM-driven judgment pass are all **detection**; the checklist, evidence model, coverage ledger, scoring, and verdict are **review orchestration**. Keep those two layers honest by treating every finding as refuting material a reviewer confirms, not as a proven vulnerability.
+The bundled scanner, specialist adapters, and LLM-driven judgment pass provide **detection**; the checklist, evidence model, coverage ledger, scoring, and verdict provide **review orchestration**.
 
-- **[Claude Security](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/claude-security) (Anthropic, MIT)** — a deep multi-agent LLM scanner of your own code, run in-session, that maps architecture and threat models, hunts across components, and adversarially verifies every finding before it is reported. Its verification model (three independent lens verifiers defaulting to false-positive, vote-clamped confidence, code-computed tally) is the same trust discipline vibecheck applies to its own findings — vibecheck's three-lens panel (`vibecheck-scan`, `vibecheck-fix`) is the in-skill expression of that idea rather than code reused from it. Use Claude Security as an added detection specialist and feed what survives its panel into a Vibecheck review as normalized evidence; do not treat a scaffold of its ideas as an endorsement or as Anthropic's product.
-- **[Codex Security](https://learn.chatgpt.com/docs/security) (OpenAI)** — an LLM security scanner that hunts vulnerabilities across your own code and returns structured findings with file/line locations and confidence. Its validation step (proving a finding is exploitable in an isolated container before it is reported) is the same trust discipline vibecheck applies to its own findings: a reported finding is refuting material a reviewer confirms, not a proven vulnerability. Use Codex Security as an added detection specialist and feed its findings.json/SARIF into a Vibecheck review as normalized evidence; treat its validated verdicts as strong evidence, never a checklist Pass in themselves.
-- Secrets: Gitleaks or TruffleHog over the full git history.
-- SAST: Semgrep Community; CodeQL for public GitHub repositories.
-- Dependencies and containers: OSV-Scanner or Trivy.
-- Dynamic web testing: OWASP ZAP against an authorized staging deployment.
-- Functional and authorization flows: Playwright with two test accounts.
+Because most users don't have specialist tools pre-installed, `vibecheck-scan` **proactively offers one-step automated installation and execution** for the default specialist pack and LLM scanners:
 
-These tools also have false positives/negatives, but they are substantially more mature than the bundled grep-based scanner — so vibecheck ranks an installed one ahead of its own scanner and ahead of a person reading the code by hand, and imports what it produced as normalized evidence.
+- **[Codex Security](https://learn.chatgpt.com/docs/security) (OpenAI)** — LLM security scanner with container/adversarial validation. Can be run with zero manual setup via `npx @openai/codex-security` and imported directly as SARIF evidence into Vibecheck.
+- **[Claude Security](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/claude-security) (Anthropic, MIT)** — Deep multi-agent LLM scanner run in-session. Findings from its 3-lens panel feed directly into Vibecheck's normalized evidence ledger.
+- **Secrets:** Gitleaks over the full git history (local, stays on machine).
+- **SAST:** Semgrep Community (AST pattern matching and registry rules).
+- **Dependencies & Vulnerabilities:** OSV-Scanner (fast package vulnerability lookup via osv.dev).
 
-Two code-computed products keep a scan honest about coverage and machine-readable:
+These tools are substantially more mature than regex scans alone. When authorized, the agent installs what is missing in one step, runs them, and imports the output as normalized Vibecheck evidence:
 
 ```bash
-# Code coverage ledger: completeness = checked | partial | not-checkable,
-# listing scanned, explicitly-skipped (with reasons) and unaccounted dirs.
-bash scripts/vibecheck.sh <repo> > /tmp/vibecheck.jsonl
-python3 scripts/coverage.py --repo <repo> < /tmp/vibecheck.jsonl
-
-# SARIF 2.1.0 for GitHub code scanning / IDE viewers; --withhold-evidence
-# never quotes a hard-coded credential line in a file that leaves the session.
-python3 scripts/sarif.py --repo <repo> --withhold-evidence < /tmp/vibecheck.jsonl
-```
-
-The Python never installs or runs a tool. The scan skill may install the default pack after one user yes, then run and import:
-
-```bash
-# What the scan skill checks before asking. The Python never installs.
+# Check availability of external specialist tools
 python3 scripts/external_adapters.py --availability
 
-# What the skill uses after a run: import, never paste
-python3 scripts/external_adapters.py --import gitleaks report.json \
+# Run & import specialist results into normalized evidence
+python3 scripts/external_adapters.py --import gitleaks /tmp/vibecheck-gitleaks.json \
   --command "gitleaks detect --source . --log-opts --all --report-format json --redact"
-python3 scripts/external_adapters.py --import zap zap.json \
-  --target-url https://staging.example.com --authorized-by "the deployment owner"
+python3 scripts/external_adapters.py --import semgrep /tmp/vibecheck-semgrep.json \
+  --command "semgrep scan --config auto --json --metrics=off"
+python3 scripts/external_adapters.py --import osv-scanner /tmp/vibecheck-osv.json \
+  --command "osv-scanner --format json --recursive ."
+python3 scripts/external_adapters.py --import codex-security /tmp/vibecheck-codex.sarif \
+  --command "npx @openai/codex-security scan ."
 ```
 
-A finding becomes scoped refuting evidence; a clean run becomes neutral evidence that can never support a Pass; a missing tool, a crash, a timeout or a cancelled run becomes an open to-do naming the coverage nobody has. A DAST or browser run that cannot name its target and who authorized it is refused rather than imported.
+A clean run becomes neutral evidence (never a checklist Pass on its own); a missing or declined tool becomes an open to-do gap so missing coverage is never hidden.
+
+Two code-computed products keep the scan honest and machine-readable:
 
 ## Usage
 

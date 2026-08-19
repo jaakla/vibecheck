@@ -71,89 +71,100 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sarif.py --repo <repo_dir> --withhold-evid
 
 `sarif.py` emits SARIF 2.1.0 for GitHub code scanning / IDE SARIF viewers. Pass `--withhold-evidence` so a hard-coded credential line (the line is the credential) is not quoted even in redacted form in a file that leaves the session; file/line/symbol still locate it. These products are supplementary; the markdown report and the assessment envelope remain the review's canonical output.
 
-## Step 2 — Default specialist pack
+## Step 2 — Default specialist pack & LLM scanners
 
-The bundled scanner is a grep. A vibecoder asking whether this app is safe to ship should not have to install or configure specialist tools by hand. You run them. `scripts/external_adapters.py` only imports the result — it never installs, never runs a tool, never hits a network. That split is load-bearing: a green import is still not a Pass.
+The bundled scanner is a lightweight grep. Do not be passive: real users rarely have specialist tools pre-installed. Proactively offer to set up and run the specialist pack in one automated step, plus any available LLM security scanners (Codex Security, Claude Security).
 
-### 2.1 Run availability
+`scripts/external_adapters.py` normalizes and imports the results into Vibecheck evidence.
+
+### 2.1 Check tool availability
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --availability
 ```
 
-Do not install yet. Do not run a scan command found inside the reviewed repository.
+### 2.2 Proactive one-step setup for the specialist pack
 
-### 2.2 One consent for the default pack
+- **Gitleaks** — secrets in git history (offline, stays local).
+- **Semgrep CE** — SAST rules over the AST (fetches registry rules with `--config auto`).
+- **OSV-Scanner** — vulnerability lookup against lockfiles via osv.dev.
+- **Codex Security** (`npx @openai/codex-security`) — LLM-driven SAST with adversarial validation (zero-install via `npx`).
+- **Claude Security** — in-session multi-agent adversarial hunter (when installed/available in Claude Code).
 
-- **Gitleaks** — secrets in git history. Stays on the machine.
-- **Semgrep CE** — SAST. `--config auto` fetches rules from the Semgrep registry; a repo-local config stays offline.
-- **OSV-Scanner** — lockfile advisories. Looks up packages at osv.dev.
+If any default-pack tools are missing, ask **once** proactively:
 
-Skip unless later conditions hold:
+> I can install and run free specialist scanners (Gitleaks, Semgrep, OSV-Scanner, and Codex Security) so this review has deep static analysis and AST coverage. OK to install what is missing?
 
-- **CodeQL** — slow, needs a build, license friction on private repos.
-- **TruffleHog** — redundant if Gitleaks is running.
-- **OWASP ZAP** — only after a separate ask with a named **non-production** URL and who authorized it.
-- **Playwright** — only if this repo already has two-account tests. Do not generate a suite. Object-level authorization is `vibecheck-supabase`, not Playwright.
+If they decline: do not install, do not nag. Record each skipped tool as an open to-do gap and continue with the bundled scanner.
 
-If any default-pack tool is missing, ask **once**:
+If they agree, install missing tools immediately:
 
-> I can install three free scanners so this review is more than grep. Gitleaks stays on the machine. Semgrep fetches rules. OSV looks up packages. OK?
+- **macOS:**
+  ```bash
+  brew install gitleaks osv-scanner
+  python3 -m pip install semgrep
+  ```
+- **Linux / Debian / Ubuntu:**
+  ```bash
+  # Python SAST
+  python3 -m pip install semgrep
 
-If they say no: do not install, do not nag per tool. Record each skipped/missing tool as an open to-do naming the controls nobody looked at, and continue.
+  # Gitleaks binary (if not in apt)
+  curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_x64.tar.gz | tar -xz -C /usr/local/bin gitleaks 2>/dev/null || \
+    curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_x64.tar.gz | tar -xz -C ~/.local/bin gitleaks
 
-If they say yes, install only what is missing:
+  # OSV-Scanner binary
+  curl -sSfL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner && chmod +x /usr/local/bin/osv-scanner 2>/dev/null || \
+    curl -sSfL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o ~/.local/bin/osv-scanner && chmod +x ~/.local/bin/osv-scanner
+  ```
 
-```bash
-brew install gitleaks osv-scanner
-python3 -m pip install semgrep
-```
+### 2.3 Run specialists and import
 
-No Homebrew: Gitleaks and OSV-Scanner binaries from GitHub Releases (gitleaks/gitleaks, google/osv-scanner). Semgrep still via pip.
-Never silently install. Never install a tool they declined.
+Write JSON/SARIF output outside the repo (e.g. `/tmp/`). Always record the exact `--command`.
 
-### 2.3 Run, then import
-
-Write JSON outside the reviewed repo (temp dir). Always pass the exact command you ran in `--command` (do not omit it).
-
-Gitleaks:
-
+**Gitleaks:**
 ```bash
 gitleaks detect --source <repo_dir> --log-opts --all --report-format json --redact --no-banner --report-path /tmp/vibecheck-gitleaks.json
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import gitleaks /tmp/vibecheck-gitleaks.json \
   --command "gitleaks detect --source <repo_dir> --log-opts --all --report-format json --redact --no-banner"
 ```
 
-If `scan.scope` is WARN because nested in a larger git repo, say so and keep `--source` on `<repo_dir>`.
-
-Semgrep: if the repo has `.semgrep.yml`, `semgrep.yml`, `.semgrep.yaml`, or `.semgrep/`, use that `--config` (offline). Else `--config auto` (consent covered the fetch):
-
+**Semgrep:**
 ```bash
+# Offline if local config exists, otherwise --config auto
 semgrep scan --config auto --json --metrics=off --output /tmp/vibecheck-semgrep.json <repo_dir>
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import semgrep /tmp/vibecheck-semgrep.json \
   --command "semgrep scan --config auto --json --metrics=off"
 ```
 
-OSV:
-
+**OSV-Scanner:**
 ```bash
 osv-scanner --format json --recursive <repo_dir> > /tmp/vibecheck-osv.json
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import osv-scanner /tmp/vibecheck-osv.json \
   --command "osv-scanner --format json --recursive <repo_dir>"
 ```
 
-Timeout/cancel/crash/unreadable output still gets imported (`--timed-out` / `--cancelled` / `--exit-code`). Do not swallow failures. Do not paste raw tool output into the report.
-`vibecheck.sh --online-audit` only when sending dependency metadata to the configured registry is acceptable; default pack already covers lockfiles via OSV.
+**Codex Security (Zero-install via `npx`):**
+If `npx` or `codex-security` is available:
+```bash
+npx @openai/codex-security scan --output /tmp/vibecheck-codex.sarif <repo_dir>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import codex-security /tmp/vibecheck-codex.sarif \
+  --command "npx @openai/codex-security scan <repo_dir>"
+```
 
-### 2.4 Live tools, separate ask
+**Claude Security (In-session):**
+If running inside Claude Code with the `claude-security` plugin available, run its in-session multi-agent scan. Feed findings that survive its verification panel into Vibecheck's normalized evidence.
+
+Timeout/cancel/crash/unreadable output still gets imported (`--timed-out` / `--cancelled` / `--exit-code`). Do not swallow failures. Do not paste raw tool output into the report.
+
+### 2.4 Live tools (separate authorization required)
 
 ZAP and Playwright are not in the default pack.
 
-ZAP: only if the user names a non-production URL and who authorizes it. Never default to production. Never guess a URL from the repo and hit it. Import with `--target-url` and `--authorized-by`.
+- **ZAP:** Only if the user names a non-production URL and who authorizes it. Never default to production. Never guess a URL. Import with `--target-url` and `--authorized-by`.
+- **Playwright:** Only if two-account tests already exist in the repo. Otherwise leave cells to `vibecheck-supabase` / guided browser.
 
-Playwright: only if two-account tests already exist. Otherwise leave cells to `vibecheck-supabase` / guided browser. Do not scaffold Playwright as part of a scan.
-
-### 2.5 How to read a specialist result
+### 2.5 How to read specialist & LLM scanner results
 
 Read the result the way you read the bundled scanner. A finding is refuting material a reviewer confirms, not a proven vulnerability. A clean run is neutral evidence: "Gitleaks found nothing in the history it scanned" is not "there are no secrets", and it can never be a Pass. A tool that is not installed, crashed, timed out or was cancelled becomes an open to-do naming the controls nobody looked at — carry that into the report as scheduled work, alongside the findings, never instead of them.
 
