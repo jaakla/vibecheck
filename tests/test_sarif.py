@@ -62,6 +62,16 @@ class TestSarif(unittest.TestCase):
         ])
         self.assertEqual(log["runs"][0]["results"][0]["level"], "error")
 
+    def test_severity_uses_worst_of_all_checklist_items_not_just_the_first(self):
+        # config.console maps to [38, 57]: item 38 is Medium, item 57 is High.
+        # The level must reflect the worst covered item, not whichever the
+        # scanner happened to list first.
+        log = render([
+            '{"check":"config.console","checklist_items":[38,57],"status":"WARN",'
+            '"title":"console logging","evidence":""}',
+        ])
+        self.assertEqual(log["runs"][0]["results"][0]["level"], "error")
+
     def test_manual_is_note(self):
         log = render([
             '{"check":"cost.budget_caps","checklist_items":[24],"status":"MANUAL","title":"budget","evidence":""}',

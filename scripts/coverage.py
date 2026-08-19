@@ -131,10 +131,11 @@ def _dir_has_source(repo, top):
     the top-level directory it lives under as scanned)."""
     base = os.path.join(repo, top)
     for root, dirnames, files in os.walk(base):
-        # prune excluded sub-paths as the scanner does
+        # prune excluded sub-paths as the scanner does (by directory *name*,
+        # matching vibecheck.sh's `-not -path '*/node_modules/*'` etc., which
+        # excludes a directory at any depth, not just directly under `repo`).
         rel_root = os.path.relpath(root, repo)
-        dirnames[:] = [d for d in dirnames
-                       if os.path.join(rel_root, d) not in EXCLUDED_SUB]
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_SUB]
         for name in files:
             rel = os.path.join(rel_root, name)
             if _is_scannable_source(repo, rel):
@@ -173,12 +174,15 @@ def build(repo, findings, skipped=None, scope=None):
     unaccounted = [d for d in dirs
                    if d not in scanned and d not in skipped]
     if scope:
-        # The user narrowed the scan; that is intentional coverage, not a gap,
-        # but the ledger must say so explicitly rather than claiming whole-tree.
-        unaccounted = [d for d in unaccounted if d not in scope]
+        # The user narrowed the scan; directories *outside* scope are
+        # intentionally excluded (skipped, not a gap). Directories *inside*
+        # scope that are still unaccounted are a real gap — the user asked
+        # for that directory and it was neither scanned nor skipped — so
+        # they must stay in `unaccounted` rather than being waved through.
         scope_skipped = [{"name": d, "reason": "outside the requested scan scope"}
-                         for d in dirs if d in scope and d not in scanned and d not in skipped]
+                         for d in unaccounted if d not in scope]
         accounted_skipped.extend(scope_skipped)
+        unaccounted = [d for d in unaccounted if d in scope]
     if unaccounted:
         completeness = "partial"
     else:

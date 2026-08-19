@@ -65,6 +65,8 @@ The bundled scanner, the specialist adapters, and the LLM-driven judgment pass a
 - Dynamic web testing: OWASP ZAP against an authorized staging deployment.
 - Functional and authorization flows: Playwright with two test accounts.
 
+These tools also have false positives/negatives, but they are substantially more mature than the bundled grep-based scanner — so vibecheck ranks an installed one ahead of its own scanner and ahead of a person reading the code by hand, and imports what it produced as normalized evidence.
+
 Two code-computed products keep a scan honest about coverage and machine-readable:
 
 ```bash

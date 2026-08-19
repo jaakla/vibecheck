@@ -38,26 +38,28 @@ def _load_controls():
     return controls
 
 
-def _item_severity(controls, item_number):
-    """Worst control severity among the controls covering `item_number`."""
+def _index_entries(controls):
+    """item_number -> control entry, built once per invocation rather than
+    re-walking the full framework mapping for every finding."""
+    return {e["item_number"]: e for e in controls.build_framework_mapping()["entries"]}
+
+
+def _worst_severity(entries_by_item, item_numbers):
+    """Worst control severity among *all* checklist items a finding covers
+    (a finding like `checklist_items: [38, 57]` must take the severity of
+    whichever covered item is worse, not just the first one listed)."""
     worst_w = -1
     worst = "note"
-    for entry in controls.build_framework_mapping()["entries"]:
-        if entry["item_number"] == item_number:
-            weight = entry["weight"]
-            if weight > worst_w:
-                worst_w = weight
-                worst = entry["severity"]
+    for n in item_numbers:
+        entry = entries_by_item.get(n)
+        if entry is None:
+            continue
+        if entry["weight"] > worst_w:
+            worst_w = entry["weight"]
+            worst = entry["severity"]
     if worst_w <= 0:
         return "note", 0
     return worst, worst_w
-
-
-def _is_screening(controls, item_number):
-    for entry in controls.build_framework_mapping()["entries"]:
-        if entry["item_number"] == item_number:
-            return entry["kind"] == "screening"
-    return False
 
 
 def _level_for(severity):
@@ -65,25 +67,26 @@ def _level_for(severity):
             "Medium": "warning", "Low": "note"}.get(severity, "note")
 
 
-def _item_is_secret(controls, item_numbers):
+def _any_secret(entries_by_item, item_numbers):
     """Whether any covered item is a secrets/credentials control (category 2)."""
-    for entry in controls.build_framework_mapping()["entries"]:
-        if entry["item_number"] in item_numbers and entry["category"]["number"] == 2:
-            return True
-    return False
+    return any(entries_by_item[n]["category"]["number"] == 2
+               for n in item_numbers if n in entries_by_item)
 
 
 def build(findings, meta, repo, version, withhold_evidence=False):
     controls = _load_controls()
+    entries_by_item = _index_entries(controls)
     results = []
     rules = {}
     for finding in findings:
         check = finding.get("check", "?")
         items = finding.get("checklist_items") or []
+        item_numbers = [int(i) for i in items]
         status = finding.get("status", "NO_SIGNAL")
         title = finding.get("title", "")
         evidence = finding.get("evidence", "")
-        severity, weight = _item_severity(controls, int(items[0])) if items else ("note", 0)
+        severity, weight = (_worst_severity(entries_by_item, item_numbers)
+                            if item_numbers else ("note", 0))
         if status == "NO_SIGNAL":
             continue  # nothing to report as a result — absent signals aren't findings
         if status == "MANUAL":
@@ -105,7 +108,7 @@ def build(findings, meta, repo, version, withhold_evidence=False):
         message_text = title
         if status == "WARN" and evidence:
             message_text = title + "\n\nEvidence:\n" + evidence
-        if withhold_evidence and _item_is_secret(controls, items):
+        if withhold_evidence and _any_secret(entries_by_item, item_numbers):
             # The line is the credential; don't ship it (or a useful prefix).
             message_text = (title + "\n\n[A hard-coded credential line was "
                             "withheld — file/line/symbol locate it.]")

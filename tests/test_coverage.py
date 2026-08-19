@@ -87,8 +87,30 @@ class TestCoverage(unittest.TestCase):
     def test_scope_accounts_intentional_narrowing(self):
         self._make(["src", "api", "web"])
         rec = build(self.tmp, scanner_lines_for_not_found(), scope=["web"])
-        # api unaccounted; web is in scope but had no evidence => add to skipped-side
-        self.assertIn("api", rec["unaccounted"])
+        # api is outside the requested scope: intentionally excluded, so it is
+        # skipped (with a reason), never reported as an unaccounted gap.
+        self.assertNotIn("api", rec["unaccounted"])
+        skipped_names = [s["name"] for s in rec["skipped"]]
+        self.assertIn("api", skipped_names)
+        reason = [s["reason"] for s in rec["skipped"] if s["name"] == "api"][0]
+        self.assertIn("outside", reason)
+        # web is inside the requested scope but had no evidence and holds no
+        # scannable source: it is a real gap and must stay unaccounted.
+        self.assertIn("web", rec["unaccounted"])
+        self.assertNotIn("web", skipped_names)
+
+    def test_nested_vendored_dir_does_not_count_as_scanned_source(self):
+        # A nested node_modules (e.g. under a monorepo package) must be
+        # pruned the same way the scanner's own SRC_FIND excludes it at any
+        # depth, not just when it is itself a top-level directory.
+        self._make(["packages"])
+        nested = os.path.join(self.tmp, "packages", "app", "node_modules", "dep")
+        os.makedirs(nested, exist_ok=True)
+        with open(os.path.join(nested, "index.js"), "w") as fh:
+            fh.write("module.exports = {};\n")
+        rec = build(self.tmp, scanner_lines_for_not_found())
+        self.assertIn("packages", rec["unaccounted"])
+        self.assertNotIn("packages", rec["scanned"])
 
     def test_not_checkable_when_tree_unreadable(self):
         rec = build(os.path.join(self.tmp, "does-not-exist"),
