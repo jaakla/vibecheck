@@ -915,7 +915,7 @@
     {
       "provider_id": "prov-static-scanner",
       "name": "vibecheck.sh static scanner",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "summary_en": "Regex and path heuristics over the working tree. Emits WARN, NO_SIGNAL or MANUAL per check; it proves neither a vulnerability nor its absence.",
       "executor_role": "automation",
       "mechanism": "vibecheck.sh",
