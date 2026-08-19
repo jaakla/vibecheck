@@ -1,7 +1,7 @@
 {
   "schema": "vibecheck.report_derivation",
   "schema_version": "1.1.0",
-  "description": "How derived contextual risks become founder-facing risk scenarios, how those scenarios are ranked and capped, and what may never be hidden behind the cap (gh issue #5, epic #1; RFC 0001 sections 5 and 9). Rules live here as data so that the same normalized inputs always produce the same scenarios, the same order and the same disclosures, and so that the reasoning can be reviewed without reading Python. Nothing in this file may change a control status, an intrinsic severity or an accepted-risk record: aggregation is presentation over assessments, never a re-assessment of them (rules R12, R14).",
+  "description": "How derived contextual risks become founder-facing risk scenarios, how those scenarios are ranked and capped, and what may never be hidden behind the cap (RFC 0001 sections 5 and 9). Rules live here as data so that the same normalized inputs always produce the same scenarios, the same order and the same disclosures, and so that the reasoning can be reviewed without reading Python. Nothing in this file may change a control status, an intrinsic severity or an accepted-risk record: aggregation is presentation over assessments, never a re-assessment of them (rules R12, R14).",
 
   "scenario_grouping": {
     "rule": "Every control belongs to exactly one scenario group. A group is a failure story a non-technical owner can act on, not a checklist category: the group is chosen by the control's namespace, unless group_by_control names a different story for that specific control. A scenario exists for a group only when at least one control in it has an unresolved assessment with a derived contextual risk.",

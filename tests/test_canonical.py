@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 1 (gh issue #3): canonical schema, stable control IDs, adapters.
+"""Canonical schema, stable control IDs and scanner adapters.
 
 Pins the acceptance criteria:
   - every checklist item has a stable control ID and a lossless vibecheck_v1
@@ -556,7 +556,7 @@ class TestRedactionBounds(unittest.TestCase):
 
 # ----------------------------------------------------------- scanner adapters
 
-HEADER = '{"scanner":"vibecheck","version":"0.4.0"}'
+HEADER = '{"scanner":"vibecheck","version":"0.5.0"}'
 WARN_LINE = ('{"check":"secrets.hardcoded","checklist_items":[7],"status":"WARN",'
              '"title":"Secret-like literals assigned in source",'
              '"evidence":"src/api.ts:12: const apiKey = \\"sk_li...[REDACTED]\\""}')

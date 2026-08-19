@@ -33,7 +33,7 @@ def build(repo, lines, scope=()):
 def scanner_lines_for_not_found():
     # Simulate a scan: one WARN under src, plus the scanner wrapper lines.
     return [
-        '{"scanner":"vibecheck","version":"0.4.0"}',
+        '{"scanner":"vibecheck","version":"0.5.0"}',
         '{"check":"secrets.known_prefixes","checklist_items":[7],"status":"WARN",'
         '"title":"cred","evidence":"./src/config.ts:3:key = \\"sk-ant-FAKE\\""}',
         '{"scanner":"vibecheck","done":true,"online_audit":false}',
@@ -128,7 +128,7 @@ class TestCoverage(unittest.TestCase):
     def test_empty_tree_with_no_source_is_honestly_unaccounted(self):
         self._make(["src", "docs"])  # no scannable files anywhere
         lines = [
-            '{"scanner":"vibecheck","version":"0.4.0"}',
+            '{"scanner":"vibecheck","version":"0.5.0"}',
             '{"check":"secrets.known_prefixes","checklist_items":[7],"status":"NO_SIGNAL",'
             '"title":"cred","evidence":""}',
             '{"scanner":"vibecheck","done":true,"online_audit":false}',

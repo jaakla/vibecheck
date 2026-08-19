@@ -1,7 +1,7 @@
 {
   "schema": "vibecheck.context_model",
   "schema_version": "1.0.0",
-  "description": "The application-context dimension model (gh issue #4, epic #1; RFC 0001 section 4). It fixes which context facts Vibecheck captures, which values each may take, and which of them feed the deterministic contextual-risk derivation in schema/risk-derivation.v1.json. Every captured field carries its own state (confirmed / inferred / conflicting / unknown) with a source and rationale, so a conclusion can never quietly rest on a guess. Labels are English only in v1; founder-facing EN/ET wording arrives with the founder report increment (gh issue #5).",
+  "description": "The application-context dimension model (RFC 0001 section 4). It fixes which context facts Vibecheck captures, which values each may take, and which of them feed the deterministic contextual-risk derivation in schema/risk-derivation.v1.json. Every captured field carries its own state (confirmed / inferred / conflicting / unknown) with a source and rationale, so a conclusion can never quietly rest on a guess. Labels are English only in v1; founder-facing EN/ET wording is carried by the founder report.",
   "field_states": [
     {
       "id": "confirmed",
@@ -107,7 +107,7 @@
       "label_en": "Network exposure",
       "question_en": "From where can the running application be reached?",
       "role": "derivation_input",
-      "description": "The 'exposure' dimension of gh issue #4, named network_exposure here so it is never confused with the exposure input of the risk matrix, which this dimension only helps compute.",
+      "description": "The 'exposure' dimension, named network_exposure here so it is never confused with the exposure input of the risk matrix, which this dimension only helps compute.",
       "values": [
         { "id": "local_only", "band": 0, "description": "Localhost or a developer machine only; not deployed." },
         { "id": "private_network", "band": 1, "description": "Reachable only inside a VPN, office network, or platform-private network." },

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Founder-facing risk scenarios (RFC 0001 §9, gh issue #5, Increment 3).
+"""Founder-facing risk scenarios (RFC 0001 §9).
 
 A reviewer reads "control 14 is failed". An owner needs to hear "anyone with
 the address of your app can read every order, and it gets worse the day you
@@ -184,8 +184,8 @@ def _worst_confidence(risks, envelope=None, now=None):
 def _linked_actions(envelope, scenario_id, control_ids, risk_ids):
     """Actions that already point at this story, by control, risk or scenario.
 
-    Actions are never rewritten from here: increment 4 owns them, and a
-    presentation layer that edits its own inputs is how traceability rots.
+    Actions are never rewritten from a presentation layer: editing
+    its own inputs is how traceability rots.
     """
     linked = []
     for action in actions_mod.current_actions(envelope):

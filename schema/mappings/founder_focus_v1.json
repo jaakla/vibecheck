@@ -2,10 +2,10 @@
   "framework": "founder_focus",
   "framework_version": "2026.08",
   "provenance": {
-    "source": "curated subset of the vibecheck_v1 checklist for a non-technical owner go/no-go review (sample second framework, issue #10)",
+    "source": "curated subset of the vibecheck_v1 checklist for a non-technical owner go/no-go review (sample second framework)",
     "established_at": "2026-08-16T00:00:00Z",
     "method": "hand-reviewed mapping onto existing stable control IDs; reuse is intentional and pinned by tests (no control record is duplicated)",
-    "reviewed_by": "vibecheck maintainers (issue #10)",
+    "reviewed_by": "vibecheck maintainers",
     "change_policy": "sample only: illustrates control reuse across frameworks; not a compliance framework."
   },
   "status_map": {

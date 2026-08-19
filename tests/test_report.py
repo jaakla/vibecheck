@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 3 (gh issue #5): risk scenarios and completeness-safe reports."""
+"""Risk scenarios and completeness-safe reports."""
 import copy
 import json
 import os

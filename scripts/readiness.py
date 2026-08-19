@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Environment-scoped readiness (RFC 0001 §4.2, gh issue #4, Increment 2).
+"""Environment-scoped readiness (RFC 0001 §4.2).
 
 "Is it ready?" is not answerable. "Is there a known blocker for a private test
 with invited users, on today's evidence?" is, and that is the only question

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment 4 (gh issue #6): Action/Procedure registry and exact attempts."""
+"""Action/Procedure registry and exact attempts."""
 import copy
 import json
 import os

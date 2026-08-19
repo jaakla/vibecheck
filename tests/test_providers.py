@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Increment 6 (gh issue #8): the verification provider registry.
+"""The verification provider registry.
 
 The acceptance criteria of the issue, one class each:
 
@@ -716,7 +716,7 @@ class TestBundledToolsAreProviders(unittest.TestCase):
     contract while their public outputs stay exactly as they were."""
 
     STREAM = [
-        json.dumps({"scanner": "vibecheck", "version": "0.4.0"}),
+        json.dumps({"scanner": "vibecheck", "version": "0.5.0"}),
         json.dumps({"check": "secrets.hardcoded", "status": "WARN",
                     "checklist_items": [7], "title": "hardcoded secret",
                     "evidence": "src/app.js: const KEY = \"abc\""}),
@@ -743,7 +743,7 @@ class TestBundledToolsAreProviders(unittest.TestCase):
         for item in env["evidence"]:
             self.assertEqual("prov-static-scanner",
                              item["provider"]["provider_ref"])
-            self.assertEqual("0.4.0", item["provider"]["version"])
+            self.assertEqual("0.5.0", item["provider"]["version"])
 
     def test_the_attached_capability_is_narrowed_to_what_was_claimed(self):
         env = adapters.import_scanner_jsonl(self.STREAM, now=NOW)

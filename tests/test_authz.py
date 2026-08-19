@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Increment 5 (gh issue #7): the Supabase authorization vertical slice.
+"""The Supabase authorization vertical slice.
 
 The acceptance criteria of the issue, one class each:
 

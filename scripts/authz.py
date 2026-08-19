@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Authorization coverage semantics (gh issue #7, Increment 5).
+"""Authorization coverage semantics (RFC 0001 §7).
 
 An authorization observation is small. A probe that reads one row of one table
 as one actor establishes exactly that: one (object, actor, operation) cell in

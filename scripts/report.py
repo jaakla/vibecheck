@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Completeness-safe founder and reviewer reports (RFC 0001 §9, gh issue #5).
+"""Completeness-safe founder and reviewer reports (RFC 0001 §9).
 
 Two jobs, deliberately separate:
 
