@@ -785,7 +785,7 @@
       "summary_en": "A person who can read the application reads the authorization policies, the server routes and the queries, and states what the source intends.",
       "executor_role": "developer",
       "mechanism": "guided reading of the source and configuration",
-      "fallback_order": 11,
+      "fallback_order": 12,
       "availability": {
         "bundled": true,
         "requires_tools": [],
@@ -844,7 +844,7 @@
       "summary_en": "Recognizes table creation and row-level-security statements in committed migrations and reports the tables created without a matching policy.",
       "executor_role": "automation",
       "mechanism": "analyze_sql.py",
-      "fallback_order": 12,
+      "fallback_order": 13,
       "availability": {
         "bundled": true,
         "requires_tools": ["python3"],
@@ -919,7 +919,7 @@
       "summary_en": "Regex and path heuristics over the working tree. Emits WARN, NO_SIGNAL or MANUAL per check; it proves neither a vulnerability nor its absence.",
       "executor_role": "automation",
       "mechanism": "vibecheck.sh",
-      "fallback_order": 13,
+      "fallback_order": 14,
       "availability": {
         "bundled": true,
         "requires_tools": ["bash", "grep"],
@@ -983,7 +983,7 @@
       "summary_en": "Pattern and entropy rules run over the commits a reviewer points them at, including credentials that were deleted from the working tree and are still in the history.",
       "executor_role": "automation",
       "mechanism": "gitleaks detect --source <repo> --log-opts <explicit revision range> --report-format json --redact --no-banner",
-      "fallback_order": 7,
+      "fallback_order": 8,
       "availability": {
         "bundled": false,
         "requires_tools": ["gitleaks"],
@@ -1066,7 +1066,7 @@
       "summary_en": "Credential detectors over git history, with optional live verification against the provider each candidate belongs to.",
       "executor_role": "automation",
       "mechanism": "trufflehog git file://<repo> --json --no-update (add --only-verified to trade recall for precision; verification is what makes the run reach the network)",
-      "fallback_order": 8,
+      "fallback_order": 9,
       "availability": {
         "bundled": false,
         "requires_tools": ["trufflehog"],
@@ -1152,7 +1152,7 @@
       "summary_en": "Declared dependency versions are matched against the OSV advisory database.",
       "executor_role": "automation",
       "mechanism": "osv-scanner --format json --lockfile <path> (or --recursive <dir>)",
-      "fallback_order": 9,
+      "fallback_order": 10,
       "availability": {
         "bundled": false,
         "requires_tools": ["osv-scanner"],
@@ -1228,7 +1228,7 @@
       "summary_en": "Filesystem, lockfile and container-image layers are matched against vulnerability and licence databases.",
       "executor_role": "automation",
       "mechanism": "trivy fs --format json --scanners vuln,license <path>, or trivy image --format json <image>",
-      "fallback_order": 10,
+      "fallback_order": 11,
       "availability": {
         "bundled": false,
         "requires_tools": ["trivy"],
@@ -1414,6 +1414,116 @@
       }
     },
 
+
+    {
+      "provider_id": "prov-codex-security",
+      "name": "Codex Security",
+      "version": "external",
+      "summary_en": "An LLM security scanner that maps the codebase, hunts for vulnerabilities across components, adversarially validates each finding, and returns structured findings with file and line locations that can be exported as SARIF.",
+      "executor_role": "automation",
+      "mechanism": "npx @openai/codex-security (local tree scan; validated findings return as findings.json/SARIF; an opt-in send mode runs model-side validation using the caller's authenticated session)",
+      "fallback_order": 6,
+      "availability": {
+        "bundled": false,
+        "requires_tools": ["codex-security"],
+        "detect": "Available when a `codex-security` executable is on PATH or reachable via `npx @openai/codex-security`. Never installed by vibecheck."
+      },
+      "required_targets": ["source_tree"],
+      "coverage": [
+        {
+          "control_id": "vibecheck.control.input.sql_parameterized",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path from an untrusted source to a query sink, as found and adversarially validated by the LLM. A clean run over the language and framework it supports is material; the control closes when a reviewer has seen how queries are built, not when a model stayed quiet."
+        },
+        {
+          "control_id": "vibecheck.control.input.output_encoding",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path from an untrusted source to a rendering sink."
+        },
+        {
+          "control_id": "vibecheck.control.input.other_injection_classes",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A traced path to a command, path, SSRF or deserialization sink."
+        },
+        {
+          "control_id": "vibecheck.control.input.server_side_validation",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "Nothing closes it here: an unqueried entry point is not a validated one."
+        },
+        {
+          "control_id": "vibecheck.control.deploy.debug_disabled",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file", "config"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A debug flag in committed configuration is a finding about the source. What the deployment runs is a live observation this never makes."
+        },
+        {
+          "control_id": "vibecheck.control.llm.no_output_to_exec",
+          "operations": ["sast_code_scan"],
+          "subjects": ["repo", "file"],
+          "max_strength": "indicative",
+          "fills_coverage_cell": false,
+          "closure_threshold": "A model response reaching an execution sink, followed across files by the model and validated. A path it did not complete is a miss; no source reading is a deployment observation."
+        }
+      ],
+      "authorization": {
+        "required": false,
+        "credentials": [],
+        "notes": "Reads the working tree. The opt-in send mode may send source excerpts to the model endpoint through the caller's authenticated session; a local run and a send-enabled run behave differently, and neither uploads to vibecheck-controlled infrastructure. A finding it validated is still evidence a reviewer confirms, never a control-wide conclusion."
+      },
+      "prerequisites": ["Source in a language Codex Security's model can reason about."],
+      "environments": ["developer_only", "private_test", "public_release"],
+      "environments_note": "It reads a working tree, so it is not acting in an environment at all; the environment on its evidence is the one the source belongs to.",
+      "cost": {
+        "monetary": "none",
+        "compute": "moderate",
+        "human_effort": "none",
+        "notes": "The SDK and local CLI are free to use; a validation-enabled run may consume model tokens. Triaging reported findings is where the time goes."
+      },
+      "network": {
+        "outbound": true,
+        "opt_in_flags": ["--send"],
+        "targets": ["the OpenAI model endpoint, only when the run sends source excerpts for validation or triage"]
+      },
+      "data_egress": {
+        "occurs": true,
+        "destinations": ["the OpenAI endpoint the caller's authenticated session is configured to reach, only when the opt-in send mode is on"]
+      },
+      "side_effects": {
+        "read": true,
+        "write": false,
+        "destructive": false,
+        "deployment": false,
+        "external_accounts": false
+      },
+      "confidence": {
+        "false_positive_risk": "low",
+        "false_negative_risk": "moderate",
+        "limitations": "A strong cross-file reader, but still a source reader. It reports what is written and what it reasoned from; it cannot observe the deployment, and a clean run never proves a control-wide absence."
+      },
+      "run_semantics": {
+        "timeout": "Caller-imposed. A deep model scan and its validation take minutes on a large codebase; no scanner-provided timeout is enforced.",
+        "cancellation": "Safe at any point in the local scan; a cancelled run imports as a partial result with an open verify Action.",
+        "partial_results": "Findings written before the stop are evidence about themselves; the files and paths never reached stay uncovered.",
+        "failure": "A crash, timeout or unparseable output produces no evidence and one open verify Action. A validated finding is triaged, never treated as proof."
+      },
+      "evidence_freshness": {
+        "typical_validity": "until the source changes"
+      }
+    },
     {
       "provider_id": "prov-codeql",
       "name": "CodeQL semantic analysis",
@@ -1421,7 +1531,7 @@
       "summary_en": "Interprocedural taint tracking over a compiled analysis database, following untrusted input to sinks across files.",
       "executor_role": "automation",
       "mechanism": "codeql database create <db> --language=<lang> && codeql database analyze <db> <suite> --format=sarif-latest --output=<file>",
-      "fallback_order": 6,
+      "fallback_order": 7,
       "availability": {
         "bundled": false,
         "requires_tools": ["codeql"],

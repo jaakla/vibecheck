@@ -18,6 +18,7 @@ n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis 
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.object_level.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
@@ -44,6 +45,7 @@ n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis 
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.object_level.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
@@ -74,6 +76,7 @@ SELECTED  Code and policy review — indicative; material only, fills no coverag
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
@@ -103,6 +106,7 @@ unused    Code and policy review — eligible, but a provider already in the pla
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
@@ -129,6 +133,7 @@ SELECTED  Code and policy review — indicative; material only, fills no coverag
 n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis observes sql_migrations, which this review does not have.
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.anon_data_access.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.anon_data_access.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.anon_data_access.
@@ -156,6 +161,7 @@ n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis 
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.object_level.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
@@ -183,6 +189,7 @@ n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis 
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.authz.object_level.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.authz.object_level.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.authz.object_level.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.authz.object_level.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.authz.object_level.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.authz.object_level.
@@ -215,6 +222,7 @@ n/a       Playwright two-account flow — Playwright two-account flow makes no c
 n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
@@ -237,6 +245,7 @@ n/a       Playwright two-account flow — Playwright two-account flow makes no c
 n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
 n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.secrets.no_repo_history_leaks.
@@ -256,6 +265,7 @@ Semgrep and CodeQL both claim the SQL control at the same strength. CodeQL finds
 ```text
 Requirement: vibecheck.control.input.sql_parameterized in developer_only, 0 cell(s).
 SELECTED  Semgrep Community Edition — indicative; material only, fills no coverage cell and closes nothing
+EXCLUDED  Codex Security — Codex Security is not bundled and needs codex-security, which is not installed here.
 EXCLUDED  CodeQL semantic analysis — CodeQL semantic analysis has high compute cost and only low, moderate was accepted.
 unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
 unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
@@ -273,6 +283,35 @@ Coverage: the requirement names no cells, so coverage is unestablished — a gap
 
 Authorization:
 
+- **would_strengthen_the_plan** — Codex Security is available but unused: authorize data egress; authorize network access; install codex-security.
+- **would_strengthen_the_plan** — CodeQL semantic analysis is available but unused: accept high compute cost.
+
+## Codex Security joins the SAST comparison
+
+Codex Security claims the same SQL control at the same indicative strength as Semgrep and ranks between Semgrep and CodeQL on the declared order. Its local tree scan needs no grant, so under this offer it is selected; opening the opt-in send mode for model validation is a network + egress decision, so a send-enabled run must say where the source excerpts go, exactly as the dependency auditors must.
+
+```text
+Requirement: vibecheck.control.input.sql_parameterized in developer_only, 0 cell(s).
+SELECTED  Semgrep Community Edition — indicative; material only, fills no coverage cell and closes nothing
+EXCLUDED  Codex Security — Codex Security reaches the OpenAI model endpoint, only when the run sends source excerpts for validation or triage and network access was not authorized.
+EXCLUDED  CodeQL semantic analysis — CodeQL semantic analysis has high compute cost and only low, moderate was accepted.
+unused    Code and policy review — eligible, but a provider already in the plan covers everything it would have
+unused    vibecheck.sh static scanner — eligible, but a provider already in the plan covers everything it would have
+n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       OSV-Scanner dependency audit — OSV-Scanner dependency audit makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       Trivy dependency, image and licence scanner — Trivy dependency, image and licence scanner makes no claim about vibecheck.control.input.sql_parameterized.
+n/a       vibecheck SQL migration analysis — vibecheck SQL migration analysis makes no claim about vibecheck.control.input.sql_parameterized.
+Coverage: the requirement names no cells, so coverage is unestablished — a gap, never a met requirement.
+```
+
+Authorization:
+
+- **would_strengthen_the_plan** — Codex Security is available but unused: authorize data egress; authorize network access.
 - **would_strengthen_the_plan** — CodeQL semantic analysis is available but unused: accept high compute cost.
 
 ## A dependency audit that has to phone home
@@ -290,6 +329,7 @@ n/a       Playwright two-account flow — Playwright two-account flow makes no c
 n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deps.vuln_scanning.
 n/a       OWASP ZAP baseline scan — OWASP ZAP baseline scan makes no claim about vibecheck.control.deps.vuln_scanning.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deps.vuln_scanning.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.deps.vuln_scanning.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deps.vuln_scanning.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deps.vuln_scanning.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deps.vuln_scanning.
@@ -315,6 +355,7 @@ n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes 
 n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deploy.cors_restricted.
@@ -341,6 +382,7 @@ n/a       vibecheck Supabase live probe — vibecheck Supabase live probe makes 
 n/a       Playwright two-account flow — Playwright two-account flow makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Guided two-account browser test — Guided two-account browser test makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Semgrep Community Edition — Semgrep Community Edition makes no claim about vibecheck.control.deploy.cors_restricted.
+n/a       Codex Security — Codex Security makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       CodeQL semantic analysis — CodeQL semantic analysis makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       Gitleaks secret scanner — Gitleaks secret scanner makes no claim about vibecheck.control.deploy.cors_restricted.
 n/a       TruffleHog credential scanner — TruffleHog credential scanner makes no claim about vibecheck.control.deploy.cors_restricted.

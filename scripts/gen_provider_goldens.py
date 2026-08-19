@@ -221,6 +221,23 @@ CASES = [
             tools=["semgrep", "codeql"], authorized_providers="all"),
     },
     {
+        "id": "codex-security-send-gated",
+        "title": "Codex Security joins the SAST comparison",
+        "why": "Codex Security claims the same SQL control at the same "
+               "indicative strength as Semgrep and ranks between Semgrep and "
+               "CodeQL on the declared order. Its local tree scan needs no "
+               "grant, so under this offer it is selected; opening the opt-in "
+               "send mode for model validation is a network + egress "
+               "decision, so a send-enabled run must say where the source "
+               "excerpts go, exactly as the dependency auditors must.",
+        "requirement": providers_mod.requirement(
+            "vibecheck.control.input.sql_parameterized", "developer_only"),
+        "offer": providers_mod.offer(
+            environment="developer_only", targets=["source_tree"],
+            tools=["semgrep", "codex-security", "codeql"],
+            authorized_providers="all"),
+    },
+    {
         "id": "dependency-audit-egress",
         "title": "A dependency audit that has to phone home",
         "why": "Both dependency auditors send the project's package names and "

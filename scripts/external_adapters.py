@@ -13,6 +13,7 @@ produced the material:
   import_trivy_json(data, run=...)         dependency, image and licence audit
   import_semgrep_json(data, run=...)       SAST
   import_codeql_sarif(data, run=...)       SAST (SARIF)
+  import_codex_security_sarif(data, run=...)  SAST (SARIF, LLM-validated)
   import_owasp_zap_json(data, run=...)     DAST against an authorized target
   import_playwright_json(data, run=...)    two-account browser flows
 
@@ -73,6 +74,7 @@ OSV_SCANNER_PROVIDER = "prov-osv-scanner"
 TRIVY_PROVIDER = "prov-trivy"
 SEMGREP_PROVIDER = "prov-semgrep-ce"
 CODEQL_PROVIDER = "prov-codeql"
+CODEX_SECURITY_PROVIDER = "prov-codex-security"
 ZAP_PROVIDER = "prov-owasp-zap"
 PLAYWRIGHT_PROVIDER = "prov-playwright-two-account"
 
@@ -85,6 +87,7 @@ _TOOLS = {
     TRIVY_PROVIDER: ("trivy", "trivy"),
     SEMGREP_PROVIDER: ("semgrep", "semgrep"),
     CODEQL_PROVIDER: ("codeql", "codeql"),
+    CODEX_SECURITY_PROVIDER: ("codex-security", "codex-security"),
     ZAP_PROVIDER: ("owasp-zap", "zap"),
     PLAYWRIGHT_PROVIDER: ("playwright", "playwright"),
 }
@@ -1035,6 +1038,53 @@ def import_codeql_sarif(data, run=None, environment="developer_only", now=None,
                    clean_claim_numbers=[28, 29, 30, 32])
 
 
+# ----------------------------------------------------- Codex Security
+
+def import_codex_security_sarif(data, run=None, environment="developer_only",
+                                now=None, app_name=None, assessment_id=None,
+                                target_scopes=None, repo_locator="."):
+    """Codex Security SARIF output → envelope.
+
+    Codex Security produces a findings.json with file/line locations and a
+    confidence for each finding, and can also emit SARIF 2.1.0. When no SARIF
+    runs are present the results stay attributable to the source reading and
+    are imported neutrally rather than as a control-wide claim.
+    """
+    subject = {"kind": "repo", "locator": repo_locator}
+
+    def findings(env, parsed, ctx):
+        if not isinstance(parsed, dict):
+            return 0
+        seq = 0
+        for sarif_run in parsed.get("runs") or []:
+            if not isinstance(sarif_run, dict):
+                continue
+            for result in sarif_run.get("results") or []:
+                seq += 1
+                locations = result.get("locations") or []
+                file_path = repo_locator
+                if locations:
+                    physical = (locations[0].get("physicalLocation") or {})
+                    file_path = ((physical.get("artifactLocation") or {})
+                                 .get("uri") or repo_locator)
+                _sast_finding(
+                    env, CODEX_SECURITY_PROVIDER, seq, ctx,
+                    rule_id=result.get("ruleId") or "codex security finding",
+                    file_path=file_path,
+                    message=(result.get("message") or {}).get("text") or "",
+                    detail=_redacted_finding(result))
+        return seq
+
+    return _import(CODEX_SECURITY_PROVIDER, data,
+                   environment=environment, now=now,
+                   app_name=app_name, assessment_id=assessment_id,
+                   target_scopes=target_scopes, run=run, subject=subject,
+                   operation="sast_code_scan",
+                   description="Imported from Codex Security SARIF output.",
+                   findings_fn=findings,
+                   clean_claim_numbers=[28, 29, 30, 32])
+
+
 # ------------------------------------------------------------- OWASP ZAP
 
 def import_owasp_zap_json(data, target_url, authorized_by, run=None,
@@ -1361,6 +1411,7 @@ _IMPORTERS = {
     "trivy": import_trivy_json,
     "semgrep": import_semgrep_json,
     "codeql": import_codeql_sarif,
+    "codex-security": import_codex_security_sarif,
     "zap": import_owasp_zap_json,
     "playwright": import_playwright_json,
 }
