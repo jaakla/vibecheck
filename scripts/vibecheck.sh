@@ -17,7 +17,7 @@
 
 set -uo pipefail
 
-VERSION="0.5.0"
+VERSION="0.5.1"
 
 REPO="."
 ONLINE_AUDIT=0
@@ -425,8 +425,8 @@ HITS=$(grep_code "catch[[:space:]]*(\([[:space:]]*[a-zA-Z_$]*[[:space:]]*\))?[[:
 [ -n "$HITS" ] && emit "errors.swallowed" "[37]" "WARN" "Empty catch blocks — errors are silently swallowed" "$HITS" \
                || emit "errors.swallowed" "[37]" "NO_SIGNAL" "No empty catch block found by this ruleset" ""
 
-ET_IMPORT=$(grep_code "(from|require\(|import)[[:space:]]*['\"](@sentry/[a-z-]+|posthog-js|posthog-node|@bugsnag/[a-z-]+|rollbar|@highlight-run/[a-z-]+)['\"]|Sentry\.init\(|posthog\.init\(|Bugsnag\.start\(|^[[:space:]]*import[[:space:]]+sentry_sdk")
-ET_DEPS=$(pkg_dep "@sentry/[a-z-]+|posthog-js|posthog-node|@bugsnag/[a-z-]+|rollbar|@highlight-run/[a-z-]+|sentry-sdk")
+ET_IMPORT=$(grep_code "(from|require\(|import)[[:space:]]*['\"](@sentry/[a-z-]+|posthog-js|posthog-node|@bugsnag/[a-z-]+|rollbar|@highlight-run/[a-z-]+|dd-trace|@datadog/[a-z-]+|@opentelemetry/[a-z-]+|@google-cloud/logging|newrelic|logrocket|winston|pino)['\"]|Sentry\.init\(|posthog\.init\(|Bugsnag\.start\(|tracer\.init\(|^[[:space:]]*import[[:space:]]+(sentry_sdk|datadog|opentelemetry|google\.cloud\.logging|newrelic|loguru)")
+ET_DEPS=$(pkg_dep "@sentry/[a-z-]+|posthog-js|posthog-node|@bugsnag/[a-z-]+|rollbar|@highlight-run/[a-z-]+|sentry-sdk|dd-trace|@datadog/[a-z-]+|@opentelemetry/[a-z-]+|@google-cloud/logging|newrelic|logrocket|winston|pino|datadog|opentelemetry-sdk|google-cloud-logging|loguru")
 if [ -z "$ET_IMPORT" ] && [ -z "$ET_DEPS" ]; then
   emit "errors.tracking" "[38]" "WARN" "No error-tracking SDK detected on client or server" ""
 else

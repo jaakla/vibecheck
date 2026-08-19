@@ -60,6 +60,7 @@ jobs:
         run: |
           bash scripts/vibecheck.sh --capability > /dev/null
           python3 scripts/supabase_probe.py --capability > /dev/null
+          python3 scripts/fault_probe.py --capability > /dev/null
 
       - name: Workbooks build in all four variants
         run: |

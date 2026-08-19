@@ -1,6 +1,6 @@
 {
   "name": "vibecheck",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Orchestrated review for vibecoded applications: a human-reviewed technical precheck, collection of static signals, guided code/live checks, a hardened Supabase probe, and an evidence-based workbook including GDPR and EU AI Act screening. Not a security certification or replacement for dedicated scanners.",
   "author": {
     "name": "Jaak Laineste (Goplex)"

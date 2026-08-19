@@ -157,12 +157,34 @@ If running inside Claude Code with the `claude-security` plugin available, run i
 
 Timeout/cancel/crash/unreadable output still gets imported (`--timed-out` / `--cancelled` / `--exit-code`). Do not swallow failures. Do not paste raw tool output into the report.
 
-### 2.4 Live tools (separate authorization required)
+### 2.4 Live tools, E2E generation & fault probes (separate authorization required)
 
-ZAP and Playwright are not in the default pack.
+ZAP, Playwright, and live fault probes target a running application and require a named URL.
 
-- **ZAP:** Only if the user names a non-production URL and who authorizes it. Never default to production. Never guess a URL. Import with `--target-url` and `--authorized-by`.
-- **Playwright:** Only if two-account tests already exist in the repo. Otherwise leave cells to `vibecheck-supabase` / guided browser.
+- **Playwright E2E testing (#13, #17, #50, #65, #69, #70):**
+  If the repository has no E2E tests, scaffold a smoke & security suite covering auth lifecycle, data persistence across page reloads, double-submit idempotency, and route authorization:
+  ```bash
+  # Scaffold test suite in project
+  python3 ${CLAUDE_PLUGIN_ROOT}/scripts/gen_playwright_suite.py <repo_dir> --base-url http://localhost:5173
+
+  # Run headless E2E tests and output JSON report
+  npx playwright test tests/e2e/vibecheck-smoke.spec.ts --reporter=json > /tmp/vibecheck-playwright.json
+
+  # Import results as normalized Vibecheck evidence
+  python3 ${CLAUDE_PLUGIN_ROOT}/scripts/external_adapters.py --import playwright /tmp/vibecheck-playwright.json \
+    --target-url http://localhost:5173 --authorized-by "tester" \
+    --command "npx playwright test tests/e2e/vibecheck-smoke.spec.ts"
+  ```
+
+- **Fault injection & error leakage probe (`scripts/fault_probe.py`, #38, #39, #41):**
+  Sends safe malformed payloads (invalid JSON, boundary values, non-existent resource IDs) to detect unhandled stack traces, SQL errors, or internal file path leaks, while injecting a traceable `X-Vibecheck-Probe-Id` header:
+  ```bash
+  python3 ${CLAUDE_PLUGIN_ROOT}/scripts/fault_probe.py --url http://localhost:3000 --endpoint /api/bookings \
+    --authorized-by "tester" --environment private_test
+  ```
+  Give the operator explicit guidance to search their logging dashboard (Sentry, Datadog, GCP Cloud Logging, CloudWatch, PostHog) for the returned `vibecheck-probe-...` ID to confirm events are captured with redacted secrets.
+
+- **OWASP ZAP:** Only if the user names a non-production URL and who authorizes it. Never default to production. Never guess a URL. Import with `--target-url` and `--authorized-by`.
 
 ### 2.5 How to read specialist & LLM scanner results
 
