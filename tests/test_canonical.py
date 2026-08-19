@@ -556,7 +556,7 @@ class TestRedactionBounds(unittest.TestCase):
 
 # ----------------------------------------------------------- scanner adapters
 
-HEADER = '{"scanner":"vibecheck","version":"0.4.0"}'
+HEADER = '{"scanner":"vibecheck","version":"0.5.0"}'
 WARN_LINE = ('{"check":"secrets.hardcoded","checklist_items":[7],"status":"WARN",'
              '"title":"Secret-like literals assigned in source",'
              '"evidence":"src/api.ts:12: const apiKey = \\"sk_li...[REDACTED]\\""}')
