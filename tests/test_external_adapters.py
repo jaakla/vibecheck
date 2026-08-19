@@ -384,6 +384,46 @@ class TestCodeQL(EnvelopeAssertions):
         self.assertIn("build failed", action_reasons(env))
 
 
+# ----------------------------------------------------- Codex Security
+
+class TestCodexSecurity(EnvelopeAssertions):
+    def test_an_finding_becomes_scoped_refuting_evidence(self):
+        sarif = {"version": "2.1.0", "runs": [{"results": [{
+            "ruleId": "js/sql-injection",
+            "message": {"text": "This query depends on a user-provided value."},
+            "locations": [{"physicalLocation": {
+                "artifactLocation": {"uri": "api/query.js"}}}],
+        }]}]}
+        env = ext.import_codex_security_sarif(json.dumps(sarif), now=NOW)
+        self.assertValid(env)
+        item = env["evidence"][0]
+        self.assertEqual("refutes", item["direction"])
+        self.assertEqual({"kind": "file", "locator": "api/query.js"},
+                         item["subject"])
+        self.assertEqual(["vibecheck.control.input.sql_parameterized"],
+                         item["claim"]["control_ids"])
+        self.assertEqual("prov-codex-security",
+                         item["provider"]["provider_ref"])
+
+    def test_a_clean_sarif_is_neutral(self):
+        env = ext.import_codex_security_sarif(
+            '{"version": "2.1.0", "runs": [{"results": []}]}', now=NOW)
+        self.assertValid(env)
+        self.assertNoPassPossible(env)
+
+    def test_a_failed_run_is_a_gap(self):
+        env = ext.import_codex_security_sarif(
+            "", now=NOW, run=ext.run_record(error="scan crashed"))
+        self.assertValid(env)
+        self.assertEqual([], env["evidence"])
+        self.assertIn("scan crashed", action_reasons(env))
+
+    def test_a_finding_maps_onto_the_importers_dispatch(self):
+        self.assertIs(ext.import_codex_security_sarif,
+                      ext._IMPORTERS["codex-security"])
+
+
+
 # -------------------------------------------------------------- OWASP ZAP
 
 ZAP_REPORT = {"site": [{
@@ -607,7 +647,7 @@ class TestAvailability(unittest.TestCase):
 
     def test_every_external_provider_is_in_the_report(self):
         report = ext.availability_report(path_lookup=lambda name: None)
-        self.assertEqual(8, len(report))
+        self.assertEqual(9, len(report))
         self.assertTrue(all(entry["detect"] for entry in report))
 
     def test_an_unavailable_tool_is_a_recorded_gap_with_no_evidence(self):
